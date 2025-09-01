@@ -270,6 +270,65 @@
             color: #fb923c;
         }
         
+        /* Modal styles */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+        
+        .modal.show {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            opacity: 1;
+        }
+        
+        .modal-content {
+            background: white;
+            padding: 30px;
+            border-radius: 15px;
+            max-width: 600px;
+            width: 90%;
+            max-height: 80vh;
+            overflow-y: auto;
+            position: relative;
+            transform: scale(0.7);
+            transition: transform 0.3s ease;
+        }
+        
+        .modal.show .modal-content {
+            transform: scale(1);
+        }
+        
+        .modal-close {
+            position: absolute;
+            top: 15px;
+            right: 20px;
+            font-size: 28px;
+            font-weight: bold;
+            color: #aaa;
+            cursor: pointer;
+            transition: color 0.3s;
+        }
+        
+        .modal-close:hover {
+            color: #fb923c;
+        }
+        
+        /* Clickable fasting style hover effect */
+        #selectedStyleName:hover {
+            color: #ec4899 !important;
+            text-decoration-color: #ec4899;
+        }
+        
         @media (max-width: 768px) {
             .hero h1 {
                 font-size: 2rem;
@@ -292,7 +351,7 @@
 <body>
     <div class="container">
         <div class="hero">
-            <h1>Let's map out your success story.</h1>
+            <h1 id="mainHeadline">Let's map out your success story.</h1>
         </div>
         
         <div class="journey-card">
@@ -336,14 +395,14 @@
             <div class="question" id="results">
                 <div style="text-align: center; margin-bottom: 30px;">
                     <h2 style="color: #333; font-size: 1.8rem; margin-bottom: 20px;">
-                        With the <span id="selectedStyleName" style="color: #fb923c; font-weight: 700;">Balanced Method</span> approach, you could reach your goal by <span id="goalDate" style="color: #ec4899; font-weight: 700;">March 15, 2026</span>!
+                        With the <span id="selectedStyleName" onclick="openProtocolModal()" style="color: #fb923c; font-weight: 700; text-decoration: underline; cursor: pointer; transition: all 0.3s ease;">Balanced Method</span> approach, you could reach your goal by <span id="goalDate" style="color: #ec4899; font-weight: 700;">March 15, 2026</span>!
                     </h2>
                     <div class="result-highlight" id="weightLoss" style="font-size: 2.5rem; font-weight: 700; color: #fb923c; margin: 20px 0;">-0 lbs</div>
                     <div style="font-size: 1.1rem; color: #666;">Total weight loss in <span id="resultWeeks">12</span> weeks</div>
                 </div>
                 
-                <!-- Fasting Protocol Selector -->
-                <div style="margin-bottom: 30px;">
+                <!-- Fasting Protocol Selector (hidden by default, shown in modal) -->
+                <div id="protocolConfigurator" style="margin-bottom: 30px; display: none;">
                     <h4 style="color: #333; margin-bottom: 20px; text-align: center;">Customize Your Fasting Protocol</h4>
                     
                     <!-- Fast Duration -->
@@ -438,6 +497,16 @@
             
             <!-- Error -->
             <div class="error" id="error"></div>
+        </div>
+    </div>
+    
+    <!-- Protocol Configuration Modal -->
+    <div id="protocolModal" class="modal">
+        <div class="modal-content">
+            <span class="modal-close" onclick="closeProtocolModal()">&times;</span>
+            <div id="modalProtocolConfigurator">
+                <!-- Protocol configurator content will be moved here -->
+            </div>
         </div>
     </div>
     
@@ -623,6 +692,9 @@
             
             // Hide loading
             document.getElementById('loading').style.display = 'none';
+            
+            // Update main headline for results phase
+            document.getElementById('mainHeadline').textContent = 'Your Transformation Plan';
             
             // Update the UI with results
             updateResultsDisplay(data);
@@ -817,6 +889,38 @@
             }
         }
         
+        function openProtocolModal() {
+            // Move protocol configurator content to modal
+            const protocolConfigurator = document.getElementById('protocolConfigurator');
+            const modalContainer = document.getElementById('modalProtocolConfigurator');
+            
+            // Clone the content to modal
+            modalContainer.innerHTML = protocolConfigurator.innerHTML;
+            
+            // Show modal with animation
+            const modal = document.getElementById('protocolModal');
+            modal.style.display = 'flex';
+            setTimeout(() => {
+                modal.classList.add('show');
+            }, 10);
+        }
+        
+        function closeProtocolModal() {
+            const modal = document.getElementById('protocolModal');
+            modal.classList.remove('show');
+            setTimeout(() => {
+                modal.style.display = 'none';
+            }, 300);
+        }
+        
+        // Close modal when clicking outside
+        document.addEventListener('click', function(event) {
+            const modal = document.getElementById('protocolModal');
+            if (event.target === modal) {
+                closeProtocolModal();
+            }
+        });
+        
         function showError(message) {
             document.getElementById('loading').style.display = 'none';
             const errorDiv = document.getElementById('error');
@@ -829,6 +933,9 @@
             document.getElementById('results').classList.remove('active');
             document.getElementById('error').style.display = 'none';
             document.getElementById('loading').style.display = 'none';
+            
+            // Reset main headline
+            document.getElementById('mainHeadline').textContent = "Let's map out your success story.";
             
             // Show main question after a brief delay
             setTimeout(() => {
