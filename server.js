@@ -26,12 +26,33 @@ app.get('/api/time', (req, res) => {
 app.post('/api/calculate', (req, res) => {
   try {
     const { weight, weightUnit, bodyFat, activityLevel, tdeeOverride, fastingBlocks, ketosisStates, weeks, 
-            insulinSensitivity, fastingExperience, bodyFatPercentage } = req.body;
+            insulinSensitivity, fastingExperience, bodyFatPercentage, startDate } = req.body;
     
     // Validate inputs
-    if (!weight || !bodyFat || !activityLevel || !fastingBlocks) {
+    if (!weight || !bodyFat || !activityLevel || !fastingBlocks || !startDate) {
       return res.status(400).json({ error: 'Missing required fields' });
     }
+    
+    // Parse start date (avoid timezone issues by parsing manually)
+    const [year, month, day] = startDate.split('-').map(Number);
+    const startDateObj = new Date(year, month - 1, day); // month is 0-indexed
+    if (isNaN(startDateObj.getTime())) {
+      return res.status(400).json({ error: 'Invalid start date' });
+    }
+    
+    // Function to calculate date for each week
+    const getWeekDate = (weekNumber) => {
+      // Parse the date string manually to avoid timezone issues
+      const [year, month, day] = startDate.split('-').map(Number);
+      const weekDate = new Date(year, month - 1, day); // month is 0-indexed
+      weekDate.setDate(weekDate.getDate() + weekNumber * 7);
+      
+      // Format back to YYYY-MM-DD
+      const formattedYear = weekDate.getFullYear();
+      const formattedMonth = String(weekDate.getMonth() + 1).padStart(2, '0');
+      const formattedDay = String(weekDate.getDate()).padStart(2, '0');
+      return `${formattedYear}-${formattedMonth}-${formattedDay}`;
+    };
     
     // Individualization factors (with defaults)
     const insulinSensitivityFactor = insulinSensitivity || 'normal'; // 'low', 'normal', 'high'
@@ -112,6 +133,22 @@ app.post('/api/calculate', (req, res) => {
     
     // Weekly simulation results
     const weeklyResults = [];
+    
+    // Add Week 0 - Starting stats
+    weeklyResults.push({
+      week: 0,
+      date: getWeekDate(0),
+      weight: currentWeight,
+      bodyFat: currentBodyFat,
+      fatMass: currentFatMass,
+      fatFreeMass: currentFFM,
+      weeklyFatLoss: 0,
+      weeklyFFMLoss: 0,
+      totalWeightLoss: 0,
+      ketosisPhase: 'baseline',
+      proteinMaintenance: 0,
+      ffmPreservation: 0
+    });
     
     for (let week = 1; week <= numWeeks; week++) {
       let weeklyFatLoss = 0;
@@ -317,6 +354,7 @@ app.post('/api/calculate', (req, res) => {
       
               weeklyResults.push({
           week,
+          date: getWeekDate(week),
           weight: currentWeight,
           bodyFat: currentBodyFat,
           fatMass: currentFatMass,
@@ -356,9 +394,14 @@ app.post('/api/calculate', (req, res) => {
   }
 });
 
-// Serve the main page
+// Serve the main page (conversational landing)
 app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
+});
+
+// Serve the calculator page
+app.get('/calculator', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'calculator.html'));
 });
 
 // Start server

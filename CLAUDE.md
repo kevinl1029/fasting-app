@@ -71,3 +71,33 @@ The application uses research-based constants for metabolic modeling:
 - Fat oxidation cap: 69 kcal/kg-fat/day (for lean individuals)
 - Ketosis phase transitions: 16h → 24h → 48h → 72h (with personalization adjustments)
 - FFM preservation improves from 0% → 40% across ketosis phases
+
+## Testing Requirements
+
+**IMPORTANT**: Always test the full user workflow through the browser interface, not just backend API endpoints. Consider timezone issues and test both frontend and backend when making changes.
+
+### Testing Guidelines
+- Test complete user experience through the browser at http://localhost:3000
+- Consider timezone differences between server-side and client-side date handling
+- Test edge cases that affect user experience (date boundaries, timezone conversions)
+- Verify dates display correctly in user's timezone
+- When making changes involving dates/times, test both API endpoints AND browser display
+
+### Testing Checklist
+When making changes involving dates/times:
+- [ ] Test backend API directly with curl/testing tools
+- [ ] Test full browser workflow with actual form submission
+- [ ] Verify dates display correctly in user's timezone
+- [ ] Test edge cases (different timezones, date boundaries)
+- [ ] Confirm user input matches displayed results
+
+### Common Testing Commands
+```bash
+# Start server for browser testing
+npm start
+
+# Test specific date scenarios:
+# - Input Sept 1, 2025 and verify it shows Sept 1, not Aug 31
+# - Test with different start dates across month/year boundaries
+# - Verify weekly progression shows correct dates
+```
