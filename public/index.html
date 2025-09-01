@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Your Fasting Transformation Journey</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         * {
             margin: 0;
@@ -235,6 +236,40 @@
             display: none;
         }
         
+        .protocol-btn {
+            flex: 1;
+            min-width: 120px;
+            padding: 12px 16px;
+            border: 2px solid #e9ecef;
+            border-radius: 10px;
+            background: white;
+            color: #666;
+            font-size: 0.85rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-align: center;
+        }
+        
+        .protocol-btn:hover {
+            border-color: #fb923c;
+            background: rgba(251, 146, 60, 0.05);
+        }
+        
+        .protocol-btn.active {
+            border-color: #fb923c;
+            background: linear-gradient(135deg, rgba(252, 211, 77, 0.1), rgba(251, 146, 60, 0.1), rgba(236, 72, 153, 0.1));
+            color: #333;
+            box-shadow: 0 2px 8px rgba(251, 146, 60, 0.2);
+        }
+        
+        .protocol-btn strong {
+            color: #333;
+        }
+        
+        .protocol-btn.active strong {
+            color: #fb923c;
+        }
+        
         @media (max-width: 768px) {
             .hero h1 {
                 font-size: 2rem;
@@ -265,24 +300,16 @@
             <!-- Interactive Sentence -->
             <div class="question active" id="mainQuestion">
                 <div class="story-text" style="font-size: 1.3rem; line-height: 2;">
-                    I am a <input type="number" class="story-input" id="age" placeholder="30" min="18" max="80" style="width: 60px;"> year-old 
-                    <select class="story-input" id="gender" style="min-width: 90px;">
-                        <option value="">select</option>
-                        <option value="male">male</option>
-                        <option value="female">female</option>
-                    </select>. 
-                    I'm <input type="number" class="story-input" id="heightFeet" placeholder="5" min="4" max="7" style="width: 50px;">'<input type="number" class="story-input" id="heightInches" placeholder="8" min="0" max="11" style="width: 50px;">" tall, 
-                    weigh <input type="number" class="story-input" id="weight" placeholder="175" min="80" max="500" style="width: 80px;"> 
+                    I weigh <input type="number" class="story-input" id="weight" placeholder="175" min="80" max="500" style="width: 80px;"> 
                     <select class="story-input" id="weightUnit" style="min-width: 70px;">
                         <option value="lb">lbs</option>
                         <option value="kg">kg</option>
-                    </select>, 
+                    </select> 
                     and have about <input type="number" class="story-input" id="bodyFat" placeholder="20" min="5" max="50" step="0.1" style="width: 60px;">% body fat. 
                     My lifestyle is mostly 
                     <select class="story-input" id="lifestyle" style="min-width: 120px;">
-                        <option value="">select</option>
                         <option value="1.2">sedentary</option>
-                        <option value="1.375">lightly active</option>
+                        <option value="1.375" selected>lightly active</option>
                         <option value="1.55">moderately active</option>
                         <option value="1.725">very active</option>
                         <option value="1.9">extremely active</option>
@@ -308,9 +335,64 @@
             <!-- Results (inside journey-card) -->
             <div class="question" id="results">
                 <div style="text-align: center; margin-bottom: 30px;">
-                    <h2 style="color: #333; font-size: 2rem; margin-bottom: 10px;">Your Success Story</h2>
+                    <h2 style="color: #333; font-size: 1.8rem; margin-bottom: 20px;">
+                        With the <span id="selectedStyleName" style="color: #fb923c; font-weight: 700;">Balanced Method</span> approach, you could reach your goal by <span id="goalDate" style="color: #ec4899; font-weight: 700;">March 15, 2026</span>!
+                    </h2>
                     <div class="result-highlight" id="weightLoss" style="font-size: 2.5rem; font-weight: 700; color: #fb923c; margin: 20px 0;">-0 lbs</div>
                     <div style="font-size: 1.1rem; color: #666;">Total weight loss in <span id="resultWeeks">12</span> weeks</div>
+                </div>
+                
+                <!-- Fasting Protocol Selector -->
+                <div style="margin-bottom: 30px;">
+                    <h4 style="color: #333; margin-bottom: 20px; text-align: center;">Customize Your Fasting Protocol</h4>
+                    
+                    <!-- Fast Duration -->
+                    <div style="margin-bottom: 20px;">
+                        <h5 style="color: #666; margin-bottom: 10px; text-align: center;">Fast Duration</h5>
+                        <div style="display: flex; gap: 10px; justify-content: center; flex-wrap: wrap;">
+                            <button class="protocol-btn duration-btn active" data-duration="24" onclick="updateProtocol('duration', '24')">
+                                <strong>24 Hours</strong><br><small>Daily fasting</small>
+                            </button>
+                            <button class="protocol-btn duration-btn" data-duration="36" onclick="updateProtocol('duration', '36')">
+                                <strong>36 Hours</strong><br><small>Skip full day</small>
+                            </button>
+                            <button class="protocol-btn duration-btn" data-duration="48" onclick="updateProtocol('duration', '48')">
+                                <strong>48 Hours</strong><br><small>Two-day fast</small>
+                            </button>
+                            <button class="protocol-btn duration-btn" data-duration="72" onclick="updateProtocol('duration', '72')">
+                                <strong>72 Hours</strong><br><small>Three-day fast</small>
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <!-- Ketosis State -->
+                    <div style="margin-bottom: 20px;">
+                        <h5 style="color: #666; margin-bottom: 10px; text-align: center;">Starting State</h5>
+                        <div style="display: flex; gap: 10px; justify-content: center;">
+                            <button class="protocol-btn ketosis-btn active" data-ketosis="false" onclick="updateProtocol('ketosis', 'false')">
+                                <strong>Start Building Ketosis</strong><br><small>Begin ketosis adaptation</small>
+                            </button>
+                            <button class="protocol-btn ketosis-btn" data-ketosis="true" onclick="updateProtocol('ketosis', 'true')">
+                                <strong>Already Ketosis-Adapted</strong><br><small>Start ketosis-adapted</small>
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <!-- Frequency -->
+                    <div style="margin-bottom: 20px;">
+                        <h5 style="color: #666; margin-bottom: 10px; text-align: center;">Frequency per Week</h5>
+                        <div style="display: flex; gap: 10px; justify-content: center;">
+                            <button class="protocol-btn frequency-btn" data-frequency="1" onclick="updateProtocol('frequency', '1')">
+                                <strong>1x per Week</strong><br><small>Once weekly</small>
+                            </button>
+                            <button class="protocol-btn frequency-btn active" data-frequency="2" onclick="updateProtocol('frequency', '2')">
+                                <strong>2x per Week</strong><br><small>Twice weekly</small>
+                            </button>
+                            <button class="protocol-btn frequency-btn" data-frequency="3" onclick="updateProtocol('frequency', '3')">
+                                <strong>3x per Week</strong><br><small>Three times weekly</small>
+                            </button>
+                        </div>
+                    </div>
                 </div>
                 
                 <div style="display: flex; justify-content: space-around; margin: 30px 0; text-align: center;">
@@ -336,6 +418,14 @@
                     </div>
                 </div>
                 
+                <!-- Weight Loss Trajectory Chart -->
+                <div style="margin: 30px 0; padding: 20px; background: #f8f9fa; border-radius: 10px;">
+                    <h4 style="color: #333; margin-bottom: 20px; text-align: center;">📈 Your Weight Loss Trajectory</h4>
+                    <div style="position: relative; height: 250px;">
+                        <canvas id="weightChart"></canvas>
+                    </div>
+                </div>
+                
                 <div style="display: flex; gap: 15px; margin-top: 30px;">
                     <a href="/calculator" style="flex: 1; padding: 15px 20px; border: 2px solid #fb923c; border-radius: 10px; background: transparent; color: #fb923c; font-size: 1rem; font-weight: 600; text-decoration: none; display: block; text-align: center; transition: all 0.3s ease;">
                         See Detailed Analysis
@@ -353,36 +443,111 @@
     
     <script>
         let userData = {};
+        let currentProtocol = {
+            duration: 24,
+            ketosis: false,
+            frequency: 2
+        };
+        let apiResults = null;
         
-        // Calculate weeks needed to reach target body fat
-        function calculateWeeksToTarget(currentBF, targetBF, weeklyFatLossRate) {
-            const fatLossNeeded = currentBF - targetBF;
-            const weeksNeeded = Math.ceil(fatLossNeeded / weeklyFatLossRate);
-            return Math.min(Math.max(weeksNeeded, 4), 52); // Between 4-52 weeks
+        // Set development defaults if running on localhost
+        function setDevelopmentDefaults() {
+            if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+                document.getElementById('weight').value = '173';
+                document.getElementById('weightUnit').value = 'lb';
+                document.getElementById('bodyFat').value = '22';
+                // lifestyle is already defaulted to 'lightly active' (1.375)
+                document.getElementById('targetBodyFat').value = '12';
+            }
         }
         
-        // Determine optimal fasting plan based on user profile
-        function getOptimalFastingPlan(bodyFat, activityLevel, targetBF) {
-            const fatLossNeeded = bodyFat - targetBF;
-            
-            if (fatLossNeeded <= 5) {
-                // Light fat loss - shorter fasts
-                return [24, 20, 0]; // 24h + 20h fasts
-            } else if (fatLossNeeded <= 10) {
-                // Moderate fat loss - standard plan
-                return [36, 24, 0]; // 36h + 24h fasts  
-            } else {
-                // Significant fat loss - longer fasts
-                return [48, 24, 0]; // 48h + 24h fasts
+        // Call development defaults when page loads
+        document.addEventListener('DOMContentLoaded', setDevelopmentDefaults);
+        
+        // Find minimum weeks to reach target body fat or below
+        async function findOptimalWeeks(userData, targetBF, protocol) {
+            // Try different week counts to find minimum weeks to reach target or below
+            for (let weeks = 1; weeks <= 52; weeks += 1) {
+                const testData = {
+                    ...userData,
+                    weeks: weeks,
+                    fastingBlocks: protocolToBlocks(protocol),
+                    ketosisStates: protocolToKetosisStates(protocol),
+                    fastingExperience: getFastingExperience(protocol)
+                };
+                
+                try {
+                    const response = await fetch('/api/calculate', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(testData)
+                    });
+                    
+                    const result = await response.json();
+                    if (response.ok) {
+                        const finalBF = result.summary.finalBodyFat;
+                        
+                        // If we've reached the target or below, return this week count
+                        if (finalBF <= targetBF) {
+                            return weeks;
+                        }
+                    }
+                } catch (error) {
+                    console.error('Error in findOptimalWeeks:', error);
+                }
             }
+            
+            // If we couldn't reach the target in 52 weeks, return 52
+            return 52;
+        }
+        
+        // Get fasting experience level based on protocol
+        function getFastingExperience(protocol) {
+            if (protocol.duration >= 72 || protocol.frequency >= 3) {
+                return 'advanced';
+            } else if (protocol.duration >= 48 || protocol.frequency >= 2) {
+                return 'intermediate'; 
+            } else {
+                return 'beginner';
+            }
+        }
+        
+        // Convert protocol to fasting blocks array
+        function protocolToBlocks(protocol) {
+            const blocks = [0, 0, 0];
+            
+            // Distribute fasts based on frequency
+            for (let i = 0; i < Math.min(protocol.frequency, 3); i++) {
+                blocks[i] = protocol.duration;
+            }
+            
+            return blocks;
+        }
+        
+        // Convert protocol to ketosis states array  
+        function protocolToKetosisStates(protocol) {
+            const states = [false, false, false];
+            
+            // Set ketosis state for active blocks
+            for (let i = 0; i < Math.min(protocol.frequency, 3); i++) {
+                states[i] = protocol.ketosis;
+            }
+            
+            return states;
+        }
+        
+        // Get a readable name for the current protocol
+        function getProtocolName(protocol) {
+            const durName = protocol.duration + '-hour';
+            const ketosisText = protocol.ketosis ? ' (ketosis-adapted)' : '';
+            const freqText = protocol.frequency === 1 ? ' weekly' : 
+                           protocol.frequency === 2 ? ' bi-weekly' : 
+                           ' tri-weekly';
+            return durName + ketosisText + freqText;
         }
         
         async function calculateResults() {
             // Collect form data
-            const age = parseInt(document.getElementById('age').value) || 30;
-            const gender = document.getElementById('gender').value || 'male';
-            const heightFeet = parseInt(document.getElementById('heightFeet').value) || 5;
-            const heightInches = parseInt(document.getElementById('heightInches').value) || 8;
             const weight = parseFloat(document.getElementById('weight').value) || 175;
             const weightUnit = document.getElementById('weightUnit').value;
             const bodyFat = parseFloat(document.getElementById('bodyFat').value) || 20;
@@ -400,15 +565,13 @@
                 return;
             }
             
-            // Calculate optimal plan
-            const fastingBlocks = getOptimalFastingPlan(bodyFat, lifestyle, targetBodyFat);
-            const estimatedWeeks = calculateWeeksToTarget(bodyFat, targetBodyFat, 0.5); // Assume 0.5% BF loss per week
-            
-            // Set defaults based on profile
+            // Set defaults based on profile and protocol
             const insulinSensitivity = bodyFat > 25 ? 'low' : (bodyFat < 15 ? 'high' : 'normal');
-            const fastingExperience = 'beginner'; // Default to beginner for safety
+            const fastingExperience = getFastingExperience(currentProtocol);
+            const fastingBlocks = protocolToBlocks(currentProtocol);
+            const ketosisStates = protocolToKetosisStates(currentProtocol);
             
-            // Prepare API data
+            // Prepare API data (without weeks initially)
             userData = {
                 weight: weight,
                 weightUnit: weightUnit,
@@ -417,14 +580,8 @@
                 insulinSensitivity: insulinSensitivity,
                 fastingExperience: fastingExperience,
                 startDate: new Date().toISOString().split('T')[0],
-                weeks: estimatedWeeks,
                 fastingBlocks: fastingBlocks,
-                ketosisStates: [false, false, false],
-                // Store additional data for results display
-                age: age,
-                gender: gender,
-                heightFeet: heightFeet,
-                heightInches: heightInches,
+                ketosisStates: ketosisStates,
                 targetBodyFat: targetBodyFat
             };
             
@@ -433,6 +590,13 @@
             document.getElementById('loading').style.display = 'block';
             
             try {
+                // First, find the optimal number of weeks to reach target
+                const optimalWeeks = await findOptimalWeeks(userData, targetBodyFat, currentProtocol);
+                
+                // Update userData with the optimal weeks
+                userData.weeks = optimalWeeks;
+                
+                // Now make the final calculation with the optimal weeks
                 const response = await fetch('/api/calculate', {
                     method: 'POST',
                     headers: {
@@ -454,9 +618,23 @@
         }
         
         function displayResults(data) {
+            // Store API results for protocol switching
+            apiResults = data;
+            
             // Hide loading
             document.getElementById('loading').style.display = 'none';
             
+            // Update the UI with results
+            updateResultsDisplay(data);
+            
+            // Update active protocol buttons
+            updateActiveProtocolButtons();
+            
+            // Show results with smooth transition
+            document.getElementById('results').classList.add('active');
+        }
+        
+        function updateResultsDisplay(data) {
             // Convert units for display
             const weightMultiplier = userData.weightUnit === 'lb' ? 2.20462 : 1;
             const weightUnit = userData.weightUnit === 'lb' ? 'lbs' : 'kg';
@@ -467,10 +645,22 @@
             const totalFatLost = data.summary.totalFatLost * weightMultiplier;
             const finalBodyFat = data.summary.finalBodyFat;
             
-            // Check if target was reached
-            const targetReached = finalBodyFat <= userData.targetBodyFat;
-            const timeframe = targetReached ? userData.weeks : Math.ceil(userData.weeks * (userData.targetBodyFat / finalBodyFat));
+            // Calculate goal date
+            const startDate = new Date(userData.startDate);
+            const goalDate = new Date(startDate);
+            goalDate.setDate(goalDate.getDate() + (userData.weeks * 7));
+            const goalDateString = goalDate.toLocaleDateString('en-US', { 
+                month: 'long', 
+                day: 'numeric', 
+                year: 'numeric' 
+            });
             
+            // Update dynamic headline
+            const styleName = getProtocolName(currentProtocol);
+            document.getElementById('selectedStyleName').textContent = styleName;
+            document.getElementById('goalDate').textContent = goalDateString;
+            
+            // Update result numbers
             document.getElementById('weightLoss').textContent = `-${totalWeightLost.toFixed(1)} ${weightUnit}`;
             document.getElementById('resultWeeks').textContent = userData.weeks;
             document.getElementById('finalWeight').textContent = `${finalWeight.toFixed(1)} ${weightUnit}`;
@@ -483,8 +673,148 @@
             const musclePreservation = ((initialFFM - totalFFMLost) / initialFFM * 100);
             document.getElementById('muscleMaintained').textContent = `${musclePreservation.toFixed(1)}%`;
             
-            // Show results with smooth transition
-            document.getElementById('results').classList.add('active');
+            // Update weight loss trajectory chart
+            updateWeightChart(data, weightMultiplier, weightUnit);
+        }
+        
+        // Global variable to store chart instance
+        let weightChart = null;
+        
+        function updateWeightChart(data, weightMultiplier, weightUnit) {
+            const ctx = document.getElementById('weightChart').getContext('2d');
+            
+            // Destroy existing chart if it exists
+            if (weightChart) {
+                weightChart.destroy();
+            }
+            
+            // Prepare data from API response
+            const weeks = data.weeklyResults || [];
+            const labels = weeks.map(week => week.week === 0 ? 'Start' : `Week ${week.week}`);
+            const weights = weeks.map(week => (week.weight * weightMultiplier).toFixed(1));
+            
+            // Create gradient for the line
+            const gradient = ctx.createLinearGradient(0, 0, 0, 400);
+            gradient.addColorStop(0, 'rgba(251, 146, 60, 0.6)');
+            gradient.addColorStop(1, 'rgba(251, 146, 60, 0.1)');
+            
+            weightChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: `Weight (${weightUnit})`,
+                        data: weights,
+                        borderColor: '#fb923c',
+                        backgroundColor: gradient,
+                        borderWidth: 3,
+                        fill: true,
+                        tension: 0.4,
+                        pointBackgroundColor: '#fb923c',
+                        pointBorderColor: '#fff',
+                        pointBorderWidth: 2,
+                        pointRadius: 5,
+                        pointHoverRadius: 7
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            display: false
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: false,
+                            grid: {
+                                color: 'rgba(0, 0, 0, 0.1)'
+                            },
+                            ticks: {
+                                callback: function(value) {
+                                    return value.toFixed(1) + ' ' + weightUnit;
+                                }
+                            }
+                        },
+                        x: {
+                            grid: {
+                                color: 'rgba(0, 0, 0, 0.1)'
+                            }
+                        }
+                    },
+                    elements: {
+                        point: {
+                            hoverBackgroundColor: '#ec4899'
+                        }
+                    }
+                }
+            });
+        }
+        
+        function updateActiveProtocolButtons() {
+            // Update duration buttons
+            document.querySelectorAll('.duration-btn').forEach(btn => {
+                btn.classList.toggle('active', parseInt(btn.dataset.duration) === currentProtocol.duration);
+            });
+            
+            // Update ketosis buttons
+            document.querySelectorAll('.ketosis-btn').forEach(btn => {
+                btn.classList.toggle('active', (btn.dataset.ketosis === 'true') === currentProtocol.ketosis);
+            });
+            
+            // Update frequency buttons
+            document.querySelectorAll('.frequency-btn').forEach(btn => {
+                btn.classList.toggle('active', parseInt(btn.dataset.frequency) === currentProtocol.frequency);
+            });
+        }
+        
+        async function updateProtocol(type, value) {
+            // Update the protocol
+            if (type === 'duration') {
+                currentProtocol.duration = parseInt(value);
+            } else if (type === 'ketosis') {
+                currentProtocol.ketosis = value === 'true';
+            } else if (type === 'frequency') {
+                currentProtocol.frequency = parseInt(value);
+            }
+            
+            // If we have calculated results, recalculate with new protocol
+            if (userData.weight && apiResults) {
+                try {
+                    // Update userData with new protocol (without weeks initially)
+                    userData.fastingBlocks = protocolToBlocks(currentProtocol);
+                    userData.ketosisStates = protocolToKetosisStates(currentProtocol);
+                    userData.fastingExperience = getFastingExperience(currentProtocol);
+                    
+                    // Find optimal weeks for the new protocol
+                    const optimalWeeks = await findOptimalWeeks(userData, userData.targetBodyFat, currentProtocol);
+                    userData.weeks = optimalWeeks;
+                    
+                    // Recalculate with new protocol and optimal weeks
+                    const response = await fetch('/api/calculate', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify(userData)
+                    });
+                    
+                    const result = await response.json();
+                    
+                    if (response.ok) {
+                        updateResultsDisplay(result);
+                        updateActiveProtocolButtons();
+                    } else {
+                        showError('Failed to recalculate with new protocol');
+                    }
+                } catch (error) {
+                    showError('Network error: ' + error.message);
+                }
+            } else {
+                // Just update the UI if no calculation has been done yet
+                updateActiveProtocolButtons();
+            }
         }
         
         function showError(message) {
