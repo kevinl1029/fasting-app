@@ -399,9 +399,14 @@ app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
-// Serve the calculator page
+// Serve the timer page (home screen for onboarded users)
+app.get('/timer', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'timer.html'));
+});
+
+// Serve the calculator page (removed for now, redirects to timer)
 app.get('/calculator', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'calculator.html'));
+  res.redirect('/timer');
 });
 
 // Start server

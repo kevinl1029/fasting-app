@@ -1,0 +1,700 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fasting Timer - Your Journey</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background: linear-gradient(135deg, #fcd34d 0%, #fb923c 50%, #ec4899 100%);
+            min-height: 100vh;
+        }
+        
+        .container {
+            max-width: 400px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        
+        .timer-card {
+            background: white;
+            border-radius: 20px;
+            padding: 30px;
+            margin: 20px 0;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            text-align: center;
+            min-height: 600px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+        
+        .status-indicator {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: #28a745;
+            display: inline-block;
+            margin-right: 8px;
+        }
+        
+        .status-indicator.fasting {
+            background: #fb923c;
+        }
+        
+        .status-indicator.feeding {
+            background: #28a745;
+        }
+        
+        .status-text {
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: #666;
+            margin-bottom: 20px;
+        }
+        
+        .circular-timer {
+            width: 280px;
+            height: 280px;
+            margin: 40px auto;
+            position: relative;
+            border-radius: 50%;
+            background: #f0f0f0;
+            box-shadow: 
+                inset 8px 8px 16px rgba(163, 177, 198, 0.6),
+                inset -8px -8px 16px rgba(255, 255, 255, 0.8);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: visible; /* Allow pulse to expand beyond container */
+        }
+        
+        .timer-progress-outer {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 260px;
+            height: 260px;
+            border-radius: 50%;
+            background: conic-gradient(#ec4899 0deg, #f0f0f0 0deg);
+            transition: all 0.3s ease;
+            transform: translate(-50%, -50%);
+        }
+        
+        .timer-progress-inner {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 230px;
+            height: 230px;
+            border-radius: 50%;
+            background: conic-gradient(#fb923c 0deg, #f8f9fa 0deg);
+            transition: all 0.3s ease;
+            transform: translate(-50%, -50%);
+        }
+        
+        .timer-progress-minute {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 200px;
+            height: 200px;
+            border-radius: 50%;
+            background: conic-gradient(#fcd34d 0deg, #f8f9fa 0deg);
+            transition: all 0.3s ease;
+            opacity: 0;
+            transform: translate(-50%, -50%);
+        }
+        
+        .timer-progress-minute.visible {
+            opacity: 1;
+        }
+        
+        .radar-pulse {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 0;
+            height: 0;
+            border: 2px solid rgba(252, 211, 77, calc(var(--pulse-opacity, 0.8)));
+            border-radius: 50%;
+            transform: translate(-50%, -50%);
+            animation: radarPulse 1s ease-out infinite;
+            z-index: 1;
+            opacity: 0;
+            pointer-events: none;
+        }
+        
+        .radar-pulse.visible {
+            opacity: 1;
+        }
+        
+        @keyframes radarPulse {
+            0% {
+                width: 0;
+                height: 0;
+                opacity: calc(var(--pulse-opacity, 0.8));
+                border-width: 3px;
+            }
+            50% {
+                opacity: calc(var(--pulse-opacity, 0.8) * 0.6);
+                border-width: 2px;
+            }
+            100% {
+                width: 280px;  /* Expands to outer ring edge */
+                height: 280px;
+                opacity: 0;
+                border-width: 1px;
+            }
+        }
+        
+        .timer-inner {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 160px;
+            height: 160px;
+            border-radius: 50%;
+            background: #f0f0f0;
+            box-shadow: 
+                8px 8px 16px rgba(163, 177, 198, 0.6),
+                -8px -8px 16px rgba(255, 255, 255, 0.8);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 4;
+            transform: translate(-50%, -50%);
+        }
+        
+        .timer-display {
+            font-size: 2.5rem;
+            font-weight: 700;
+            color: #333;
+            font-family: 'Courier New', monospace;
+            margin: 5px 0;
+        }
+        
+        .timer-label {
+            font-size: 0.9rem;
+            color: #666;
+            font-weight: 500;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        
+        .phase-info {
+            background: linear-gradient(135deg, rgba(251, 146, 60, 0.08), rgba(236, 72, 153, 0.08));
+            padding: 20px;
+            border-radius: 15px;
+            margin: 20px 0;
+            border-left: 4px solid #fb923c;
+        }
+        
+        .phase-title {
+            color: #fb923c;
+            font-weight: 600;
+            font-size: 1.1rem;
+            margin-bottom: 10px;
+        }
+        
+        .phase-description {
+            color: #666;
+            font-size: 0.95rem;
+            line-height: 1.5;
+        }
+        
+        .start-fast-btn {
+            width: 100%;
+            max-width: 300px;
+            margin: 0 auto 30px;
+            padding: 20px 40px;
+            border: none;
+            border-radius: 15px;
+            font-size: 1.3rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            background: linear-gradient(135deg, #fcd34d 0%, #fb923c 50%, #ec4899 100%);
+            color: white;
+            box-shadow: 0 8px 25px rgba(251, 146, 60, 0.4);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        
+        .start-fast-btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 12px 35px rgba(251, 146, 60, 0.5);
+        }
+        
+        .control-buttons {
+            display: flex;
+            gap: 15px;
+            margin: 20px 0;
+            justify-content: center;
+        }
+        
+        .btn {
+            flex: 1;
+            padding: 15px 20px;
+            border: none;
+            border-radius: 10px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .btn-primary {
+            background: linear-gradient(135deg, #fcd34d 0%, #fb923c 50%, #ec4899 100%);
+            color: white;
+        }
+        
+        .btn-secondary {
+            background: transparent;
+            border: 2px solid #fb923c;
+            color: #fb923c;
+        }
+        
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(251, 146, 60, 0.4);
+        }
+        
+        .scheduled-fast {
+            background: linear-gradient(135deg, rgba(251, 146, 60, 0.08), rgba(236, 72, 153, 0.08));
+            padding: 20px;
+            border-radius: 15px;
+            margin: 20px 0;
+            border-left: 4px solid #fb923c;
+        }
+        
+        .scheduled-title {
+            color: #fb923c;
+            font-weight: 600;
+            font-size: 1rem;
+            margin-bottom: 10px;
+        }
+        
+        .scheduled-info {
+            color: #666;
+            font-size: 0.95rem;
+            line-height: 1.4;
+        }
+        
+        .time-display {
+            margin: 20px 0;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 10px;
+        }
+        
+        .time-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin: 8px 0;
+        }
+        
+        .time-label {
+            color: #666;
+            font-weight: 500;
+        }
+        
+        .time-value {
+            color: #333;
+            font-weight: 700;
+            font-family: 'Courier New', monospace;
+        }
+        
+        .stats-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin: 25px 0;
+        }
+        
+        .stat-item {
+            text-align: center;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 10px;
+        }
+        
+        .stat-value {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: #333;
+        }
+        
+        .stat-label {
+            font-size: 0.9rem;
+            color: #666;
+            margin-top: 5px;
+        }
+        
+        .welcome-message {
+            text-align: center;
+            color: white;
+            padding: 20px 0;
+            margin-bottom: 20px;
+        }
+        
+        .welcome-message h1 {
+            font-size: 1.8rem;
+            margin-bottom: 10px;
+            font-weight: 700;
+        }
+        
+        .welcome-message p {
+            font-size: 1.1rem;
+            opacity: 0.9;
+        }
+        
+        @media (max-width: 768px) {
+            .container {
+                padding: 15px;
+            }
+            
+            .timer-display {
+                font-size: 2.5rem;
+            }
+            
+            .control-buttons {
+                flex-direction: column;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="welcome-message">
+            <h1>Welcome back!</h1>
+            <p>Ready for your next fasting session?</p>
+        </div>
+        
+        <div class="timer-card">
+            <!-- Pre-Fast State -->
+            <div id="preFastState">
+                <div class="scheduled-fast">
+                    <div class="scheduled-title">🗓️ Next Scheduled Fast</div>
+                    <div class="scheduled-info">
+                        Tomorrow at 8:00 PM • 24-hour fast<br>
+                        <small style="opacity: 0.7;">Tap to modify schedule</small>
+                    </div>
+                </div>
+                
+                <button class="start-fast-btn" onclick="startFast()">
+                    Start Fast
+                </button>
+                
+                <div class="stats-grid">
+                    <div class="stat-item">
+                        <div class="stat-value" id="totalFasts">3</div>
+                        <div class="stat-label">Completed Fasts</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value" id="longestFast">36h</div>
+                        <div class="stat-label">Longest Fast</div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Active Fast State -->
+            <div id="activeFastState" style="display: none;">
+                <div class="status-text">
+                    <span class="status-indicator fasting" id="statusIndicator"></span>
+                    <span id="statusText">Fasting Active</span>
+                </div>
+                
+                <div class="circular-timer">
+                    <div class="timer-progress-outer" id="timerProgressOuter"></div>
+                    <div class="timer-progress-inner" id="timerProgressInner"></div>
+                    <div class="timer-progress-minute" id="timerProgressMinute"></div>
+                    <div class="radar-pulse" id="radarPulse"></div>
+                    <div class="timer-inner">
+                        <div class="timer-display" id="timerDisplay">12:30</div>
+                        <div class="timer-label" id="timerLabel">ELAPSED</div>
+                    </div>
+                </div>
+                
+                <div class="time-display">
+                    <div class="time-item">
+                        <span class="time-label">Started</span>
+                        <span class="time-value" id="startTime">8:00 PM</span>
+                    </div>
+                    <div class="time-item">
+                        <span class="time-label">Target End</span>
+                        <span class="time-value" id="endTime">8:00 PM</span>
+                    </div>
+                </div>
+                
+                <div class="phase-info" id="phaseInfo">
+                    <div class="phase-title" id="phaseTitle">Metabolic Shift</div>
+                    <div class="phase-description" id="phaseDescription">
+                        Your body is starting to switch from glucose to fat burning. Energy may fluctuate.
+                    </div>
+                </div>
+                
+                <div class="control-buttons">
+                    <button class="btn btn-secondary" onclick="endFast()">
+                        End Fast
+                    </button>
+                    <button class="btn btn-secondary" onclick="resetTimer()">
+                        Reset
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        // Timer state
+        let isRunning = false;
+        let fastStartTime = null;
+        let elapsedTime = 0;
+        let timerInterval = null;
+        let fastDuration = 24; // Default 24-hour fast
+        
+        // Fasting phases with descriptions
+        const phases = {
+            0: {
+                title: "Getting Started",
+                description: "Your body is beginning to use stored glucose and transitioning away from constant feeding."
+            },
+            4: {
+                title: "Early Adaptation", 
+                description: "Blood sugar stabilizing. Initial hunger pangs are normal as your body adjusts."
+            },
+            8: {
+                title: "Metabolic Shift",
+                description: "Your body is starting to switch from glucose to fat burning. Energy may fluctuate."
+            },
+            12: {
+                title: "Fat Burning Mode",
+                description: "Ketone production increasing. You may start feeling more focused and energized."
+            },
+            16: {
+                title: "Deep Ketosis",
+                description: "Significant ketone production. Mental clarity improving, hunger often subsides."
+            },
+            24: {
+                title: "Optimal Fat Burning",
+                description: "Peak fat oxidation and ketone production. Maximum metabolic benefits activated."
+            },
+            36: {
+                title: "Advanced Ketosis", 
+                description: "Deep therapeutic ketosis. Enhanced autophagy and cellular repair processes."
+            },
+            48: {
+                title: "Extended Benefits",
+                description: "Maximum autophagy, growth hormone elevation, and metabolic optimization."
+            }
+        };
+        
+        // Start a fast
+        function startFast() {
+            document.getElementById('preFastState').style.display = 'none';
+            document.getElementById('activeFastState').style.display = 'block';
+            
+            isRunning = true;
+            fastStartTime = new Date();
+            elapsedTime = 0;
+            
+            // Set start and end times
+            updateTimeDisplay();
+            
+            // Initial display update
+            updateTimerDisplay();
+            
+            // Start the timer interval
+            timerInterval = setInterval(() => {
+                elapsedTime = Date.now() - fastStartTime.getTime();
+                updateTimerDisplay();
+            }, 1000);
+        }
+        
+        // End a fast
+        function endFast() {
+            if (isRunning) {
+                clearInterval(timerInterval);
+                isRunning = false;
+            }
+            
+            document.getElementById('activeFastState').style.display = 'none';
+            document.getElementById('preFastState').style.display = 'block';
+        }
+        
+        // Update timer display with elapsed/remaining logic
+        function updateTimerDisplay() {
+            const totalFastDuration = fastDuration * 60 * 60 * 1000; // Convert hours to milliseconds
+            const remainingTime = Math.max(0, totalFastDuration - elapsedTime);
+            const isShowingElapsed = elapsedTime <= totalFastDuration / 2;
+            
+            let displayTime, label;
+            
+            if (isShowingElapsed) {
+                displayTime = elapsedTime;
+                label = 'ELAPSED';
+            } else {
+                displayTime = remainingTime;
+                label = remainingTime > 0 ? 'REMAINING' : 'COMPLETE';
+            }
+            
+            const hours = Math.floor(displayTime / (1000 * 60 * 60));
+            const minutes = Math.floor((displayTime % (1000 * 60 * 60)) / (1000 * 60));
+            const seconds = Math.floor((displayTime % (1000 * 60)) / 1000);
+            
+            // Show seconds for first hour, then switch to HH:MM
+            const showSeconds = elapsedTime < (60 * 60 * 1000); // First 60 minutes
+            
+            if (showSeconds) {
+                document.getElementById('timerDisplay').textContent = 
+                    `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+            } else {
+                document.getElementById('timerDisplay').textContent = 
+                    `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
+            }
+            
+            document.getElementById('timerLabel').textContent = label;
+            
+            // Update triple-layer circular progress
+            
+            // Outer circle: Overall fast progress (24 hours)
+            const overallProgressPercent = Math.min(100, (elapsedTime / totalFastDuration) * 100);
+            const overallProgressDegrees = (overallProgressPercent / 100) * 360;
+            document.getElementById('timerProgressOuter').style.background = 
+                `conic-gradient(#ec4899 ${overallProgressDegrees}deg, #f0f0f0 ${overallProgressDegrees}deg)`;
+            
+            // Inner circle: Current hour progress (resets every hour)
+            const millisecondsInHour = 60 * 60 * 1000;
+            const currentHourProgress = (elapsedTime % millisecondsInHour) / millisecondsInHour;
+            const hourProgressDegrees = currentHourProgress * 360;
+            document.getElementById('timerProgressInner').style.background = 
+                `conic-gradient(#fb923c ${hourProgressDegrees}deg, #f8f9fa ${hourProgressDegrees}deg)`;
+            
+            // Innermost circle: First minute and last minute logic
+            const minuteElement = document.getElementById('timerProgressMinute');
+            const radarPulse = document.getElementById('radarPulse');
+            const millisecondsInMinute = 60 * 1000;
+            // Use the remainingTime already calculated above
+            
+            if (elapsedTime <= millisecondsInMinute) {
+                // First minute: Show progress and fade out pulse
+                const minuteProgress = elapsedTime / millisecondsInMinute;
+                const minuteProgressDegrees = minuteProgress * 360;
+                
+                minuteElement.classList.add('visible');
+                minuteElement.style.background = 
+                    `conic-gradient(#fcd34d ${minuteProgressDegrees}deg, #f8f9fa ${minuteProgressDegrees}deg)`;
+                
+                // Show radar pulse with fade out intensity over the minute (strong to weak)
+                // Use a slower fade curve: stays strong until 75% through, then fades to 30%
+                const firstMinutePulseIntensity = minuteProgress < 0.75 ? 
+                    1 - (minuteProgress * 0.3) :  // Slow fade from 1.0 to 0.7 over first 75%
+                    0.7 - ((minuteProgress - 0.75) / 0.25) * 0.4; // Faster fade from 0.7 to 0.3 over last 25%
+                
+                radarPulse.classList.add('visible');
+                radarPulse.style.setProperty('--pulse-opacity', Math.max(0.3, firstMinutePulseIntensity));
+                
+            } else if (remainingTime <= millisecondsInMinute && remainingTime > 0) {
+                // Last minute: Show progress and fade in pulse
+                const lastMinuteProgress = (millisecondsInMinute - remainingTime) / millisecondsInMinute;
+                const lastMinuteProgressDegrees = lastMinuteProgress * 360;
+                
+                minuteElement.classList.add('visible');
+                minuteElement.style.background = 
+                    `conic-gradient(#fcd34d ${lastMinuteProgressDegrees}deg, #f8f9fa ${lastMinuteProgressDegrees}deg)`;
+                
+                // Show radar pulse with fade in intensity over the last minute (weak to strong)
+                // Start at 30% and build to full intensity more gradually
+                const lastMinutePulseIntensity = lastMinuteProgress < 0.25 ? 
+                    0.3 + (lastMinuteProgress / 0.25) * 0.4 : // Slow build from 0.3 to 0.7 over first 25%
+                    0.7 + ((lastMinuteProgress - 0.25) / 0.75) * 0.3; // Build from 0.7 to 1.0 over last 75%
+                    
+                radarPulse.classList.add('visible');
+                radarPulse.style.setProperty('--pulse-opacity', Math.min(1.0, lastMinutePulseIntensity));
+                
+            } else {
+                // Hide minute ring and pulse during middle period
+                minuteElement.classList.remove('visible');
+                radarPulse.classList.remove('visible');
+            }
+            
+            // Update phase info
+            const elapsedHours = Math.floor(elapsedTime / (1000 * 60 * 60));
+            updatePhaseInfo(elapsedHours);
+        }
+        
+        // Update start and end time display
+        function updateTimeDisplay() {
+            if (!fastStartTime) return;
+            
+            const startTime = fastStartTime;
+            const endTime = new Date(fastStartTime.getTime() + (fastDuration * 60 * 60 * 1000));
+            
+            const formatTime = (date) => {
+                return date.toLocaleTimeString('en-US', { 
+                    hour: 'numeric', 
+                    minute: '2-digit',
+                    hour12: true 
+                });
+            };
+            
+            document.getElementById('startTime').textContent = formatTime(startTime);
+            document.getElementById('endTime').textContent = formatTime(endTime);
+        }
+        
+        // Update phase information based on elapsed hours
+        function updatePhaseInfo(hours) {
+            let currentPhase = phases[0];
+            
+            // Find the appropriate phase
+            for (const phaseHour in phases) {
+                if (hours >= parseInt(phaseHour)) {
+                    currentPhase = phases[phaseHour];
+                }
+            }
+            
+            document.getElementById('phaseTitle').textContent = currentPhase.title;
+            document.getElementById('phaseDescription').textContent = currentPhase.description;
+        }
+        
+        
+        
+        // Reset timer
+        function resetTimer() {
+            if (isRunning) {
+                clearInterval(timerInterval);
+                isRunning = false;
+            }
+            
+            // Reset to pre-fast state
+            document.getElementById('activeFastState').style.display = 'none';
+            document.getElementById('preFastState').style.display = 'block';
+            
+            elapsedTime = 0;
+            fastStartTime = null;
+        }
+        
+        // Load saved stats (placeholder for now)
+        function loadStats() {
+            // This would connect to user data in a real app
+            document.getElementById('totalFasts').textContent = '0';
+            document.getElementById('longestFast').textContent = '0h';
+        }
+        
+        // Initialize
+        loadStats();
+    </script>
+</body>
+</html>

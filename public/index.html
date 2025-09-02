@@ -472,6 +472,10 @@
                         <strong><span id="fatLost">0</span> lbs</strong>
                     </div>
                     <div style="display: flex; justify-content: space-between; margin: 15px 0; font-size: 1rem;">
+                        <span>Average weekly fat loss:</span>
+                        <strong style="color: #fb923c;"><span id="avgWeeklyFatLoss">0</span> lbs/week</strong>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; margin: 15px 0; font-size: 1rem;">
                         <span>Muscle preservation:</span>
                         <strong style="color: #28a745;"><span id="muscleMaintained">95%</span></strong>
                     </div>
@@ -486,12 +490,16 @@
                 </div>
                 
                 <div style="display: flex; gap: 15px; margin-top: 30px;">
-                    <a href="/calculator" style="flex: 1; padding: 15px 20px; border: 2px solid #fb923c; border-radius: 10px; background: transparent; color: #fb923c; font-size: 1rem; font-weight: 600; text-decoration: none; display: block; text-align: center; transition: all 0.3s ease;">
-                        See Detailed Analysis
+                    <a href="/timer" style="flex: 1; padding: 15px 20px; border: 2px solid #fb923c; border-radius: 10px; background: linear-gradient(135deg, #fcd34d 0%, #fb923c 50%, #ec4899 100%); color: white; font-size: 1rem; font-weight: 600; text-decoration: none; display: block; text-align: center; transition: all 0.3s ease;">
+                        Start My Journey
                     </a>
-                    <button onclick="startOver()" style="flex: 1; padding: 15px 20px; border: 2px solid #fb923c; border-radius: 10px; background: linear-gradient(135deg, #fcd34d 0%, #fb923c 50%, #ec4899 100%); color: white; font-size: 1rem; font-weight: 600; cursor: pointer; transition: all 0.3s ease;">
+                    <button onclick="startOver()" style="flex: 1; padding: 15px 20px; border: 2px solid #fb923c; border-radius: 10px; background: transparent; color: #fb923c; font-size: 1rem; font-weight: 600; cursor: pointer; transition: all 0.3s ease;">
                         Try Different Plan
                     </button>
+                </div>
+                
+                <div style="margin-top: 25px; padding-top: 20px; border-top: 1px solid #e9ecef; font-size: 0.8rem; color: #6c757d; line-height: 1.4; text-align: center;">
+                    <strong>Important Disclaimer:</strong> This is an estimate. Actual results will vary. Some advanced protocols should only be attempted under medical supervision. Always consult a doctor before making major lifestyle changes.
                 </div>
             </div>
             
@@ -744,6 +752,10 @@
             const initialFFM = data.initialStats.fatFreeMass * weightMultiplier;
             const musclePreservation = ((initialFFM - totalFFMLost) / initialFFM * 100);
             document.getElementById('muscleMaintained').textContent = `${musclePreservation.toFixed(1)}%`;
+            
+            // Calculate average weekly fat loss
+            const avgWeeklyFatLoss = totalFatLost / userData.weeks;
+            document.getElementById('avgWeeklyFatLoss').textContent = `${avgWeeklyFatLoss.toFixed(1)} ${weightUnit}`;
             
             // Update weight loss trajectory chart
             updateWeightChart(data, weightMultiplier, weightUnit);

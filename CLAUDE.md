@@ -83,6 +83,27 @@ The application uses research-based constants for metabolic modeling:
 - Verify dates display correctly in user's timezone
 - When making changes involving dates/times, test both API endpoints AND browser display
 
+### JavaScript Code Quality Checks
+
+**Before committing changes that add new JavaScript variables:**
+
+```bash
+# Quick duplicate variable check for timer.html
+npm run check-duplicates:timer
+
+# Check specific lines after editing (efficient for large files)
+npm run check-duplicates:timer "500,510-520,530"
+
+# Full project duplicate check
+npm run check-duplicates
+```
+
+**When to run duplicate checks:**
+- After adding new `const`, `let`, or `var` declarations
+- Before committing JavaScript changes
+- When encountering "Identifier already declared" errors
+- After refactoring functions with multiple variable scopes
+
 ### Testing Checklist
 When making changes involving dates/times:
 - [ ] Test backend API directly with curl/testing tools
@@ -90,6 +111,12 @@ When making changes involving dates/times:
 - [ ] Verify dates display correctly in user's timezone
 - [ ] Test edge cases (different timezones, date boundaries)
 - [ ] Confirm user input matches displayed results
+
+When making JavaScript changes:
+- [ ] Run `npm run check-duplicates:timer` before testing
+- [ ] Check browser console for syntax errors
+- [ ] Test all interactive features (buttons, timers, etc.)
+- [ ] Verify no "function not defined" errors
 
 ### Common Testing Commands
 ```bash
@@ -100,4 +127,7 @@ npm start
 # - Input Sept 1, 2025 and verify it shows Sept 1, not Aug 31
 # - Test with different start dates across month/year boundaries
 # - Verify weekly progression shows correct dates
+
+# JavaScript quality checks
+npm run check-duplicates:timer  # Check timer.html for duplicate variables
 ```
