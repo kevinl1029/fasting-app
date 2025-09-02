@@ -424,6 +424,142 @@
             opacity: 0.9;
         }
         
+        .customize-duration {
+            text-align: center;
+            margin: 15px 0;
+        }
+        
+        .customize-btn {
+            background: transparent;
+            border: 1px solid #fb923c;
+            color: #fb923c;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 0.9rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .customize-btn:hover {
+            background: rgba(251, 146, 60, 0.1);
+            transform: translateY(-1px);
+        }
+        
+        .duration-selector {
+            background: linear-gradient(135deg, rgba(251, 146, 60, 0.05), rgba(236, 72, 153, 0.05));
+            border-radius: 15px;
+            padding: 20px;
+            margin: 15px 0;
+            border: 1px solid rgba(251, 146, 60, 0.2);
+            transition: all 0.3s ease;
+        }
+        
+        .duration-presets h4 {
+            color: #fb923c;
+            font-size: 1.1rem;
+            margin-bottom: 15px;
+            text-align: center;
+        }
+        
+        .preset-buttons {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+        
+        .preset-btn {
+            background: white;
+            border: 2px solid #e9ecef;
+            border-radius: 10px;
+            padding: 12px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-align: left;
+        }
+        
+        .preset-btn:hover {
+            border-color: #fb923c;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(251, 146, 60, 0.2);
+        }
+        
+        .preset-btn.active {
+            border-color: #fb923c;
+            background: linear-gradient(135deg, rgba(251, 146, 60, 0.1), rgba(236, 72, 153, 0.1));
+            box-shadow: 0 4px 12px rgba(251, 146, 60, 0.3);
+        }
+        
+        .preset-btn .duration {
+            display: block;
+            font-weight: 700;
+            font-size: 1.1rem;
+            color: #333;
+            margin-bottom: 4px;
+        }
+        
+        .preset-btn .description {
+            display: block;
+            font-size: 0.8rem;
+            color: #666;
+            line-height: 1.2;
+        }
+        
+        .custom-duration {
+            border-top: 1px solid rgba(251, 146, 60, 0.2);
+            padding-top: 15px;
+        }
+        
+        .custom-duration label {
+            display: block;
+            color: #fb923c;
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+        
+        .custom-input {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+        
+        .custom-input input {
+            width: 80px;
+            padding: 8px 12px;
+            border: 2px solid #e9ecef;
+            border-radius: 8px;
+            font-size: 1rem;
+            text-align: center;
+        }
+        
+        .custom-input input:focus {
+            border-color: #fb923c;
+            outline: none;
+            box-shadow: 0 0 0 3px rgba(251, 146, 60, 0.1);
+        }
+        
+        .custom-input span {
+            color: #666;
+            font-weight: 500;
+        }
+        
+        .apply-custom-btn {
+            background: linear-gradient(135deg, #fcd34d 0%, #fb923c 50%, #ec4899 100%);
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .apply-custom-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(251, 146, 60, 0.4);
+        }
+
         @media (max-width: 768px) {
             .container {
                 padding: 15px;
@@ -435,6 +571,10 @@
             
             .control-buttons {
                 flex-direction: column;
+            }
+            
+            .preset-buttons {
+                grid-template-columns: 1fr;
             }
         }
     </style>
@@ -457,9 +597,48 @@
                     </div>
                 </div>
                 
-                <button class="start-fast-btn" onclick="startFast()">
-                    Start Fast
+                <button class="start-fast-btn" id="startFastBtn" onclick="startFast()">
+                    Start 24h Fast
                 </button>
+                
+                <div class="customize-duration">
+                    <button class="customize-btn" onclick="toggleDurationSelector()">
+                        Customize Duration ⚙️
+                    </button>
+                </div>
+                
+                <div class="duration-selector" id="durationSelector" style="display: none;">
+                    <div class="duration-presets">
+                        <h4>Choose Duration</h4>
+                        <div class="preset-buttons">
+                            <button class="preset-btn active" data-hours="24" onclick="selectDuration(24)">
+                                <span class="duration">24h</span>
+                                <span class="description">Metabolic reset & fat burning</span>
+                            </button>
+                            <button class="preset-btn" data-hours="36" onclick="selectDuration(36)">
+                                <span class="duration">36h</span>
+                                <span class="description">Deep ketosis & mental clarity</span>
+                            </button>
+                            <button class="preset-btn" data-hours="48" onclick="selectDuration(48)">
+                                <span class="duration">48h</span>
+                                <span class="description">Peak autophagy & cellular renewal</span>
+                            </button>
+                            <button class="preset-btn" data-hours="72" onclick="selectDuration(72)">
+                                <span class="duration">72h</span>
+                                <span class="description">Extended therapeutic benefits</span>
+                            </button>
+                        </div>
+                        
+                        <div class="custom-duration">
+                            <label for="customHours">Custom Duration:</label>
+                            <div class="custom-input">
+                                <input type="number" id="customHours" min="1" max="168" placeholder="24">
+                                <span>hours</span>
+                                <button class="apply-custom-btn" onclick="applyCustomDuration()">Apply</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
                 
                 <div class="stats-grid">
                     <div class="stat-item">
@@ -532,6 +711,7 @@
         let elapsedTime = 0;
         let timerInterval = null;
         let fastDuration = 24; // Default 24-hour fast
+        let selectedDuration = 24; // Selected duration for next fast
         
         // Milestone definitions
         const milestones = [
@@ -629,9 +809,13 @@
             });
         }
         
+        // Track the last reached milestone to avoid repeated updates
+        let lastReachedMilestone = null;
+        
         // Update milestone states based on current progress
         function updateMilestoneStates() {
             const currentElapsedHours = elapsedTime / (1000 * 60 * 60);
+            let currentMilestone = null;
             
             document.querySelectorAll('.milestone-marker').forEach(marker => {
                 const milestoneHours = parseFloat(marker.dataset.hours);
@@ -644,10 +828,93 @@
                     // Currently approaching or in milestone window
                     marker.classList.add('current');
                 }
+                
+                // Check if we just reached this milestone
+                if (currentElapsedHours >= milestoneHours && currentElapsedHours < milestoneHours + 1) {
+                    // Find the milestone data
+                    const milestone = milestones.find(m => m.hours === milestoneHours);
+                    if (milestone) {
+                        currentMilestone = milestone;
+                    }
+                }
             });
+            
+            // If we have a current milestone and it's different from the last one, update the display
+            if (currentMilestone && currentMilestone !== lastReachedMilestone) {
+                lastReachedMilestone = currentMilestone;
+                updatePhaseInfoWithMilestone(currentMilestone);
+            } else if (!currentMilestone && lastReachedMilestone) {
+                // No current milestone, return to regular phase info
+                lastReachedMilestone = null;
+                const elapsedHours = Math.floor(elapsedTime / (1000 * 60 * 60));
+                updatePhaseInfo(elapsedHours);
+            }
         }
+        // Toggle duration selector visibility
+        function toggleDurationSelector() {
+            const selector = document.getElementById('durationSelector');
+            const isVisible = selector.style.display !== 'none';
+            
+            if (isVisible) {
+                selector.style.display = 'none';
+            } else {
+                selector.style.display = 'block';
+            }
+        }
+        
+        // Select a preset duration
+        function selectDuration(hours) {
+            selectedDuration = hours;
+            
+            // Update active state on buttons
+            document.querySelectorAll('.preset-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            document.querySelector(`[data-hours="${hours}"]`).classList.add('active');
+            
+            // Clear custom input
+            document.getElementById('customHours').value = '';
+            
+            // Update start button text
+            updateStartButtonText();
+        }
+        
+        // Apply custom duration
+        function applyCustomDuration() {
+            const customInput = document.getElementById('customHours');
+            const customHours = parseInt(customInput.value);
+            
+            // Validation
+            if (isNaN(customHours) || customHours < 1 || customHours > 168) {
+                alert('Please enter a valid duration between 1 and 168 hours.');
+                return;
+            }
+            
+            selectedDuration = customHours;
+            
+            // Remove active state from preset buttons
+            document.querySelectorAll('.preset-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            
+            // Update start button text
+            updateStartButtonText();
+        }
+        
+        // Update start button text based on selected duration
+        function updateStartButtonText() {
+            const btn = document.getElementById('startFastBtn');
+            btn.textContent = `Start ${selectedDuration}h Fast`;
+        }
+        
         // Start a fast
         function startFast() {
+            // Use selected duration for this fast
+            fastDuration = selectedDuration;
+            
+            // Hide duration selector
+            document.getElementById('durationSelector').style.display = 'none';
+            
             document.getElementById('preFastState').style.display = 'none';
             document.getElementById('activeFastState').style.display = 'block';
             
@@ -780,8 +1047,6 @@
             
             // Update milestone states and phase info
             updateMilestoneStates();
-            const elapsedHours = Math.floor(elapsedTime / (1000 * 60 * 60));
-            updatePhaseInfo(elapsedHours);
         }
         
         // Update start and end time display
@@ -836,6 +1101,12 @@
             document.getElementById('phaseDescription').textContent = currentPhase.description;
         }
         
+        // Update phase info container with milestone details
+        function updatePhaseInfoWithMilestone(milestone) {
+            document.getElementById('phaseTitle').textContent = `${milestone.icon} ${milestone.title}`;
+            document.getElementById('phaseDescription').textContent = milestone.message;
+        }
+        
         
         
         // Reset timer
@@ -847,6 +1118,12 @@
             
             // Clear milestone markers
             document.getElementById('milestoneMarkers').innerHTML = '';
+            
+            // Reset milestone tracking
+            lastReachedMilestone = null;
+            
+            // Hide duration selector
+            document.getElementById('durationSelector').style.display = 'none';
             
             // Reset to pre-fast state
             document.getElementById('activeFastState').style.display = 'none';
