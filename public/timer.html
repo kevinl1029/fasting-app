@@ -138,6 +138,64 @@
             opacity: 1;
         }
         
+        /* Milestone Markers */
+        .milestone-marker {
+            position: absolute;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: #fff;
+            border: 3px solid #ddd;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            z-index: 5;
+            transform: translate(-50%, -50%);
+        }
+        
+        .milestone-marker.reached {
+            background: #28a745;
+            border-color: #28a745;
+            box-shadow: 0 0 8px rgba(40, 167, 69, 0.4);
+        }
+        
+        .milestone-marker.current {
+            background: #fb923c;
+            border-color: #fb923c;
+            box-shadow: 0 0 12px rgba(251, 146, 60, 0.6);
+            animation: milestoneGlow 2s ease-in-out infinite;
+        }
+        
+        .milestone-marker:hover {
+            transform: translate(-50%, -50%) scale(1.3);
+            box-shadow: 0 0 15px rgba(251, 146, 60, 0.8);
+        }
+        
+        @keyframes milestoneGlow {
+            0%, 100% { box-shadow: 0 0 12px rgba(251, 146, 60, 0.6); }
+            50% { box-shadow: 0 0 20px rgba(251, 146, 60, 0.9); }
+        }
+        
+        /* Milestone Tooltip */
+        .milestone-tooltip {
+            position: absolute;
+            background: rgba(0, 0, 0, 0.9);
+            color: white;
+            padding: 12px 16px;
+            border-radius: 8px;
+            font-size: 0.85rem;
+            white-space: nowrap;
+            z-index: 10;
+            opacity: 0;
+            transform: translateY(-10px);
+            transition: all 0.3s ease;
+            pointer-events: none;
+        }
+        
+        .milestone-marker:hover .milestone-tooltip {
+            opacity: 1;
+            transform: translateY(-40px);
+        }
+        
         @keyframes radarPulse {
             0% {
                 width: 0;
@@ -301,19 +359,25 @@
         .time-item {
             display: flex;
             justify-content: space-between;
-            align-items: center;
-            margin: 8px 0;
+            align-items: baseline;
+            margin: 12px 0;
+            min-height: 24px;
         }
         
         .time-label {
             color: #666;
             font-weight: 500;
+            font-size: 0.95rem;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
         }
         
         .time-value {
             color: #333;
-            font-weight: 700;
-            font-family: 'Courier New', monospace;
+            font-weight: 600;
+            font-size: 0.95rem;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            text-align: right;
+            line-height: 1.2;
         }
         
         .stats-grid {
@@ -421,6 +485,10 @@
                     <div class="timer-progress-inner" id="timerProgressInner"></div>
                     <div class="timer-progress-minute" id="timerProgressMinute"></div>
                     <div class="radar-pulse" id="radarPulse"></div>
+                    
+                    <!-- Milestone Markers -->
+                    <div id="milestoneMarkers"></div>
+                    
                     <div class="timer-inner">
                         <div class="timer-display" id="timerDisplay">12:30</div>
                         <div class="timer-label" id="timerLabel">ELAPSED</div>
@@ -465,6 +533,34 @@
         let timerInterval = null;
         let fastDuration = 24; // Default 24-hour fast
         
+        // Milestone definitions
+        const milestones = [
+            {
+                hours: 12,
+                title: "Glycogen Depletion Begins",
+                message: "Your body is running low on stored glycogen and beginning to shift toward fat burning.",
+                icon: "⚡"
+            },
+            {
+                hours: 18,
+                title: "Ketosis Transition",
+                message: "Ketones are rising - you're switching to fat for fuel. Mental clarity often improves.",
+                icon: "🔥"
+            },
+            {
+                hours: 30,
+                title: "Sustained Fat-Burning",
+                message: "Fat is now your body's main energy source. You're in a deep metabolic state.",
+                icon: "💪"
+            },
+            {
+                hours: 48,
+                title: "Cellular Renewal (Autophagy)",
+                message: "Your cells are recycling and repairing. Maximum therapeutic benefits activated.",
+                icon: "✨"
+            }
+        ];
+        
         // Fasting phases with descriptions
         const phases = {
             0: {
@@ -501,6 +597,55 @@
             }
         };
         
+        // Create milestone markers on the outer ring
+        function createMilestoneMarkers() {
+            const container = document.getElementById('milestoneMarkers');
+            const containerRadius = 140; // Distance from center to outer ring
+            
+            milestones.forEach(milestone => {
+                // Only show milestones that are within the fast duration
+                if (milestone.hours <= fastDuration) {
+                    const marker = document.createElement('div');
+                    marker.className = 'milestone-marker';
+                    marker.dataset.hours = milestone.hours;
+                    
+                    // Calculate position on outer ring (12 o'clock = 0°, clockwise)
+                    const angle = (milestone.hours / fastDuration) * 360 - 90; // -90 to start at top
+                    const radians = (angle * Math.PI) / 180;
+                    const x = containerRadius + containerRadius * Math.cos(radians);
+                    const y = containerRadius + containerRadius * Math.sin(radians);
+                    
+                    marker.style.left = x + 'px';
+                    marker.style.top = y + 'px';
+                    
+                    // Add tooltip
+                    const tooltip = document.createElement('div');
+                    tooltip.className = 'milestone-tooltip';
+                    tooltip.innerHTML = `<strong>${milestone.icon} ${milestone.title}</strong><br>${milestone.message}`;
+                    marker.appendChild(tooltip);
+                    
+                    container.appendChild(marker);
+                }
+            });
+        }
+        
+        // Update milestone states based on current progress
+        function updateMilestoneStates() {
+            const currentElapsedHours = elapsedTime / (1000 * 60 * 60);
+            
+            document.querySelectorAll('.milestone-marker').forEach(marker => {
+                const milestoneHours = parseFloat(marker.dataset.hours);
+                marker.classList.remove('reached', 'current');
+                
+                if (currentElapsedHours >= milestoneHours + 1) {
+                    // Milestone completed (1 hour grace period)
+                    marker.classList.add('reached');
+                } else if (currentElapsedHours >= milestoneHours - 1 && currentElapsedHours < milestoneHours + 1) {
+                    // Currently approaching or in milestone window
+                    marker.classList.add('current');
+                }
+            });
+        }
         // Start a fast
         function startFast() {
             document.getElementById('preFastState').style.display = 'none';
@@ -509,6 +654,9 @@
             isRunning = true;
             fastStartTime = new Date();
             elapsedTime = 0;
+            
+            // Create milestone markers
+            createMilestoneMarkers();
             
             // Set start and end times
             updateTimeDisplay();
@@ -630,7 +778,8 @@
                 radarPulse.classList.remove('visible');
             }
             
-            // Update phase info
+            // Update milestone states and phase info
+            updateMilestoneStates();
             const elapsedHours = Math.floor(elapsedTime / (1000 * 60 * 60));
             updatePhaseInfo(elapsedHours);
         }
@@ -642,16 +791,34 @@
             const startTime = fastStartTime;
             const endTime = new Date(fastStartTime.getTime() + (fastDuration * 60 * 60 * 1000));
             
-            const formatTime = (date) => {
-                return date.toLocaleTimeString('en-US', { 
+            const formatDateTime = (date) => {
+                const timeStr = date.toLocaleTimeString('en-US', { 
                     hour: 'numeric', 
                     minute: '2-digit',
                     hour12: true 
                 });
+                
+                // Check if it's a different day to show date
+                const today = new Date();
+                const isToday = date.toDateString() === today.toDateString();
+                const isTomorrow = date.toDateString() === new Date(today.getTime() + 24 * 60 * 60 * 1000).toDateString();
+                
+                if (isToday) {
+                    return timeStr + ' (Today)';
+                } else if (isTomorrow) {
+                    return timeStr + ' (Tomorrow)';
+                } else {
+                    // Show abbreviated date for other days
+                    const dateStr = date.toLocaleDateString('en-US', { 
+                        month: 'short', 
+                        day: 'numeric' 
+                    });
+                    return timeStr + ' (' + dateStr + ')';
+                }
             };
             
-            document.getElementById('startTime').textContent = formatTime(startTime);
-            document.getElementById('endTime').textContent = formatTime(endTime);
+            document.getElementById('startTime').textContent = formatDateTime(startTime);
+            document.getElementById('endTime').textContent = formatDateTime(endTime);
         }
         
         // Update phase information based on elapsed hours
@@ -677,6 +844,9 @@
                 clearInterval(timerInterval);
                 isRunning = false;
             }
+            
+            // Clear milestone markers
+            document.getElementById('milestoneMarkers').innerHTML = '';
             
             // Reset to pre-fast state
             document.getElementById('activeFastState').style.display = 'none';
