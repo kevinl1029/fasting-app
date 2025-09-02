@@ -380,6 +380,84 @@
             line-height: 1.2;
         }
         
+        .time-value-container {
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+            gap: 8px;
+        }
+        
+        .adjust-time-btn {
+            background: transparent;
+            border: 1px solid #ddd;
+            color: #666;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 0.7rem;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            opacity: 0.7;
+        }
+        
+        .adjust-time-btn:hover {
+            border-color: #fb923c;
+            color: #fb923c;
+            opacity: 1;
+        }
+        
+        .time-adjustment-controls {
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+            gap: 6px;
+            flex-wrap: wrap;
+        }
+        
+        .time-adjustment-controls input[type="time"],
+        .time-adjustment-controls select {
+            padding: 4px 6px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 0.8rem;
+            font-family: inherit;
+        }
+        
+        .time-adjustment-controls input[type="time"]:focus,
+        .time-adjustment-controls select:focus {
+            border-color: #fb923c;
+            outline: none;
+            box-shadow: 0 0 0 2px rgba(251, 146, 60, 0.1);
+        }
+        
+        .apply-adjustment-btn,
+        .cancel-adjustment-btn {
+            padding: 4px 8px;
+            border: none;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        
+        .apply-adjustment-btn {
+            background: #28a745;
+            color: white;
+        }
+        
+        .apply-adjustment-btn:hover {
+            background: #218838;
+        }
+        
+        .cancel-adjustment-btn {
+            background: #6c757d;
+            color: white;
+        }
+        
+        .cancel-adjustment-btn:hover {
+            background: #5a6268;
+        }
+        
         .stats-grid {
             display: grid;
             grid-template-columns: 1fr 1fr;
@@ -559,6 +637,79 @@
             transform: translateY(-2px);
             box-shadow: 0 4px 12px rgba(251, 146, 60, 0.4);
         }
+        
+        .start-time-section {
+            border-top: 1px solid rgba(251, 146, 60, 0.2);
+            padding-top: 15px;
+            margin-top: 15px;
+        }
+        
+        .start-time-section > label {
+            display: block;
+            color: #fb923c;
+            font-weight: 600;
+            margin-bottom: 10px;
+        }
+        
+        .start-time-options {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            margin-bottom: 10px;
+        }
+        
+        .radio-option {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            cursor: pointer;
+            color: #333;
+            font-weight: 500;
+        }
+        
+        .radio-option input[type="radio"] {
+            margin: 0;
+        }
+        
+        .time-input-group {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            justify-content: center;
+            padding: 8px;
+            background: rgba(251, 146, 60, 0.05);
+            border-radius: 8px;
+            border: 1px solid rgba(251, 146, 60, 0.1);
+        }
+        
+        .time-input-group input[type="time"] {
+            padding: 6px 10px;
+            border: 2px solid #e9ecef;
+            border-radius: 6px;
+            font-size: 0.95rem;
+            font-family: inherit;
+        }
+        
+        .time-input-group input[type="time"]:focus {
+            border-color: #fb923c;
+            outline: none;
+            box-shadow: 0 0 0 2px rgba(251, 146, 60, 0.1);
+        }
+        
+        .time-input-group select {
+            padding: 6px 10px;
+            border: 2px solid #e9ecef;
+            border-radius: 6px;
+            font-size: 0.95rem;
+            background: white;
+            cursor: pointer;
+        }
+        
+        .time-input-group select:focus {
+            border-color: #fb923c;
+            outline: none;
+            box-shadow: 0 0 0 2px rgba(251, 146, 60, 0.1);
+        }
 
         @media (max-width: 768px) {
             .container {
@@ -637,6 +788,28 @@
                                 <button class="apply-custom-btn" onclick="applyCustomDuration()">Apply</button>
                             </div>
                         </div>
+                        
+                        <div class="start-time-section">
+                            <label>Start Time:</label>
+                            <div class="start-time-options">
+                                <label class="radio-option">
+                                    <input type="radio" name="startTime" value="now" checked onchange="toggleStartTimeInputs()">
+                                    <span>Start now</span>
+                                </label>
+                                <label class="radio-option">
+                                    <input type="radio" name="startTime" value="custom" onchange="toggleStartTimeInputs()">
+                                    <span>Started at:</span>
+                                </label>
+                            </div>
+                            <div class="time-input-group" id="timeInputGroup" style="display: none;">
+                                <input type="time" id="startTimeInput" onchange="updateSelectedStartTime(); updateStartButtonText();">
+                                <select id="startDateOffset" onchange="updateSelectedStartTime(); updateStartButtonText();">
+                                    <option value="0">Today</option>
+                                    <option value="1">Yesterday</option>
+                                    <option value="2">2 days ago</option>
+                                </select>
+                            </div>
+                        </div>
                     </div>
                 </div>
                 
@@ -677,7 +850,24 @@
                 <div class="time-display">
                     <div class="time-item">
                         <span class="time-label">Started</span>
-                        <span class="time-value" id="startTime">8:00 PM</span>
+                        <div class="time-value-container">
+                            <span class="time-value" id="startTime">8:00 PM</span>
+                            <button class="adjust-time-btn" id="adjustStartBtn" onclick="toggleStartTimeAdjustment()">
+                                <small>adjust</small>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="time-item" id="startTimeAdjustment" style="display: none;">
+                        <div class="time-adjustment-controls">
+                            <input type="time" id="adjustTimeInput">
+                            <select id="adjustDateOffset">
+                                <option value="0">Today</option>
+                                <option value="1">Yesterday</option>
+                                <option value="2">2 days ago</option>
+                            </select>
+                            <button class="apply-adjustment-btn" onclick="applyStartTimeAdjustment()">Apply</button>
+                            <button class="cancel-adjustment-btn" onclick="cancelStartTimeAdjustment()">Cancel</button>
+                        </div>
                     </div>
                     <div class="time-item">
                         <span class="time-label">Target End</span>
@@ -712,6 +902,7 @@
         let timerInterval = null;
         let fastDuration = 24; // Default 24-hour fast
         let selectedDuration = 24; // Selected duration for next fast
+        let selectedStartTime = null; // Selected start time (null = start now)
         
         // Milestone definitions
         const milestones = [
@@ -780,6 +971,8 @@
         // Create milestone markers on the outer ring
         function createMilestoneMarkers() {
             const container = document.getElementById('milestoneMarkers');
+            // Clear any existing markers first
+            container.innerHTML = '';
             const containerRadius = 140; // Distance from center to outer ring
             
             milestones.forEach(milestone => {
@@ -848,6 +1041,10 @@
                 lastReachedMilestone = null;
                 const elapsedHours = Math.floor(elapsedTime / (1000 * 60 * 60));
                 updatePhaseInfo(elapsedHours);
+            } else if (!currentMilestone && !lastReachedMilestone) {
+                // No milestone active, show regular phase info
+                const phaseElapsedHours = Math.floor(elapsedTime / (1000 * 60 * 60));
+                updatePhaseInfo(phaseElapsedHours);
             }
         }
         // Toggle duration selector visibility
@@ -901,10 +1098,164 @@
             updateStartButtonText();
         }
         
-        // Update start button text based on selected duration
+        // Toggle start time inputs visibility
+        function toggleStartTimeInputs() {
+            const startTimeRadios = document.querySelectorAll('input[name="startTime"]');
+            const timeInputGroup = document.getElementById('timeInputGroup');
+            const isCustomTime = Array.from(startTimeRadios).find(r => r.checked)?.value === 'custom';
+            
+            if (isCustomTime) {
+                timeInputGroup.style.display = 'flex';
+                // Set default to current time if not already set
+                const startTimeInput = document.getElementById('startTimeInput');
+                if (!startTimeInput.value) {
+                    const currentTime = new Date();
+                    startTimeInput.value = currentTime.toTimeString().slice(0, 5); // HH:MM format
+                }
+            } else {
+                timeInputGroup.style.display = 'none';
+                selectedStartTime = null;
+            }
+            
+            updateSelectedStartTime();
+            updateStartButtonText();
+        }
+        
+        // Update selected start time based on inputs
+        function updateSelectedStartTime() {
+            const modeRadios = document.querySelectorAll('input[name="startTime"]');
+            const selectedMode = Array.from(modeRadios).find(r => r.checked)?.value;
+            
+            if (selectedMode === 'now') {
+                selectedStartTime = null;
+            } else if (selectedMode === 'custom') {
+                const customTimeInput = document.getElementById('startTimeInput');
+                const dateOffset = parseInt(document.getElementById('startDateOffset').value);
+                
+                if (customTimeInput.value) {
+                    const nowTime = new Date();
+                    const [hours, minutes] = customTimeInput.value.split(':').map(Number);
+                    
+                    // Create date with selected time
+                    const selectedDate = new Date(nowTime);
+                    selectedDate.setHours(hours, minutes, 0, 0);
+                    
+                    // Apply date offset (0 = today, 1 = yesterday)
+                    selectedDate.setDate(selectedDate.getDate() - dateOffset);
+                    
+                    // Validate - can't be in the future or more than 7 days ago
+                    const maxBackdate = new Date(nowTime.getTime() - (7 * 24 * 60 * 60 * 1000)); // 7 days ago
+                    
+                    if (selectedDate > nowTime) {
+                        selectedStartTime = null;
+                        alert('Start time cannot be in the future!');
+                        customTimeInput.value = '';
+                    } else if (selectedDate < maxBackdate) {
+                        selectedStartTime = null;
+                        alert('Start time cannot be more than 7 days ago!');
+                        customTimeInput.value = '';
+                    } else {
+                        selectedStartTime = selectedDate;
+                    }
+                }
+            }
+        }
+        
+        // Update start button text based on selected duration and start time
         function updateStartButtonText() {
             const btn = document.getElementById('startFastBtn');
-            btn.textContent = `Start ${selectedDuration}h Fast`;
+            
+            if (selectedStartTime) {
+                const startTimeStr = selectedStartTime.toLocaleTimeString('en-US', {
+                    hour: 'numeric',
+                    minute: '2-digit',
+                    hour12: true
+                });
+                btn.textContent = `Resume ${selectedDuration}h Fast (started ${startTimeStr})`;
+            } else {
+                btn.textContent = `Start ${selectedDuration}h Fast`;
+            }
+        }
+        
+        // Toggle start time adjustment controls
+        function toggleStartTimeAdjustment() {
+            const toggleAdjustmentRow = document.getElementById('startTimeAdjustment');
+            const toggleAdjustBtn = document.getElementById('adjustStartBtn');
+            
+            if (toggleAdjustmentRow.style.display === 'none') {
+                // Show adjustment controls
+                toggleAdjustmentRow.style.display = 'block';
+                toggleAdjustBtn.textContent = 'cancel';
+                
+                // Pre-populate with current start time
+                const toggleTimeInput = document.getElementById('adjustTimeInput');
+                const toggleDateOffset = document.getElementById('adjustDateOffset');
+                
+                toggleTimeInput.value = fastStartTime.toTimeString().slice(0, 5); // HH:MM
+                
+                // Calculate date offset
+                const adjustToday = new Date();
+                adjustToday.setHours(0, 0, 0, 0);
+                const startDate = new Date(fastStartTime);
+                startDate.setHours(0, 0, 0, 0);
+                const daysDiff = Math.floor((adjustToday - startDate) / (24 * 60 * 60 * 1000));
+                
+                toggleDateOffset.value = Math.min(daysDiff, 2); // Cap at 2 days ago
+            } else {
+                // Hide adjustment controls
+                cancelStartTimeAdjustment();
+            }
+        }
+        
+        // Apply start time adjustment
+        function applyStartTimeAdjustment() {
+            const adjustTimeInput = document.getElementById('adjustTimeInput');
+            const adjustDateOffset = document.getElementById('adjustDateOffset');
+            
+            if (!adjustTimeInput.value) {
+                alert('Please enter a start time.');
+                return;
+            }
+            
+            // Calculate new start time
+            const adjustmentTime = new Date();
+            const [hours, minutes] = adjustTimeInput.value.split(':').map(Number);
+            const adjustmentDateOffset = parseInt(adjustDateOffset.value);
+            
+            const newStartTime = new Date(adjustmentTime);
+            newStartTime.setHours(hours, minutes, 0, 0);
+            newStartTime.setDate(newStartTime.getDate() - adjustmentDateOffset);
+            
+            // Validation
+            const adjustmentMaxBackdate = new Date(adjustmentTime.getTime() - (7 * 24 * 60 * 60 * 1000));
+            
+            if (newStartTime > adjustmentTime) {
+                alert('Start time cannot be in the future!');
+                return;
+            } else if (newStartTime < adjustmentMaxBackdate) {
+                alert('Start time cannot be more than 7 days ago!');
+                return;
+            }
+            
+            // Update the fast start time
+            fastStartTime = newStartTime;
+            elapsedTime = Date.now() - fastStartTime.getTime();
+            
+            // Recalculate everything
+            updateTimeDisplay();
+            updateTimerDisplay();
+            
+            // Hide adjustment controls
+            cancelStartTimeAdjustment();
+        }
+        
+        // Cancel start time adjustment
+        function cancelStartTimeAdjustment() {
+            const cancelAdjustmentRow = document.getElementById('startTimeAdjustment');
+            const cancelAdjustBtn = document.getElementById('adjustStartBtn');
+            
+            cancelAdjustmentRow.style.display = 'none';
+            cancelAdjustBtn.innerHTML = '<small>adjust</small>';
         }
         
         // Start a fast
@@ -919,8 +1270,9 @@
             document.getElementById('activeFastState').style.display = 'block';
             
             isRunning = true;
-            fastStartTime = new Date();
-            elapsedTime = 0;
+            // Use selected start time or current time
+            fastStartTime = selectedStartTime || new Date();
+            elapsedTime = selectedStartTime ? Date.now() - selectedStartTime.getTime() : 0;
             
             // Create milestone markers
             createMilestoneMarkers();
@@ -930,6 +1282,11 @@
             
             // Initial display update
             updateTimerDisplay();
+            
+            // If backdated, immediately update milestone states to reflect elapsed time
+            if (selectedStartTime) {
+                updateMilestoneStates();
+            }
             
             // Start the timer interval
             timerInterval = setInterval(() => {
@@ -1121,6 +1478,15 @@
             
             // Reset milestone tracking
             lastReachedMilestone = null;
+            
+            // Reset start time selection
+            selectedStartTime = null;
+            document.querySelector('input[name="startTime"][value="now"]').checked = true;
+            document.getElementById('timeInputGroup').style.display = 'none';
+            document.getElementById('startTimeInput').value = '';
+            
+            // Hide adjustment controls
+            cancelStartTimeAdjustment();
             
             // Hide duration selector
             document.getElementById('durationSelector').style.display = 'none';
