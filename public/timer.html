@@ -17,12 +17,15 @@
             color: #333;
             background: linear-gradient(135deg, #fcd34d 0%, #fb923c 50%, #ec4899 100%);
             min-height: 100vh;
+            padding-bottom: 85px;
+            overflow-x: hidden;
         }
         
         .container {
-            max-width: 400px;
+            max-width: 480px;
             margin: 0 auto;
             padding: 20px;
+            width: 100%;
         }
         
         .timer-card {
@@ -32,10 +35,12 @@
             margin: 20px 0;
             box-shadow: 0 10px 30px rgba(0,0,0,0.2);
             text-align: center;
-            min-height: 600px;
+            min-height: 500px;
+            max-height: calc(100vh - 140px);
             display: flex;
             flex-direction: column;
             justify-content: center;
+            overflow-y: auto;
         }
         
         .status-indicator {
@@ -63,9 +68,9 @@
         }
         
         .circular-timer {
-            width: 280px;
-            height: 280px;
-            margin: 40px auto;
+            width: min(280px, 70vw);
+            height: min(280px, 70vw);
+            margin: 30px auto 20px;
             position: relative;
             border-radius: 50%;
             background: #f0f0f0;
@@ -82,8 +87,8 @@
             position: absolute;
             top: 50%;
             left: 50%;
-            width: 260px;
-            height: 260px;
+            width: calc(min(280px, 70vw) - 20px);
+            height: calc(min(280px, 70vw) - 20px);
             border-radius: 50%;
             background: conic-gradient(#ec4899 0deg, #f0f0f0 0deg);
             transition: all 0.3s ease;
@@ -94,8 +99,8 @@
             position: absolute;
             top: 50%;
             left: 50%;
-            width: 230px;
-            height: 230px;
+            width: calc(min(280px, 70vw) - 50px);
+            height: calc(min(280px, 70vw) - 50px);
             border-radius: 50%;
             background: conic-gradient(#fb923c 0deg, #f8f9fa 0deg);
             transition: all 0.3s ease;
@@ -106,8 +111,8 @@
             position: absolute;
             top: 50%;
             left: 50%;
-            width: 200px;
-            height: 200px;
+            width: calc(min(280px, 70vw) - 80px);
+            height: calc(min(280px, 70vw) - 80px);
             border-radius: 50%;
             background: conic-gradient(#fcd34d 0deg, #f8f9fa 0deg);
             transition: all 0.3s ease;
@@ -183,17 +188,21 @@
             padding: 12px 16px;
             border-radius: 8px;
             font-size: 0.85rem;
-            white-space: nowrap;
+            white-space: normal;
+            max-width: min(200px, 50vw);
+            word-wrap: break-word;
             z-index: 10;
             opacity: 0;
             transform: translateY(-10px);
             transition: all 0.3s ease;
             pointer-events: none;
+            left: 50%;
+            transform: translateX(-50%) translateY(-10px);
         }
         
         .milestone-marker:hover .milestone-tooltip {
             opacity: 1;
-            transform: translateY(-40px);
+            transform: translateX(-50%) translateY(-40px);
         }
         
         @keyframes radarPulse {
@@ -208,8 +217,8 @@
                 border-width: 2px;
             }
             100% {
-                width: 280px;  /* Expands to outer ring edge */
-                height: 280px;
+                width: min(280px, 70vw);  /* Responsive to match timer size */
+                height: min(280px, 70vw);
                 opacity: 0;
                 border-width: 1px;
             }
@@ -219,8 +228,8 @@
             position: absolute;
             top: 50%;
             left: 50%;
-            width: 160px;
-            height: 160px;
+            width: calc(min(280px, 70vw) - 120px);
+            height: calc(min(280px, 70vw) - 120px);
             border-radius: 50%;
             background: #f0f0f0;
             box-shadow: 
@@ -913,6 +922,141 @@
             
             .completion-header .celebration {
                 font-size: 2.5rem;
+            }
+        }
+        
+        /* Bottom Navigation */
+        .bottom-nav {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            width: 100%;
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-top: 1px solid rgba(251, 146, 60, 0.2);
+            display: flex;
+            justify-content: space-around;
+            align-items: center;
+            padding: 8px 0 max(8px, env(safe-area-inset-bottom));
+            z-index: 1000;
+            box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.1);
+        }
+        
+        .nav-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-decoration: none;
+            color: #666;
+            transition: all 0.3s ease;
+            padding: 8px 12px;
+            border-radius: 12px;
+            min-width: 50px;
+            position: relative;
+        }
+        
+        .nav-item:hover {
+            color: #fb923c;
+            transform: translateY(-2px);
+        }
+        
+        .nav-item.active {
+            color: #fb923c;
+            background: rgba(251, 146, 60, 0.1);
+        }
+        
+        .nav-item.nav-primary {
+            transform: scale(1.1);
+            background: linear-gradient(135deg, #fcd34d 0%, #fb923c 50%, #ec4899 100%);
+            color: white;
+            box-shadow: 0 4px 15px rgba(251, 146, 60, 0.3);
+        }
+        
+        .nav-item.nav-primary:hover {
+            transform: scale(1.15) translateY(-2px);
+            box-shadow: 0 6px 20px rgba(251, 146, 60, 0.4);
+            color: white;
+        }
+        
+        .nav-item.nav-primary.active {
+            color: white;
+            background: linear-gradient(135deg, #fcd34d 0%, #fb923c 50%, #ec4899 100%);
+        }
+        
+        .nav-icon {
+            width: 24px;
+            height: 24px;
+            margin-bottom: 4px;
+            stroke-width: 2;
+        }
+        
+        .nav-primary .nav-icon {
+            width: 28px;
+            height: 28px;
+        }
+        
+        .nav-label {
+            font-size: 10px;
+            font-weight: 500;
+            text-align: center;
+            line-height: 1.2;
+        }
+        
+        .nav-primary .nav-label {
+            font-size: 11px;
+            font-weight: 600;
+        }
+        
+        
+        @media (max-width: 768px) {
+            .bottom-nav {
+                padding: 6px 0 max(6px, env(safe-area-inset-bottom));
+            }
+            
+            .nav-item {
+                padding: 6px 8px;
+            }
+            
+            .nav-icon {
+                width: 20px;
+                height: 20px;
+                margin-bottom: 2px;
+            }
+            
+            .nav-primary .nav-icon {
+                width: 24px;
+                height: 24px;
+            }
+            
+            .nav-label {
+                font-size: 9px;
+            }
+            
+            .nav-primary .nav-label {
+                font-size: 10px;
+            }
+            
+            body {
+                padding-bottom: 75px;
+            }
+            
+            .timer-card {
+                min-height: 450px;
+                max-height: calc(100vh - 120px);
+                padding: 20px;
+            }
+            
+            .circular-timer {
+                width: min(240px, 65vw);
+                height: min(240px, 65vw);
+                margin: 20px auto 15px;
+            }
+            
+            html, body {
+                overflow-x: hidden;
+                width: 100%;
             }
         }
     </style>
@@ -1985,6 +2129,96 @@
         
         // Initialize
         loadStats();
+        
+        // Bottom Navigation Functionality
+        function updateActiveNavItem() {
+            const currentPath = window.location.pathname;
+            const navItems = document.querySelectorAll('.nav-item');
+            
+            navItems.forEach(item => {
+                item.classList.remove('active');
+                const href = item.getAttribute('href');
+                
+                // Set active state based on current path
+                if (href === currentPath || (href === '/timer' && (currentPath === '/timer' || currentPath === '/timer.html'))) {
+                    item.classList.add('active');
+                }
+            });
+        }
+        
+        // Update navigation on page load
+        document.addEventListener('DOMContentLoaded', () => {
+            updateActiveNavItem();
+            
+            // Add click handlers for navigation items
+            const navItems = document.querySelectorAll('.nav-item');
+            navItems.forEach(item => {
+                item.addEventListener('click', (e) => {
+                    const href = item.getAttribute('href');
+                    
+                    // For now, prevent default navigation for pages that don't exist
+                    if (href !== '/' && href !== '/timer') {
+                        e.preventDefault();
+                        
+                        // Show a temporary message for unimplemented pages
+                        const pageName = item.querySelector('.nav-label').textContent;
+                        alert(`${pageName} page coming soon!`);
+                    }
+                });
+            });
+        });
+        
+        // Update active nav item when navigating (for SPA-style navigation in the future)
+        window.addEventListener('popstate', updateActiveNavItem);
     </script>
+    
+    <!-- Bottom Navigation -->
+    <nav class="bottom-nav">
+        <a href="/schedule" class="nav-item" data-page="schedule">
+            <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
+                <line x1="16" y1="2" x2="16" y2="6"/>
+                <line x1="8" y1="2" x2="8" y2="6"/>
+                <line x1="3" y1="10" x2="21" y2="10"/>
+            </svg>
+            <span class="nav-label">Schedule</span>
+        </a>
+        
+        <a href="/" class="nav-item" data-page="dashboard">
+            <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <line x1="18" y1="20" x2="18" y2="10"/>
+                <line x1="12" y1="20" x2="12" y2="4"/>
+                <line x1="6" y1="20" x2="6" y2="14"/>
+            </svg>
+            <span class="nav-label">Dashboard</span>
+        </a>
+        
+        <a href="/timer" class="nav-item nav-primary active" data-page="timer">
+            <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="12" cy="13" r="9"/>
+                <polyline points="12,7 12,13 16,15"/>
+                <path d="M9,2 L15,2"/>
+                <path d="M12,2 L12,6"/>
+            </svg>
+            <span class="nav-label">Timer</span>
+        </a>
+        
+        <a href="/learning" class="nav-item" data-page="learning">
+            <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/>
+                <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/>
+            </svg>
+            <span class="nav-label">Learning Hub</span>
+        </a>
+        
+        <a href="/more" class="nav-item" data-page="more">
+            <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="12" cy="12" r="1"/>
+                <circle cx="19" cy="12" r="1"/>
+                <circle cx="5" cy="12" r="1"/>
+            </svg>
+            <span class="nav-label">More</span>
+        </a>
+    </nav>
 </body>
 </html>
