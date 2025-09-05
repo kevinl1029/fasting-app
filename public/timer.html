@@ -259,6 +259,90 @@
             letter-spacing: 1px;
         }
         
+        .upcoming-fast-notice {
+            background: linear-gradient(135deg, rgba(59, 130, 246, 0.1), rgba(147, 51, 234, 0.1));
+            border: 1px solid rgba(59, 130, 246, 0.2);
+            border-radius: 15px;
+            padding: 15px 20px;
+            margin: 20px 0;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+        }
+        
+        .upcoming-fast-content {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+        
+        .upcoming-text {
+            flex: 1;
+            color: #1e40af;
+            font-size: 0.95rem;
+            line-height: 1.4;
+        }
+        
+        .upcoming-text strong {
+            color: #1e3a8a;
+            font-weight: 600;
+        }
+        
+        .upcoming-text small {
+            color: #64748b;
+            font-size: 0.85rem;
+        }
+        
+        .btn-start-early {
+            background: linear-gradient(135deg, #3b82f6, #6366f1);
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 8px;
+            font-size: 0.9rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+            flex-shrink: 0;
+        }
+        
+        .btn-start-early:hover {
+            background: linear-gradient(135deg, #2563eb, #4f46e5);
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+        }
+        
+        /* Actionable upcoming fast - within 6 hours, Start Early available */
+        .upcoming-fast-notice.actionable {
+            background: linear-gradient(135deg, rgba(59, 130, 246, 0.12), rgba(147, 51, 234, 0.12));
+            border: 1px solid rgba(59, 130, 246, 0.25);
+            animation: subtle-glow 3s ease-in-out infinite alternate;
+        }
+        
+        @keyframes subtle-glow {
+            from { box-shadow: 0 4px 12px rgba(59, 130, 246, 0.1); }
+            to { box-shadow: 0 6px 20px rgba(59, 130, 246, 0.15); }
+        }
+        
+        /* Informational upcoming fast - distant future, just awareness */
+        .upcoming-fast-notice.informational {
+            background: linear-gradient(135deg, rgba(107, 114, 128, 0.08), rgba(156, 163, 175, 0.08));
+            border: 1px solid rgba(107, 114, 128, 0.15);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.03);
+        }
+        
+        .upcoming-fast-notice.informational .upcoming-text {
+            color: #6b7280;
+        }
+        
+        .upcoming-fast-notice.informational .upcoming-text strong {
+            color: #4b5563;
+        }
+        
+        .upcoming-fast-notice.informational .upcoming-text small {
+            color: #9ca3af;
+        }
+        
         .phase-info {
             background: linear-gradient(135deg, rgba(251, 146, 60, 0.08), rgba(236, 72, 153, 0.08));
             padding: 20px;
@@ -1392,6 +1476,10 @@
         let selectedDuration = 24; // Selected duration for next fast
         let selectedStartTime = null; // Selected start time (null = start now)
         
+        // Session management
+        const sessionId = localStorage.getItem('fastingForecast_sessionId');
+        let currentFastId = null;
+        
         // Milestone definitions
         const milestones = [
             {
@@ -2366,7 +2454,7 @@
                     const href = item.getAttribute('href');
                     
                     // For now, prevent default navigation for pages that don't exist
-                    if (href !== '/dashboard' && href !== '/timer') {
+                    if (href !== '/dashboard' && href !== '/timer' && href !== '/schedule') {
                         e.preventDefault();
                         
                         // Show a temporary message for unimplemented pages
@@ -2381,8 +2469,6 @@
         window.addEventListener('popstate', updateActiveNavItem);
         
         // Database integration functions
-        let currentFastId = null;
-        
         async function createFastEntry() {
             try {
                 // Get session ID to link fast to user profile
@@ -2462,8 +2548,165 @@
             }
         }
         
-        // Check for active fast when page loads
+        // Check for upcoming scheduled fast
+        async function checkForUpcomingFast() {
+            try {
+                // Check for upcoming fast
+                const upcomingResponse = await fetch(`/api/schedule/upcoming?sessionId=${sessionId}`);
+                if (upcomingResponse.ok) {
+                    const upcomingData = await upcomingResponse.json();
+                    if (upcomingData.upcoming) {
+                        showUpcomingFast(upcomingData.upcoming);
+                    }
+                }
+                
+                // Check if user has a schedule and hide setup prompt if they do
+                const scheduleResponse = await fetch(`/api/schedule?sessionId=${sessionId}`);
+                if (scheduleResponse.ok) {
+                    const scheduleData = await scheduleResponse.json();
+                    const scheduleSetupElement = document.getElementById('scheduleSetupState');
+                    if (scheduleSetupElement) {
+                        if (scheduleData.schedule) {
+                            // User has a schedule, hide the setup prompt
+                            scheduleSetupElement.style.display = 'none';
+                        } else {
+                            // User doesn't have a schedule, show the setup prompt
+                            scheduleSetupElement.style.display = 'block';
+                        }
+                    }
+                }
+            } catch (error) {
+                console.error('Error checking for upcoming fast:', error);
+            }
+        }
+        
+        // Display upcoming fast information
+        function showUpcomingFast(upcomingFast) {
+            // Only show if no active timer (pre-timer page)
+            if (isRunning) return;
+            
+            const startTime = new Date(upcomingFast.start_at_utc);
+            const now = new Date();
+            const hoursUntil = Math.round((startTime - now) / (1000 * 60 * 60));
+            const isActionable = hoursUntil <= 6; // Within 6 hours = actionable with Start Early
+            
+            // Create upcoming fast display
+            const upcomingDiv = document.getElementById('upcoming-fast-notice') || createUpcomingNotice();
+            
+            const dayName = startTime.toLocaleDateString('en-US', { weekday: 'short' });
+            const timeStr = startTime.toLocaleTimeString('en-US', { 
+                hour: 'numeric', 
+                minute: '2-digit',
+                hour12: true 
+            });
+            
+            // Format time until fast
+            let timeUntilText = '';
+            if (hoursUntil > 24) {
+                const daysUntil = Math.round(hoursUntil / 24);
+                timeUntilText = ` (in ${daysUntil} day${daysUntil === 1 ? '' : 's'})`;
+            } else if (hoursUntil > 1) {
+                timeUntilText = ` (in ${hoursUntil} hour${hoursUntil === 1 ? '' : 's'})`;
+            } else if (hoursUntil === 1) {
+                timeUntilText = ' (in 1 hour)';
+            } else if (hoursUntil === 0) {
+                timeUntilText = ' (starting now!)';
+            }
+            
+            // Different styling and content based on actionability
+            const label = isActionable ? 'Upcoming:' : 'Next:';
+            const startEarlyButton = isActionable ? 
+                `<button class="btn btn-start-early" onclick="startEarly('${upcomingFast.id}')">
+                    Start Early
+                </button>` : '';
+            
+            upcomingDiv.innerHTML = `
+                <div class="upcoming-fast-content">
+                    <div class="upcoming-text">
+                        <strong>${label}</strong> ${dayName} ${timeStr}${timeUntilText}
+                        <br><small>${upcomingFast.block_name || 'Scheduled Fast'} • ${upcomingFast.duration_hours}h</small>
+                    </div>
+                    ${startEarlyButton}
+                </div>
+            `;
+            
+            // Apply different CSS class based on actionability
+            upcomingDiv.className = isActionable ? 'upcoming-fast-notice actionable' : 'upcoming-fast-notice informational';
+            upcomingDiv.style.display = 'block';
+        }
+        
+        // Create upcoming fast notice element (pre-timer page only)
+        function createUpcomingNotice() {
+            const upcomingDiv = document.createElement('div');
+            upcomingDiv.id = 'upcoming-fast-notice';
+            upcomingDiv.className = 'upcoming-fast-notice';
+            upcomingDiv.style.display = 'none';
+            
+            // Insert before START FAST NOW button on pre-timer page
+            const startButton = document.querySelector('.start-fast-btn') || 
+                              document.querySelector('#startFastBtn') ||
+                              document.querySelector('button[onclick="startFast()"]');
+            if (startButton) {
+                startButton.parentNode.insertBefore(upcomingDiv, startButton);
+            } else {
+                // Final fallback: add to body
+                document.body.appendChild(upcomingDiv);
+            }
+            
+            return upcomingDiv;
+        }
+        
+        // Handle start early action
+        async function startEarly(upcomingId) {
+            try {
+                console.log('Starting early for upcoming fast:', upcomingId);
+                
+                // Show a confirmation dialog first per spec
+                const confirmEarly = confirm('Do you want to start your scheduled fast early? This will update today\'s plan.');
+                if (!confirmEarly) {
+                    return;
+                }
+                
+                // Call the start early API
+                const response = await fetch('/api/schedule/start-early', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        sessionId: sessionId,
+                        upcomingId: upcomingId
+                    })
+                });
+                
+                if (response.ok) {
+                    const result = await response.json();
+                    
+                    // Set the fast ID for tracking
+                    currentFastId = result.fastId;
+                    
+                    // Start the timer UI
+                    startTimer();
+                    
+                    // Hide the upcoming notice
+                    const upcomingDiv = document.getElementById('upcoming-fast-notice');
+                    if (upcomingDiv) {
+                        upcomingDiv.style.display = 'none';
+                    }
+                    
+                    console.log('Scheduled fast started early:', result);
+                } else {
+                    const error = await response.json();
+                    alert('Failed to start early: ' + (error.error || 'Unknown error'));
+                }
+                
+            } catch (error) {
+                console.error('Error starting early:', error);
+                alert('Failed to start early. Please try again.');
+            }
+        }
+        
+        // Check for active fast and upcoming fast when page loads
         checkForActiveFast();
+        checkForUpcomingFast();
     </script>
     
     <!-- Bottom Navigation -->

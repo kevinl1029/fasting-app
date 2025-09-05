@@ -1,0 +1,1553 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Schedule - Fasting Journey</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background: linear-gradient(135deg, #fcd34d 0%, #fb923c 50%, #ec4899 100%);
+            min-height: 100vh;
+            padding-bottom: 85px;
+            overflow-x: hidden;
+        }
+        
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+            width: 100%;
+        }
+        
+        .schedule-card {
+            position: relative;
+            background: white;
+            border-radius: 20px;
+            padding: 30px;
+            margin: 20px 0;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            min-height: calc(100vh - 140px);
+        }
+        
+        .schedule-header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        
+        .schedule-header h1 {
+            font-size: 2rem;
+            font-weight: 700;
+            color: #333;
+            margin-bottom: 10px;
+        }
+        
+        .schedule-header p {
+            font-size: 1.1rem;
+            color: #666;
+        }
+        
+        .metrics-bar {
+            display: flex;
+            justify-content: space-around;
+            background: linear-gradient(135deg, rgba(251, 146, 60, 0.1), rgba(236, 72, 153, 0.1));
+            border-radius: 15px;
+            padding: 20px;
+            margin-bottom: 30px;
+            text-align: center;
+        }
+        
+        .metric {
+            flex: 1;
+        }
+        
+        .metric-value {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: #fb923c;
+            display: block;
+        }
+        
+        .metric-label {
+            font-size: 0.9rem;
+            color: #666;
+            margin-top: 5px;
+        }
+        
+        .view-toggle {
+            display: flex;
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 5px;
+            margin-bottom: 20px;
+        }
+        
+        .toggle-btn {
+            flex: 1;
+            background: none;
+            border: none;
+            padding: 10px;
+            border-radius: 8px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s;
+            color: #666;
+        }
+        
+        .toggle-btn.active {
+            background: white;
+            color: #fb923c;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: #666;
+        }
+        
+        .empty-icon {
+            font-size: 4rem;
+            margin-bottom: 20px;
+            opacity: 0.3;
+        }
+        
+        .empty-state h3 {
+            font-size: 1.3rem;
+            margin-bottom: 10px;
+            color: #333;
+        }
+        
+        .empty-state p {
+            margin-bottom: 30px;
+            line-height: 1.5;
+        }
+        
+        .btn {
+            background: linear-gradient(135deg, #fcd34d 0%, #fb923c 50%, #ec4899 100%);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 10px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-size: 1rem;
+        }
+        
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 15px rgba(251, 146, 60, 0.3);
+        }
+        
+        .btn-secondary {
+            background: white;
+            color: #fb923c;
+            border: 2px solid #fb923c;
+        }
+        
+        .btn-secondary:hover {
+            background: #fb923c;
+            color: white;
+        }
+        
+        /* Grid View Styles */
+        .schedule-grid {
+            display: none;
+            grid-template-columns: 60px repeat(7, 1fr);
+            gap: 2px;
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 10px;
+            font-size: 0.8rem;
+        }
+        
+        .schedule-grid.active {
+            display: grid;
+        }
+        
+        .grid-header {
+            background: white;
+            padding: 8px 4px;
+            text-align: center;
+            font-weight: 600;
+            color: #333;
+            border-radius: 4px;
+        }
+        
+        .time-label {
+            background: white;
+            padding: 4px;
+            text-align: center;
+            font-size: 0.7rem;
+            color: #666;
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .grid-cell {
+            background: #e9ecef;
+            height: 20px;
+            border-radius: 2px;
+            position: relative;
+        }
+        
+        .grid-cell.fasting {
+            background: linear-gradient(135deg, #fb923c, #ec4899);
+        }
+        
+        .grid-cell.feeding {
+            background: #28a745;
+        }
+        
+        /* List View Styles */
+        .schedule-list {
+            display: none;
+        }
+        
+        .schedule-list.active {
+            display: block;
+        }
+        
+        .schedule-item {
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 15px;
+            border-left: 4px solid #fb923c;
+        }
+        
+        .item-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+        
+        .item-name {
+            font-weight: 600;
+            color: #333;
+        }
+        
+        .item-duration {
+            background: #fb923c;
+            color: white;
+            padding: 4px 8px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 600;
+        }
+        
+        .item-time {
+            color: #666;
+            margin-bottom: 10px;
+        }
+        
+        .item-next {
+            font-size: 0.9rem;
+            color: #28a745;
+            font-weight: 500;
+        }
+        
+        .item-actions {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+        }
+        
+        .btn-small {
+            padding: 6px 12px;
+            font-size: 0.8rem;
+            border-radius: 6px;
+        }
+        
+        /* Bottom Navigation */
+        .bottom-nav {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            width: 100%;
+            background: white;
+            padding: 10px 0 max(10px, env(safe-area-inset-bottom));
+            display: flex;
+            justify-content: space-around;
+            align-items: center;
+            box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.1);
+        }
+        
+        .nav-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-decoration: none;
+            color: #999;
+            padding: 8px 12px;
+            border-radius: 8px;
+            transition: all 0.3s;
+            min-width: 50px;
+            position: relative;
+        }
+        
+        .nav-item:hover {
+            color: #fb923c;
+            transform: translateY(-2px);
+        }
+        
+        .nav-item.active {
+            color: #fb923c;
+            background: rgba(251, 146, 60, 0.1);
+        }
+        
+        .nav-item.nav-primary {
+            transform: scale(1.1);
+            background: linear-gradient(135deg, #fcd34d 0%, #fb923c 50%, #ec4899 100%);
+            color: white;
+            box-shadow: 0 4px 15px rgba(251, 146, 60, 0.3);
+        }
+        
+        .nav-item.nav-primary:hover {
+            transform: scale(1.15) translateY(-2px);
+            box-shadow: 0 6px 20px rgba(251, 146, 60, 0.4);
+            color: white;
+        }
+        
+        .nav-item.nav-primary.active {
+            color: white;
+            background: linear-gradient(135deg, #fcd34d 0%, #fb923c 50%, #ec4899 100%);
+        }
+        
+        .nav-icon {
+            width: 24px;
+            height: 24px;
+            margin-bottom: 4px;
+            stroke-width: 2;
+        }
+        
+        .nav-primary .nav-icon {
+            width: 28px;
+            height: 28px;
+        }
+        
+        .nav-label {
+            font-size: 10px;
+            font-weight: 500;
+            text-align: center;
+            line-height: 1.2;
+        }
+        
+        .nav-primary .nav-label {
+            font-size: 11px;
+            font-weight: 600;
+        }
+        
+        /* Loading state */
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #666;
+        }
+        
+        .spinner {
+            width: 40px;
+            height: 40px;
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #fb923c;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 20px;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        /* Add Block Button */
+        .add-block-btn {
+            position: absolute;
+            bottom: 20px;
+            right: 20px;
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #fcd34d 0%, #fb923c 50%, #ec4899 100%);
+            border: none;
+            color: white;
+            font-size: 1.5rem;
+            cursor: pointer;
+            box-shadow: 0 4px 20px rgba(251, 146, 60, 0.4);
+            transition: all 0.3s;
+            z-index: 10;
+        }
+        
+        .add-block-btn:hover {
+            transform: scale(1.1);
+            box-shadow: 0 6px 25px rgba(251, 146, 60, 0.5);
+        }
+        
+        /* Mobile adjustment for FAB to avoid bottom nav overlap */
+        @media (max-width: 768px) {
+            .add-block-btn {
+                position: fixed; /* Fixed positioning on mobile to avoid scroll overlap */
+                bottom: 90px; /* Position above fixed bottom navigation */
+                right: 20px;
+            }
+        }
+        
+        /* Modal Styles */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 2000;
+            padding: 20px;
+            box-sizing: border-box;
+        }
+        
+        .modal.active {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .modal-content {
+            background: white;
+            border-radius: 20px;
+            padding: 30px;
+            width: 100%;
+            max-width: 500px;
+            max-height: 90vh;
+            overflow-y: auto;
+            position: relative;
+        }
+        
+        .modal-header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        
+        .modal-header h2 {
+            font-size: 1.5rem;
+            color: #333;
+            margin-bottom: 10px;
+        }
+        
+        .modal-header p {
+            color: #666;
+        }
+        
+        .close-btn {
+            position: absolute;
+            top: 15px;
+            right: 20px;
+            background: none;
+            border: none;
+            font-size: 1.5rem;
+            color: #999;
+            cursor: pointer;
+            width: 30px;
+            height: 30px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .close-btn:hover {
+            color: #333;
+        }
+        
+        .form-group {
+            margin-bottom: 20px;
+        }
+        
+        .form-label {
+            display: block;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 8px;
+        }
+        
+        .form-input, .form-select {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e9ecef;
+            border-radius: 8px;
+            font-size: 1rem;
+            transition: border-color 0.3s;
+        }
+        
+        .form-input:focus, .form-select:focus {
+            outline: none;
+            border-color: #fb923c;
+        }
+        
+        .form-row {
+            display: flex;
+            gap: 15px;
+        }
+        
+        .form-row .form-group {
+            flex: 1;
+        }
+        
+        .form-actions {
+            display: flex;
+            gap: 15px;
+            margin-top: 30px;
+        }
+        
+        .btn-cancel {
+            flex: 1;
+            background: #e9ecef;
+            color: #666;
+        }
+        
+        .btn-save {
+            flex: 1;
+        }
+        
+        .btn-delete {
+            background: #dc3545;
+            color: white;
+        }
+        
+        .btn-delete:hover {
+            background: #c82333;
+        }
+        
+        .preview-section {
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 15px;
+            margin-top: 20px;
+        }
+        
+        .preview-title {
+            font-weight: 600;
+            margin-bottom: 10px;
+            color: #333;
+        }
+        
+        .preview-instances {
+            font-size: 0.9rem;
+            color: #666;
+        }
+        
+        .preview-instance {
+            padding: 8px 0;
+            border-bottom: 1px solid #e9ecef;
+        }
+        
+        .preview-instance:last-child {
+            border-bottom: none;
+        }
+        
+        .overlap-warning {
+            background: #fff3cd;
+            border: 1px solid #ffeaa7;
+            border-radius: 10px;
+            padding: 15px;
+            margin-top: 20px;
+        }
+        
+        .warning-title {
+            font-weight: 600;
+            margin-bottom: 10px;
+            color: #856404;
+        }
+        
+        .warning-content {
+            font-size: 0.9rem;
+            color: #856404;
+        }
+        
+        .warning-item {
+            padding: 8px 0;
+            border-bottom: 1px solid #ffeaa7;
+        }
+        
+        .warning-item:last-child {
+            border-bottom: none;
+        }
+        
+        .error-message {
+            color: #dc3545;
+            font-size: 0.9rem;
+            margin-top: 5px;
+            display: none;
+        }
+        
+        .success-message {
+            color: #28a745;
+            font-size: 0.9rem;
+            margin-top: 5px;
+            display: none;
+        }
+        
+        /* Mobile responsiveness */
+        @media (max-width: 480px) {
+            .container {
+                padding: 10px;
+            }
+            
+            .schedule-card {
+                padding: 20px;
+            }
+            
+            .metrics-bar {
+                flex-direction: column;
+                gap: 15px;
+            }
+            
+            .metric {
+                flex: none;
+            }
+            
+            .bottom-nav {
+                padding: 6px 0 max(6px, env(safe-area-inset-bottom));
+            }
+            
+            .nav-item {
+                padding: 6px 8px;
+            }
+            
+            .nav-icon {
+                width: 20px;
+                height: 20px;
+                margin-bottom: 2px;
+            }
+            
+            .nav-primary .nav-icon {
+                width: 24px;
+                height: 24px;
+            }
+            
+            .nav-label {
+                font-size: 9px;
+            }
+            
+            .nav-primary .nav-label {
+                font-size: 10px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="schedule-card">
+            <div class="schedule-header">
+                <h1>📅 Your Schedule</h1>
+                <p>Plan your fasting journey</p>
+            </div>
+            
+            <!-- Loading State -->
+            <div id="loading" class="loading">
+                <div class="spinner"></div>
+                <p>Loading your schedule...</p>
+            </div>
+            
+            <!-- Main Content -->
+            <div id="schedule-content" style="display: none;">
+                <!-- Metrics Bar -->
+                <div class="metrics-bar">
+                    <div class="metric">
+                        <span class="metric-value" id="planned-hours">0</span>
+                        <div class="metric-label">Hours/Week</div>
+                    </div>
+                    <div class="metric">
+                        <span class="metric-value" id="total-blocks">0</span>
+                        <div class="metric-label">Blocks</div>
+                    </div>
+                    <div class="metric">
+                        <span class="metric-value" id="adherence">0%</span>
+                        <div class="metric-label">Adherence</div>
+                    </div>
+                </div>
+                
+                <!-- View Toggle -->
+                <div class="view-toggle">
+                    <button class="toggle-btn active" id="list-view-btn">📋 List</button>
+                    <button class="toggle-btn" id="grid-view-btn">📊 Grid</button>
+                </div>
+                
+                <!-- List View -->
+                <div id="schedule-list" class="schedule-list active">
+                    <!-- Schedule items will be populated here -->
+                </div>
+                
+                <!-- Grid View -->
+                <div id="schedule-grid" class="schedule-grid">
+                    <!-- Grid will be populated here -->
+                </div>
+            </div>
+            
+            <!-- Empty State -->
+            <div id="empty-state" class="empty-state" style="display: none;">
+                <div class="empty-icon">📅</div>
+                <h3>No Schedule Set</h3>
+                <p>Create your first fasting block to get started with a recurring schedule.</p>
+                <button class="btn" id="create-first-block">Create First Block</button>
+            </div>
+            
+            <!-- Add Block Button -->
+            <button class="add-block-btn" id="add-block-btn">+</button>
+        </div>
+    </div>
+    
+    <!-- Create Block Modal -->
+    <div id="create-block-modal" class="modal">
+        <div class="modal-content">
+            <button class="close-btn" onclick="closeModal('create-block-modal')">&times;</button>
+            <div class="modal-header">
+                <h2>🕒 Create Fasting Block</h2>
+                <p>Set up a recurring fasting schedule</p>
+            </div>
+            
+            <form id="create-block-form">
+                <div class="form-group">
+                    <label class="form-label">Block Name (Optional)</label>
+                    <input type="text" class="form-input" id="create-name" placeholder="e.g., Weekend 48h Fast">
+                </div>
+                
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label">Start Day</label>
+                        <select class="form-select" id="create-start-dow" required>
+                            <option value="1">Monday</option>
+                            <option value="2">Tuesday</option>
+                            <option value="3">Wednesday</option>
+                            <option value="4">Thursday</option>
+                            <option value="5">Friday</option>
+                            <option value="6">Saturday</option>
+                            <option value="0">Sunday</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Start Time</label>
+                        <input type="time" class="form-input" id="create-start-time" value="20:00" required>
+                    </div>
+                </div>
+                
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label">End Day</label>
+                        <select class="form-select" id="create-end-dow" required>
+                            <option value="1">Monday</option>
+                            <option value="2">Tuesday</option>
+                            <option value="3">Wednesday</option>
+                            <option value="4">Thursday</option>
+                            <option value="5">Friday</option>
+                            <option value="6">Saturday</option>
+                            <option value="0">Sunday</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">End Time</label>
+                        <input type="time" class="form-input" id="create-end-time" value="20:00" required>
+                    </div>
+                </div>
+                
+                <div class="preview-section" id="create-preview" style="display: none;">
+                    <div class="preview-title">📅 Preview Next 4 Weeks:</div>
+                    <div class="preview-instances" id="create-preview-content"></div>
+                </div>
+                
+                <div class="overlap-warning" id="create-overlap-warning" style="display: none;">
+                    <div class="warning-title">⚠️ Schedule Conflicts Detected:</div>
+                    <div class="warning-content" id="create-overlap-content"></div>
+                </div>
+                
+                <div class="error-message" id="create-error"></div>
+                <div class="success-message" id="create-success"></div>
+                
+                <div class="form-actions">
+                    <button type="button" class="btn btn-cancel" onclick="closeModal('create-block-modal')">Cancel</button>
+                    <button type="submit" class="btn btn-save">Create Block</button>
+                </div>
+            </form>
+        </div>
+    </div>
+    
+    <!-- Edit Block Modal -->
+    <div id="edit-block-modal" class="modal">
+        <div class="modal-content">
+            <button class="close-btn" onclick="closeModal('edit-block-modal')">&times;</button>
+            <div class="modal-header">
+                <h2>✏️ Edit Fasting Block</h2>
+                <p>Modify your recurring schedule</p>
+            </div>
+            
+            <form id="edit-block-form">
+                <input type="hidden" id="edit-block-id">
+                
+                <div class="form-group">
+                    <label class="form-label">Block Name (Optional)</label>
+                    <input type="text" class="form-input" id="edit-name" placeholder="e.g., Weekend 48h Fast">
+                </div>
+                
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label">Start Day</label>
+                        <select class="form-select" id="edit-start-dow" required>
+                            <option value="1">Monday</option>
+                            <option value="2">Tuesday</option>
+                            <option value="3">Wednesday</option>
+                            <option value="4">Thursday</option>
+                            <option value="5">Friday</option>
+                            <option value="6">Saturday</option>
+                            <option value="0">Sunday</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Start Time</label>
+                        <input type="time" class="form-input" id="edit-start-time" required>
+                    </div>
+                </div>
+                
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label">End Day</label>
+                        <select class="form-select" id="edit-end-dow" required>
+                            <option value="1">Monday</option>
+                            <option value="2">Tuesday</option>
+                            <option value="3">Wednesday</option>
+                            <option value="4">Thursday</option>
+                            <option value="5">Friday</option>
+                            <option value="6">Saturday</option>
+                            <option value="0">Sunday</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">End Time</label>
+                        <input type="time" class="form-input" id="edit-end-time" required>
+                    </div>
+                </div>
+                
+                <div class="preview-section" id="edit-preview" style="display: none;">
+                    <div class="preview-title">📅 Preview Next 4 Weeks:</div>
+                    <div class="preview-instances" id="edit-preview-content"></div>
+                </div>
+                
+                <div class="overlap-warning" id="edit-overlap-warning" style="display: none;">
+                    <div class="warning-title">⚠️ Schedule Conflicts Detected:</div>
+                    <div class="warning-content" id="edit-overlap-content"></div>
+                </div>
+                
+                <div class="error-message" id="edit-error"></div>
+                <div class="success-message" id="edit-success"></div>
+                
+                <div class="form-actions">
+                    <button type="button" class="btn btn-delete" id="delete-block-btn">Delete</button>
+                    <button type="button" class="btn btn-cancel" onclick="closeModal('edit-block-modal')">Cancel</button>
+                    <button type="submit" class="btn btn-save">Save Changes</button>
+                </div>
+            </form>
+        </div>
+    </div>
+    
+    <!-- Bottom Navigation -->
+    <nav class="bottom-nav">
+        <a href="/schedule" class="nav-item active" data-page="schedule">
+            <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
+                <line x1="16" y1="2" x2="16" y2="6"/>
+                <line x1="8" y1="2" x2="8" y2="6"/>
+                <line x1="3" y1="10" x2="21" y2="10"/>
+            </svg>
+            <span class="nav-label">Schedule</span>
+        </a>
+        
+        <a href="/dashboard" class="nav-item" data-page="dashboard">
+            <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <line x1="18" y1="20" x2="18" y2="10"/>
+                <line x1="12" y1="20" x2="12" y2="4"/>
+                <line x1="6" y1="20" x2="6" y2="14"/>
+            </svg>
+            <span class="nav-label">Dashboard</span>
+        </a>
+        
+        <a href="/timer" class="nav-item nav-primary" data-page="timer">
+            <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="12" cy="13" r="9"/>
+                <polyline points="12,7 12,13 16,15"/>
+                <path d="M9,2 L15,2"/>
+                <path d="M12,2 L12,6"/>
+            </svg>
+            <span class="nav-label">Timer</span>
+        </a>
+        
+        <a href="/learning" class="nav-item" data-page="learning">
+            <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/>
+                <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/>
+            </svg>
+            <span class="nav-label">Learning Hub</span>
+        </a>
+        
+        <a href="/more" class="nav-item" data-page="more">
+            <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="12" cy="12" r="1"/>
+                <circle cx="19" cy="12" r="1"/>
+                <circle cx="5" cy="12" r="1"/>
+            </svg>
+            <span class="nav-label">More</span>
+        </a>
+    </nav>
+
+    <script>
+        // Session management
+        const sessionId = localStorage.getItem('fastingForecast_sessionId');
+        
+        // Global state
+        let scheduleData = {
+            schedule: null,
+            blocks: [],
+            nextInstances: []
+        };
+        
+        // DOM elements
+        const loading = document.getElementById('loading');
+        const scheduleContent = document.getElementById('schedule-content');
+        const emptyState = document.getElementById('empty-state');
+        const listViewBtn = document.getElementById('list-view-btn');
+        const gridViewBtn = document.getElementById('grid-view-btn');
+        const scheduleList = document.getElementById('schedule-list');
+        const scheduleGrid = document.getElementById('schedule-grid');
+        
+        // Initialize the page
+        document.addEventListener('DOMContentLoaded', function() {
+            if (!sessionId) {
+                window.location.href = '/forecaster';
+                return;
+            }
+            
+            loadSchedule();
+            setupEventListeners();
+        });
+        
+        function setupEventListeners() {
+            // View toggle
+            listViewBtn.addEventListener('click', () => switchView('list'));
+            gridViewBtn.addEventListener('click', () => switchView('grid'));
+            
+            // Add block buttons
+            document.getElementById('create-first-block').addEventListener('click', () => {
+                openCreateModal();
+            });
+            document.getElementById('add-block-btn').addEventListener('click', () => {
+                openCreateModal();
+            });
+            
+            // Form submissions
+            document.getElementById('create-block-form').addEventListener('submit', handleCreateBlock);
+            document.getElementById('edit-block-form').addEventListener('submit', handleEditBlock);
+            document.getElementById('delete-block-btn').addEventListener('click', handleDeleteBlock);
+            
+            // Preview updates
+            document.getElementById('create-start-dow').addEventListener('change', updateCreatePreview);
+            document.getElementById('create-start-time').addEventListener('change', updateCreatePreview);
+            document.getElementById('create-end-dow').addEventListener('change', updateCreatePreview);
+            document.getElementById('create-end-time').addEventListener('change', updateCreatePreview);
+            
+            document.getElementById('edit-start-dow').addEventListener('change', updateEditPreview);
+            document.getElementById('edit-start-time').addEventListener('change', updateEditPreview);
+            document.getElementById('edit-end-dow').addEventListener('change', updateEditPreview);
+            document.getElementById('edit-end-time').addEventListener('change', updateEditPreview);
+            
+            // Modal close on background click
+            document.getElementById('create-block-modal').addEventListener('click', (e) => {
+                if (e.target.id === 'create-block-modal') {
+                    closeModal('create-block-modal');
+                }
+            });
+            document.getElementById('edit-block-modal').addEventListener('click', (e) => {
+                if (e.target.id === 'edit-block-modal') {
+                    closeModal('edit-block-modal');
+                }
+            });
+        }
+        
+        function switchView(view) {
+            if (view === 'list') {
+                listViewBtn.classList.add('active');
+                gridViewBtn.classList.remove('active');
+                scheduleList.classList.add('active');
+                scheduleGrid.classList.remove('active');
+            } else {
+                listViewBtn.classList.remove('active');
+                gridViewBtn.classList.add('active');
+                scheduleList.classList.remove('active');
+                scheduleGrid.classList.add('active');
+            }
+        }
+        
+        async function loadSchedule() {
+            try {
+                const response = await fetch(`/api/schedule?sessionId=${sessionId}`);
+                const data = await response.json();
+                
+                if (!response.ok) {
+                    throw new Error(data.error || 'Failed to load schedule');
+                }
+                
+                scheduleData = data;
+                renderSchedule();
+                
+            } catch (error) {
+                console.error('Error loading schedule:', error);
+                showError('Failed to load schedule. Please try again.');
+            }
+        }
+        
+        function renderSchedule() {
+            loading.style.display = 'none';
+            
+            if (!scheduleData.schedule || scheduleData.blocks.length === 0) {
+                showEmptyState();
+                return;
+            }
+            
+            showScheduleContent();
+            updateMetrics();
+            renderListView();
+            renderGridView();
+        }
+        
+        function showEmptyState() {
+            emptyState.style.display = 'block';
+            scheduleContent.style.display = 'none';
+        }
+        
+        function showScheduleContent() {
+            emptyState.style.display = 'none';
+            scheduleContent.style.display = 'block';
+        }
+        
+        function updateMetrics() {
+            // Calculate planned hours per week
+            let totalHours = 0;
+            scheduleData.blocks.forEach(block => {
+                const start = parseTime(block.start_time);
+                const end = parseTime(block.end_time);
+                let duration = end - start;
+                
+                // Handle overnight fasts
+                if (block.end_dow < block.start_dow || (block.end_dow === block.start_dow && duration <= 0)) {
+                    duration += 24;
+                }
+                
+                // Handle multi-day fasts
+                if (block.end_dow > block.start_dow) {
+                    duration += (block.end_dow - block.start_dow) * 24;
+                }
+                
+                totalHours += duration;
+            });
+            
+            document.getElementById('planned-hours').textContent = Math.round(totalHours);
+            document.getElementById('total-blocks').textContent = scheduleData.blocks.length;
+            
+            // TODO: Calculate real adherence from historical data
+            document.getElementById('adherence').textContent = '95%';
+        }
+        
+        function parseTime(timeStr) {
+            const [hours, minutes] = timeStr.split(':').map(Number);
+            return hours + minutes / 60;
+        }
+        
+        function renderListView() {
+            const listContainer = document.getElementById('schedule-list');
+            listContainer.innerHTML = '';
+            
+            scheduleData.blocks.forEach(block => {
+                const nextInstance = scheduleData.nextInstances.find(inst => inst.block_id === block.id);
+                
+                const itemEl = document.createElement('div');
+                itemEl.className = 'schedule-item';
+                itemEl.innerHTML = `
+                    <div class="item-header">
+                        <div class="item-name">${block.name || 'Unnamed Block'}</div>
+                        <div class="item-duration">${calculateDuration(block)}h</div>
+                    </div>
+                    <div class="item-time">
+                        ${formatScheduleTime(block)}
+                    </div>
+                    ${nextInstance ? `
+                        <div class="item-next">
+                            Next: ${formatNextInstance(nextInstance)}
+                        </div>
+                    ` : ''}
+                    <div class="item-actions">
+                        <button class="btn btn-secondary btn-small" onclick="editBlock(${block.id})">Edit</button>
+                        <button class="btn btn-secondary btn-small" onclick="showOverrides(${block.id})">Quick Actions</button>
+                    </div>
+                `;
+                listContainer.appendChild(itemEl);
+            });
+        }
+        
+        function renderGridView() {
+            const gridContainer = document.getElementById('schedule-grid');
+            gridContainer.innerHTML = '';
+            
+            // Create header row
+            const timeHeader = document.createElement('div');
+            timeHeader.className = 'grid-header';
+            timeHeader.textContent = '';
+            gridContainer.appendChild(timeHeader);
+            
+            const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+            days.forEach(day => {
+                const dayHeader = document.createElement('div');
+                dayHeader.className = 'grid-header';
+                dayHeader.textContent = day;
+                gridContainer.appendChild(dayHeader);
+            });
+            
+            // Create time rows (simplified - showing every 4 hours)
+            for (let hour = 0; hour < 24; hour += 4) {
+                const timeLabel = document.createElement('div');
+                timeLabel.className = 'time-label';
+                timeLabel.textContent = `${hour}:00`;
+                gridContainer.appendChild(timeLabel);
+                
+                for (let day = 0; day < 7; day++) {
+                    const cell = document.createElement('div');
+                    cell.className = 'grid-cell';
+                    
+                    // Check if this cell is part of a fasting block
+                    const isFasting = scheduleData.blocks.some(block => {
+                        return isTimeInBlock(day, hour, block);
+                    });
+                    
+                    if (isFasting) {
+                        cell.classList.add('fasting');
+                    } else {
+                        cell.classList.add('feeding');
+                    }
+                    
+                    gridContainer.appendChild(cell);
+                }
+            }
+        }
+        
+        function isTimeInBlock(day, hour, block) {
+            const blockStartDay = block.start_dow;
+            const blockEndDay = block.end_dow;
+            const blockStartHour = parseTime(block.start_time);
+            const blockEndHour = parseTime(block.end_time);
+            
+            // Simple check - can be enhanced for complex scenarios
+            if (blockStartDay === blockEndDay) {
+                return day === blockStartDay && hour >= blockStartHour && hour < blockEndHour;
+            }
+            
+            // Multi-day fast
+            if (day === blockStartDay) {
+                return hour >= blockStartHour;
+            } else if (day === blockEndDay) {
+                return hour < blockEndHour;
+            } else if (blockEndDay > blockStartDay) {
+                return day > blockStartDay && day < blockEndDay;
+            } else {
+                // Spans week boundary
+                return day > blockStartDay || day < blockEndDay;
+            }
+        }
+        
+        function calculateDuration(block) {
+            const start = parseTime(block.start_time);
+            const end = parseTime(block.end_time);
+            let duration = end - start;
+            
+            if (block.end_dow < block.start_dow || (block.end_dow === block.start_dow && duration <= 0)) {
+                duration += 24;
+            }
+            
+            if (block.end_dow > block.start_dow) {
+                duration += (block.end_dow - block.start_dow) * 24;
+            }
+            
+            return Math.round(duration);
+        }
+        
+        function checkBlockOverlap(newBlock, existingBlocks, excludeId = null) {
+            const overlaps = [];
+            
+            for (const existing of existingBlocks) {
+                // Skip the block being edited
+                if (excludeId && existing.id === excludeId) continue;
+                
+                if (blocksOverlap(newBlock, existing)) {
+                    overlaps.push(existing);
+                }
+            }
+            
+            return overlaps;
+        }
+        
+        function blocksOverlap(block1, block2) {
+            const b1Start = getBlockStartMinutes(block1);
+            const b1End = getBlockEndMinutes(block1);
+            const b2Start = getBlockStartMinutes(block2);
+            const b2End = getBlockEndMinutes(block2);
+            
+            // Check for overlap: blocks overlap if one starts before the other ends
+            return b1Start < b2End && b2Start < b1End;
+        }
+        
+        function getBlockStartMinutes(block) {
+            const startHour = parseTime(block.start_time);
+            return (block.start_dow * 24 * 60) + (startHour * 60);
+        }
+        
+        function getBlockEndMinutes(block) {
+            const endHour = parseTime(block.end_time);
+            let endMinutes = (block.end_dow * 24 * 60) + (endHour * 60);
+            
+            // Handle week wraparound
+            if (block.end_dow < block.start_dow || 
+                (block.end_dow === block.start_dow && endHour <= parseTime(block.start_time))) {
+                endMinutes += 7 * 24 * 60; // Add a week
+            }
+            
+            return endMinutes;
+        }
+        
+        function formatScheduleTime(block) {
+            const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+            const startDay = days[block.start_dow];
+            const endDay = days[block.end_dow];
+            
+            return `${startDay} ${block.start_time} → ${endDay} ${block.end_time}`;
+        }
+        
+        function formatNextInstance(instance) {
+            const date = new Date(instance.start_at_utc);
+            const options = { 
+                month: 'short', 
+                day: 'numeric',
+                hour: 'numeric',
+                minute: '2-digit'
+            };
+            
+            if (instance.status === 'skipped') {
+                return `${date.toLocaleDateString('en-US', options)} (Skipped)`;
+            }
+            
+            return date.toLocaleDateString('en-US', options);
+        }
+        
+        function showError(message) {
+            loading.style.display = 'none';
+            emptyState.style.display = 'block';
+            emptyState.innerHTML = `
+                <div class="empty-icon">⚠️</div>
+                <h3>Error</h3>
+                <p>${message}</p>
+                <button class="btn" onclick="location.reload()">Retry</button>
+            `;
+        }
+        
+        function checkAndDisplayOverlaps(type, blockData, excludeId = null) {
+            // Validate the block data first
+            if (!blockData.start_time || !blockData.end_time || 
+                blockData.start_dow === null || blockData.end_dow === null) {
+                hideOverlapWarning(type);
+                return;
+            }
+            
+            // Check for overlaps with existing blocks
+            const overlaps = checkBlockOverlap(blockData, scheduleData.blocks, excludeId);
+            
+            if (overlaps.length > 0) {
+                showOverlapWarning(type, overlaps);
+            } else {
+                hideOverlapWarning(type);
+            }
+        }
+        
+        function showOverlapWarning(type, overlappingBlocks) {
+            const warningDiv = document.getElementById(`${type}-overlap-warning`);
+            const contentDiv = document.getElementById(`${type}-overlap-content`);
+            
+            let warningHtml = '';
+            overlappingBlocks.forEach(block => {
+                warningHtml += `
+                    <div class="warning-item">
+                        <strong>${block.name || 'Unnamed Block'}</strong><br>
+                        ${formatScheduleTime(block)}
+                    </div>
+                `;
+            });
+            
+            contentDiv.innerHTML = warningHtml;
+            warningDiv.style.display = 'block';
+        }
+        
+        function hideOverlapWarning(type) {
+            const warningDiv = document.getElementById(`${type}-overlap-warning`);
+            warningDiv.style.display = 'none';
+        }
+        
+        // Modal functions
+        function openCreateModal() {
+            resetForm('create');
+            document.getElementById('create-block-modal').classList.add('active');
+        }
+        
+        function openEditModal(blockId) {
+            const block = scheduleData.blocks.find(b => b.id === blockId);
+            if (!block) return;
+            
+            // Populate edit form
+            document.getElementById('edit-block-id').value = block.id;
+            document.getElementById('edit-name').value = block.name || '';
+            document.getElementById('edit-start-dow').value = block.start_dow;
+            document.getElementById('edit-start-time').value = block.start_time;
+            document.getElementById('edit-end-dow').value = block.end_dow;
+            document.getElementById('edit-end-time').value = block.end_time;
+            
+            clearMessages('edit');
+            updateEditPreview();
+            document.getElementById('edit-block-modal').classList.add('active');
+        }
+        
+        function closeModal(modalId) {
+            document.getElementById(modalId).classList.remove('active');
+        }
+        
+        function resetForm(type) {
+            if (type === 'create') {
+                document.getElementById('create-name').value = '';
+                document.getElementById('create-start-dow').value = '1';
+                document.getElementById('create-start-time').value = '20:00';
+                document.getElementById('create-end-dow').value = '3';
+                document.getElementById('create-end-time').value = '20:00';
+                document.getElementById('create-preview').style.display = 'none';
+            }
+            clearMessages(type);
+        }
+        
+        function clearMessages(type) {
+            document.getElementById(`${type}-error`).style.display = 'none';
+            document.getElementById(`${type}-success`).style.display = 'none';
+        }
+        
+        function showMessage(type, messageType, text) {
+            clearMessages(type);
+            const element = document.getElementById(`${type}-${messageType}`);
+            element.textContent = text;
+            element.style.display = 'block';
+        }
+        
+        // Form handlers
+        async function handleCreateBlock(e) {
+            e.preventDefault();
+            
+            const formData = {
+                sessionId: sessionId,
+                name: document.getElementById('create-name').value || null,
+                start_dow: parseInt(document.getElementById('create-start-dow').value),
+                start_time: document.getElementById('create-start-time').value,
+                end_dow: parseInt(document.getElementById('create-end-dow').value),
+                end_time: document.getElementById('create-end-time').value,
+                tz_mode: 'local',
+                notifications: {
+                    pre_start: ['3h', '30m'],
+                    start_grace_mins: 60,
+                    milestones: true
+                }
+            };
+            
+            try {
+                const response = await fetch('/api/schedule/blocks', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(formData)
+                });
+                
+                const result = await response.json();
+                
+                if (!response.ok) {
+                    throw new Error(result.error || 'Failed to create block');
+                }
+                
+                showMessage('create', 'success', 'Fasting block created successfully!');
+                setTimeout(() => {
+                    closeModal('create-block-modal');
+                    loadSchedule(); // Refresh the schedule
+                }, 1500);
+                
+            } catch (error) {
+                console.error('Error creating block:', error);
+                showMessage('create', 'error', error.message);
+            }
+        }
+        
+        async function handleEditBlock(e) {
+            e.preventDefault();
+            
+            const blockId = document.getElementById('edit-block-id').value;
+            const formData = {
+                sessionId: sessionId,
+                name: document.getElementById('edit-name').value || null,
+                start_dow: parseInt(document.getElementById('edit-start-dow').value),
+                start_time: document.getElementById('edit-start-time').value,
+                end_dow: parseInt(document.getElementById('edit-end-dow').value),
+                end_time: document.getElementById('edit-end-time').value
+            };
+            
+            try {
+                const response = await fetch(`/api/schedule/blocks/${blockId}`, {
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(formData)
+                });
+                
+                const result = await response.json();
+                
+                if (!response.ok) {
+                    throw new Error(result.error || 'Failed to update block');
+                }
+                
+                showMessage('edit', 'success', 'Fasting block updated successfully!');
+                setTimeout(() => {
+                    closeModal('edit-block-modal');
+                    loadSchedule(); // Refresh the schedule
+                }, 1500);
+                
+            } catch (error) {
+                console.error('Error updating block:', error);
+                showMessage('edit', 'error', error.message);
+            }
+        }
+        
+        async function handleDeleteBlock() {
+            const blockId = document.getElementById('edit-block-id').value;
+            
+            if (!confirm('Are you sure you want to delete this fasting block? This cannot be undone.')) {
+                return;
+            }
+            
+            try {
+                const response = await fetch(`/api/schedule/blocks/${blockId}?sessionId=${sessionId}`, {
+                    method: 'DELETE'
+                });
+                
+                const result = await response.json();
+                
+                if (!response.ok) {
+                    throw new Error(result.error || 'Failed to delete block');
+                }
+                
+                closeModal('edit-block-modal');
+                loadSchedule(); // Refresh the schedule
+                
+            } catch (error) {
+                console.error('Error deleting block:', error);
+                showMessage('edit', 'error', error.message);
+            }
+        }
+        
+        // Preview functions
+        async function updateCreatePreview() {
+            const blockData = {
+                name: document.getElementById('create-name').value || 'New Block',
+                start_dow: parseInt(document.getElementById('create-start-dow').value),
+                start_time: document.getElementById('create-start-time').value,
+                end_dow: parseInt(document.getElementById('create-end-dow').value),
+                end_time: document.getElementById('create-end-time').value,
+                tz_mode: 'local'
+            };
+            
+            // Check for overlaps
+            checkAndDisplayOverlaps('create', blockData);
+            
+            await generatePreview('create', [blockData]);
+        }
+        
+        async function updateEditPreview() {
+            const blockData = {
+                name: document.getElementById('edit-name').value || 'Edited Block',
+                start_dow: parseInt(document.getElementById('edit-start-dow').value),
+                start_time: document.getElementById('edit-start-time').value,
+                end_dow: parseInt(document.getElementById('edit-end-dow').value),
+                end_time: document.getElementById('edit-end-time').value,
+                tz_mode: 'local'
+            };
+            
+            // Check for overlaps (exclude current block being edited)
+            const editingBlockId = parseInt(document.getElementById('edit-block-id').value);
+            checkAndDisplayOverlaps('edit', blockData, editingBlockId);
+            
+            await generatePreview('edit', [blockData]);
+        }
+        
+        async function generatePreview(type, blocks) {
+            try {
+                const response = await fetch('/api/schedule/preview', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ sessionId: sessionId, blocks: blocks })
+                });
+                
+                const result = await response.json();
+                
+                if (!response.ok) {
+                    throw new Error(result.error || 'Failed to generate preview');
+                }
+                
+                const previewContent = document.getElementById(`${type}-preview-content`);
+                const previewSection = document.getElementById(`${type}-preview`);
+                
+                if (result.nextInstances && result.nextInstances.length > 0) {
+                    previewContent.innerHTML = result.nextInstances.slice(0, 4).map(instance => {
+                        const date = new Date(instance.start_at_utc);
+                        const options = { 
+                            weekday: 'short',
+                            month: 'short', 
+                            day: 'numeric',
+                            hour: 'numeric',
+                            minute: '2-digit'
+                        };
+                        return `<div class="preview-instance">${date.toLocaleDateString('en-US', options)} • ${Math.round(instance.duration_hours)}h</div>`;
+                    }).join('');
+                    previewSection.style.display = 'block';
+                } else {
+                    previewSection.style.display = 'none';
+                }
+                
+            } catch (error) {
+                console.error('Error generating preview:', error);
+            }
+        }
+        
+        // Updated functions
+        function editBlock(blockId) {
+            openEditModal(blockId);
+        }
+        
+        function showOverrides(blockId) {
+            // TODO: Implement override quick actions modal
+            alert(`Override actions for block ${blockId} will be implemented in the next phase`);
+        }
+    </script>
+</body>
+</html>

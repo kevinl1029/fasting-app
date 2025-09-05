@@ -1215,7 +1215,7 @@
                 const href = item.getAttribute('href');
                 
                 // For now, prevent default navigation for pages that don't exist
-                if (href !== '/dashboard' && href !== '/timer') {
+                if (href !== '/dashboard' && href !== '/timer' && href !== '/schedule') {
                     e.preventDefault();
                     
                     const pageName = item.querySelector('.nav-label').textContent;

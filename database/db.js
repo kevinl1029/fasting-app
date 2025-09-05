@@ -36,6 +36,9 @@ class Database {
           is_manual BOOLEAN DEFAULT FALSE,
           is_active BOOLEAN DEFAULT FALSE,
           user_profile_id INTEGER,
+          source TEXT DEFAULT 'manual',
+          planned_instance_id TEXT,
+          planned_duration_hours REAL,
           created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
           updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
           FOREIGN KEY (user_profile_id) REFERENCES user_profiles (id)
@@ -43,8 +46,8 @@ class Database {
       `;
 
       const copyDataFromOldTable = `
-        INSERT INTO fasts_new (id, start_time, end_time, duration_hours, notes, weight, photos, is_manual, is_active, created_at, updated_at)
-        SELECT id, start_time, end_time, duration_hours, notes, weight, photos, is_manual, is_active, created_at, updated_at
+        INSERT INTO fasts_new (id, start_time, end_time, duration_hours, notes, weight, photos, is_manual, is_active, source, created_at, updated_at)
+        SELECT id, start_time, end_time, duration_hours, notes, weight, photos, is_manual, is_active, 'manual' as source, created_at, updated_at
         FROM fasts
         WHERE EXISTS (SELECT name FROM sqlite_master WHERE type='table' AND name='fasts')
       `;
@@ -78,6 +81,64 @@ class Database {
           hours_elapsed REAL NOT NULL,
           created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
           FOREIGN KEY (fast_id) REFERENCES fasts (id) ON DELETE CASCADE
+        )
+      `;
+
+      // Schedule feature tables
+      const createSchedulesTable = `
+        CREATE TABLE IF NOT EXISTS schedules (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          user_profile_id INTEGER NOT NULL,
+          week_anchor INTEGER DEFAULT 1,
+          is_paused BOOLEAN DEFAULT FALSE,
+          created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+          updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+          FOREIGN KEY (user_profile_id) REFERENCES user_profiles (id)
+        )
+      `;
+
+      const createFastingBlocksTable = `
+        CREATE TABLE IF NOT EXISTS fasting_blocks (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          schedule_id INTEGER NOT NULL,
+          name TEXT,
+          start_dow INTEGER NOT NULL,
+          start_time TEXT NOT NULL,
+          end_dow INTEGER NOT NULL,
+          end_time TEXT NOT NULL,
+          tz_mode TEXT DEFAULT 'local',
+          anchor_tz TEXT,
+          notifications TEXT,
+          is_active BOOLEAN DEFAULT TRUE,
+          created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+          updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+          FOREIGN KEY (schedule_id) REFERENCES schedules (id) ON DELETE CASCADE
+        )
+      `;
+
+      const createOverridesTable = `
+        CREATE TABLE IF NOT EXISTS overrides (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          block_id INTEGER NOT NULL,
+          occurrence_date TEXT NOT NULL,
+          type TEXT NOT NULL,
+          payload TEXT,
+          reason TEXT,
+          created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+          FOREIGN KEY (block_id) REFERENCES fasting_blocks (id) ON DELETE CASCADE
+        )
+      `;
+
+      const createPlannedInstancesTable = `
+        CREATE TABLE IF NOT EXISTS planned_instances (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          block_id INTEGER NOT NULL,
+          start_at_utc DATETIME NOT NULL,
+          end_at_utc DATETIME NOT NULL,
+          occurrence_date TEXT NOT NULL,
+          status TEXT DEFAULT 'upcoming',
+          created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+          FOREIGN KEY (block_id) REFERENCES fasting_blocks (id) ON DELETE CASCADE
         )
       `;
 
@@ -127,6 +188,43 @@ class Database {
             return;
           }
           console.log('Milestones table created successfully');
+        });
+
+        // Create schedule tables
+        this.db.run(createSchedulesTable, (err) => {
+          if (err) {
+            console.error('Error creating schedules table:', err);
+            reject(err);
+            return;
+          }
+          console.log('Schedules table created successfully');
+        });
+
+        this.db.run(createFastingBlocksTable, (err) => {
+          if (err) {
+            console.error('Error creating fasting_blocks table:', err);
+            reject(err);
+            return;
+          }
+          console.log('Fasting blocks table created successfully');
+        });
+
+        this.db.run(createOverridesTable, (err) => {
+          if (err) {
+            console.error('Error creating overrides table:', err);
+            reject(err);
+            return;
+          }
+          console.log('Overrides table created successfully');
+        });
+
+        this.db.run(createPlannedInstancesTable, (err) => {
+          if (err) {
+            console.error('Error creating planned_instances table:', err);
+            reject(err);
+            return;
+          }
+          console.log('Planned instances table created successfully');
           resolve();
         });
       });
@@ -137,6 +235,25 @@ class Database {
     return new Promise((resolve, reject) => {
       const query = `
         SELECT * FROM fasts 
+        ORDER BY start_time DESC 
+        LIMIT ? OFFSET ?
+      `;
+      
+      this.db.all(query, [limit, offset], (err, rows) => {
+        if (err) {
+          reject(err);
+        } else {
+          resolve(rows);
+        }
+      });
+    });
+  }
+
+  async getOrphanedFasts(limit = 50, offset = 0) {
+    return new Promise((resolve, reject) => {
+      const query = `
+        SELECT * FROM fasts 
+        WHERE user_profile_id IS NULL
         ORDER BY start_time DESC 
         LIMIT ? OFFSET ?
       `;
@@ -194,15 +311,18 @@ class Database {
         photos = null,
         is_manual = false,
         is_active = false,
-        user_profile_id = null
+        user_profile_id = null,
+        source = 'manual',
+        planned_instance_id = null,
+        planned_duration_hours = null
       } = fastData;
 
       const query = `
-        INSERT INTO fasts (start_time, end_time, notes, weight, photos, is_manual, is_active, user_profile_id)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        INSERT INTO fasts (start_time, end_time, notes, weight, photos, is_manual, is_active, user_profile_id, source, planned_instance_id, planned_duration_hours)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `;
 
-      this.db.run(query, [start_time, end_time, notes, weight, photos, is_manual, is_active, user_profile_id], function(err) {
+      this.db.run(query, [start_time, end_time, notes, weight, photos, is_manual, is_active, user_profile_id, source, planned_instance_id, planned_duration_hours], function(err) {
         if (err) {
           reject(err);
         } else {
@@ -210,6 +330,11 @@ class Database {
         }
       });
     });
+  }
+
+  // Convenience method for server compatibility
+  async createFastEntry(fastData) {
+    return this.createFast(fastData);
   }
 
   async updateFast(id, fastData) {
@@ -424,6 +549,417 @@ class Database {
           reject(err);
         } else {
           resolve({ session_id: sessionId, changes: this.changes });
+        }
+      });
+    });
+  }
+
+  // Schedule CRUD methods
+  async createSchedule(scheduleData) {
+    return new Promise((resolve, reject) => {
+      const { user_profile_id, week_anchor = 1, is_paused = false } = scheduleData;
+
+      const query = `
+        INSERT INTO schedules (user_profile_id, week_anchor, is_paused)
+        VALUES (?, ?, ?)
+      `;
+
+      this.db.run(query, [user_profile_id, week_anchor, is_paused], function(err) {
+        if (err) {
+          reject(err);
+        } else {
+          resolve({ id: this.lastID, ...scheduleData });
+        }
+      });
+    });
+  }
+
+  async getScheduleByUserProfile(userProfileId) {
+    return new Promise((resolve, reject) => {
+      const query = 'SELECT * FROM schedules WHERE user_profile_id = ? AND is_paused = FALSE ORDER BY created_at DESC LIMIT 1';
+      
+      this.db.get(query, [userProfileId], (err, row) => {
+        if (err) {
+          reject(err);
+        } else {
+          resolve(row || null);
+        }
+      });
+    });
+  }
+
+  async updateSchedule(scheduleId, updateData) {
+    return new Promise((resolve, reject) => {
+      const fields = [];
+      const values = [];
+
+      Object.entries(updateData).forEach(([key, value]) => {
+        if (value !== undefined && key !== 'id') {
+          fields.push(`${key} = ?`);
+          values.push(value);
+        }
+      });
+
+      if (fields.length === 0) {
+        resolve({ id: scheduleId, ...updateData });
+        return;
+      }
+
+      fields.push('updated_at = CURRENT_TIMESTAMP');
+      values.push(scheduleId);
+
+      const query = `UPDATE schedules SET ${fields.join(', ')} WHERE id = ?`;
+
+      this.db.run(query, values, function(err) {
+        if (err) {
+          reject(err);
+        } else {
+          resolve({ id: scheduleId, changes: this.changes });
+        }
+      });
+    });
+  }
+
+  // Fasting Block CRUD methods
+  async createFastingBlock(blockData) {
+    return new Promise((resolve, reject) => {
+      const {
+        schedule_id,
+        name,
+        start_dow,
+        start_time,
+        end_dow,
+        end_time,
+        tz_mode = 'local',
+        anchor_tz,
+        notifications,
+        is_active = true
+      } = blockData;
+
+      const notificationsJson = notifications ? JSON.stringify(notifications) : null;
+
+      const query = `
+        INSERT INTO fasting_blocks (schedule_id, name, start_dow, start_time, end_dow, end_time, tz_mode, anchor_tz, notifications, is_active)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `;
+
+      this.db.run(query, [schedule_id, name, start_dow, start_time, end_dow, end_time, tz_mode, anchor_tz, notificationsJson, is_active], function(err) {
+        if (err) {
+          reject(err);
+        } else {
+          resolve({ id: this.lastID, ...blockData });
+        }
+      });
+    });
+  }
+
+  async getFastingBlocksBySchedule(scheduleId) {
+    return new Promise((resolve, reject) => {
+      const query = 'SELECT * FROM fasting_blocks WHERE schedule_id = ? AND is_active = TRUE ORDER BY start_dow, start_time';
+      
+      this.db.all(query, [scheduleId], (err, rows) => {
+        if (err) {
+          reject(err);
+        } else {
+          // Parse notifications JSON for each row
+          const blocks = rows.map(row => ({
+            ...row,
+            notifications: row.notifications ? JSON.parse(row.notifications) : null
+          }));
+          resolve(blocks);
+        }
+      });
+    });
+  }
+
+  async getFastingBlockById(blockId) {
+    return new Promise((resolve, reject) => {
+      const query = 'SELECT * FROM fasting_blocks WHERE id = ?';
+      
+      this.db.get(query, [blockId], (err, row) => {
+        if (err) {
+          reject(err);
+        } else {
+          if (row && row.notifications) {
+            try {
+              row.notifications = JSON.parse(row.notifications);
+            } catch (e) {
+              console.error('Error parsing notifications JSON:', e);
+            }
+          }
+          resolve(row || null);
+        }
+      });
+    });
+  }
+
+  async updateFastingBlock(blockId, updateData) {
+    return new Promise((resolve, reject) => {
+      const fields = [];
+      const values = [];
+
+      Object.entries(updateData).forEach(([key, value]) => {
+        if (value !== undefined && key !== 'id') {
+          if (key === 'notifications' && value) {
+            fields.push(`${key} = ?`);
+            values.push(JSON.stringify(value));
+          } else {
+            fields.push(`${key} = ?`);
+            values.push(value);
+          }
+        }
+      });
+
+      if (fields.length === 0) {
+        resolve({ id: blockId, ...updateData });
+        return;
+      }
+
+      fields.push('updated_at = CURRENT_TIMESTAMP');
+      values.push(blockId);
+
+      const query = `UPDATE fasting_blocks SET ${fields.join(', ')} WHERE id = ?`;
+
+      this.db.run(query, values, function(err) {
+        if (err) {
+          reject(err);
+        } else {
+          resolve({ id: blockId, changes: this.changes });
+        }
+      });
+    });
+  }
+
+  async deleteFastingBlock(blockId) {
+    return new Promise((resolve, reject) => {
+      const query = 'UPDATE fasting_blocks SET is_active = FALSE, updated_at = CURRENT_TIMESTAMP WHERE id = ?';
+      
+      this.db.run(query, [blockId], function(err) {
+        if (err) {
+          reject(err);
+        } else {
+          resolve({ deleted: this.changes > 0 });
+        }
+      });
+    });
+  }
+
+  // Override CRUD methods
+  async createOverride(overrideData) {
+    return new Promise((resolve, reject) => {
+      const { block_id, occurrence_date, type, payload, reason } = overrideData;
+      const payloadJson = payload ? JSON.stringify(payload) : null;
+
+      const query = `
+        INSERT INTO overrides (block_id, occurrence_date, type, payload, reason)
+        VALUES (?, ?, ?, ?, ?)
+      `;
+
+      this.db.run(query, [block_id, occurrence_date, type, payloadJson, reason], function(err) {
+        if (err) {
+          reject(err);
+        } else {
+          resolve({ id: this.lastID, ...overrideData });
+        }
+      });
+    });
+  }
+
+  async getOverridesByBlock(blockId) {
+    return new Promise((resolve, reject) => {
+      const query = 'SELECT * FROM overrides WHERE block_id = ? ORDER BY occurrence_date';
+      
+      this.db.all(query, [blockId], (err, rows) => {
+        if (err) {
+          reject(err);
+        } else {
+          // Parse payload JSON for each row
+          const overrides = rows.map(row => ({
+            ...row,
+            payload: row.payload ? JSON.parse(row.payload) : null
+          }));
+          resolve(overrides);
+        }
+      });
+    });
+  }
+
+  async getOverrideByBlockAndDate(blockId, occurrenceDate) {
+    return new Promise((resolve, reject) => {
+      const query = 'SELECT * FROM overrides WHERE block_id = ? AND occurrence_date = ?';
+      
+      this.db.get(query, [blockId, occurrenceDate], (err, row) => {
+        if (err) {
+          reject(err);
+        } else {
+          if (row && row.payload) {
+            try {
+              row.payload = JSON.parse(row.payload);
+            } catch (e) {
+              console.error('Error parsing payload JSON:', e);
+            }
+          }
+          resolve(row || null);
+        }
+      });
+    });
+  }
+
+  // Instance generation methods
+  async generatePlannedInstances(scheduleId, weeksAhead = 4) {
+    return new Promise(async (resolve, reject) => {
+      try {
+        // Get schedule details
+        const schedule = await this.getScheduleById(scheduleId);
+        if (!schedule) {
+          resolve([]);
+          return;
+        }
+
+        // Get all active fasting blocks for this schedule
+        const blocks = await this.getFastingBlocksBySchedule(scheduleId);
+        if (blocks.length === 0) {
+          resolve([]);
+          return;
+        }
+
+        const instances = [];
+        const now = new Date();
+        const endDate = new Date();
+        endDate.setDate(endDate.getDate() + (weeksAhead * 7));
+
+        for (const block of blocks) {
+          // Generate instances for this block
+          const blockInstances = await this.generateInstancesForBlock(block, schedule, now, endDate);
+          instances.push(...blockInstances);
+        }
+
+        // Sort instances by start time
+        instances.sort((a, b) => new Date(a.start_at_utc) - new Date(b.start_at_utc));
+
+        resolve(instances);
+      } catch (error) {
+        reject(error);
+      }
+    });
+  }
+
+  async generateInstancesForBlock(block, schedule, startDate, endDate) {
+    const instances = [];
+    
+    // Find the next occurrence of the specified day of week (start_dow)
+    const current = new Date(startDate);
+    current.setHours(0, 0, 0, 0);
+    
+    // Find the first occurrence of this day of week on or after startDate
+    const targetDayOfWeek = block.start_dow; // 0 = Sunday, 1 = Monday, etc.
+    const currentDayOfWeek = current.getDay();
+    
+    let daysUntilTarget = (targetDayOfWeek - currentDayOfWeek + 7) % 7;
+    if (daysUntilTarget === 0) {
+      // If it's the same day, check if we've passed the start time
+      const [startHour, startMinute] = block.start_time.split(':').map(Number);
+      const startTimeToday = new Date(current);
+      startTimeToday.setHours(startHour, startMinute, 0, 0);
+      
+      if (startDate > startTimeToday) {
+        // We've passed today's start time, so look for next week
+        daysUntilTarget = 7;
+      }
+    }
+    
+    current.setDate(current.getDate() + daysUntilTarget);
+
+    // Generate instances week by week
+    while (current <= endDate) {
+      const instanceStartDate = new Date(current);
+      
+      const [startHour, startMinute] = block.start_time.split(':').map(Number);
+      instanceStartDate.setHours(startHour, startMinute, 0, 0);
+
+      // Calculate end date using end_dow and end_time
+      const instanceEndDate = new Date(current);
+      instanceEndDate.setDate(instanceEndDate.getDate() + block.end_dow);
+      
+      const [endHour, endMinute] = block.end_time.split(':').map(Number);
+      instanceEndDate.setHours(endHour, endMinute, 0, 0);
+
+      // Handle cases where end is in the next week (end_dow < start_dow)
+      if (block.end_dow < block.start_dow) {
+        instanceEndDate.setDate(instanceEndDate.getDate() + 7);
+      }
+
+      // Only include instances that start after the current time
+      if (instanceStartDate >= startDate) {
+        // Format occurrence date (the date this instance represents)
+        const occurrenceDate = instanceStartDate.toISOString().split('T')[0];
+
+        // Check for overrides for this occurrence
+        const override = await this.getOverrideByBlockAndDate(block.id, occurrenceDate);
+        let status = 'upcoming';
+        
+        if (override) {
+          switch (override.type) {
+            case 'skip':
+              status = 'skipped';
+              break;
+            case 'shift':
+              // Apply time shift from override payload
+              if (override.payload && override.payload.hours) {
+                instanceStartDate.setHours(instanceStartDate.getHours() + override.payload.hours);
+                instanceEndDate.setHours(instanceEndDate.getHours() + override.payload.hours);
+              }
+              break;
+            case 'extend':
+              if (override.payload && override.payload.hours) {
+                instanceEndDate.setHours(instanceEndDate.getHours() + override.payload.hours);
+              }
+              break;
+            case 'shorten':
+              if (override.payload && override.payload.hours) {
+                instanceEndDate.setHours(instanceEndDate.getHours() - override.payload.hours);
+              }
+              break;
+          }
+        }
+
+        // Determine if this instance is currently active
+        if (status !== 'skipped') {
+          if (instanceStartDate <= new Date() && new Date() <= instanceEndDate) {
+            status = 'active';
+          } else if (instanceEndDate < new Date()) {
+            status = 'completed';
+          }
+        }
+
+        instances.push({
+          block_id: block.id,
+          block_name: block.name,
+          start_at_utc: instanceStartDate.toISOString(),
+          end_at_utc: instanceEndDate.toISOString(),
+          occurrence_date: occurrenceDate,
+          status: status,
+          duration_hours: (instanceEndDate - instanceStartDate) / (1000 * 60 * 60),
+          override: override || null
+        });
+      }
+
+      // Move to next week
+      current.setDate(current.getDate() + 7);
+    }
+
+    return instances;
+  }
+
+  async getScheduleById(scheduleId) {
+    return new Promise((resolve, reject) => {
+      const query = 'SELECT * FROM schedules WHERE id = ?';
+      
+      this.db.get(query, [scheduleId], (err, row) => {
+        if (err) {
+          reject(err);
+        } else {
+          resolve(row || null);
         }
       });
     });

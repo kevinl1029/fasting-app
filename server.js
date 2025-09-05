@@ -33,8 +33,17 @@ app.get('/api/fasts', async (req, res) => {
       // Get user profile first to find user_profile_id
       const profile = await db.getUserProfileBySessionId(sessionId);
       if (profile) {
-        const fasts = await db.getFastsByUserProfile(profile.id, limit, offset);
-        res.json(fasts);
+        // Get both user-specific fasts and orphaned fasts (for backward compatibility)
+        const userFasts = await db.getFastsByUserProfile(profile.id, limit, offset);
+        const orphanedFasts = await db.getOrphanedFasts(limit, offset);
+        
+        // Combine and sort by start_time desc
+        const allFasts = [...userFasts, ...orphanedFasts];
+        allFasts.sort((a, b) => new Date(b.start_time) - new Date(a.start_time));
+        
+        // Apply limit after combining
+        const limitedFasts = allFasts.slice(offset, offset + limit);
+        res.json(limitedFasts);
       } else {
         // Return empty array if no profile found
         res.json([]);
@@ -311,6 +320,436 @@ app.post('/api/user/onboard/:sessionId', async (req, res) => {
   } catch (error) {
     console.error('Error marking user onboarded:', error);
     res.status(500).json({ error: 'Failed to mark user as onboarded' });
+  }
+});
+
+// Schedule API Endpoints
+app.get('/api/schedule', async (req, res) => {
+  try {
+    const sessionId = req.query.sessionId;
+    if (!sessionId) {
+      return res.status(400).json({ error: 'sessionId is required' });
+    }
+    
+    // Get user profile
+    const profile = await db.getUserProfileBySessionId(sessionId);
+    if (!profile) {
+      return res.status(404).json({ error: 'User profile not found' });
+    }
+    
+    // Get user's schedule
+    const schedule = await db.getScheduleByUserProfile(profile.id);
+    if (!schedule) {
+      return res.json({ schedule: null, blocks: [], nextInstances: [] });
+    }
+    
+    // Get fasting blocks for the schedule
+    const blocks = await db.getFastingBlocksBySchedule(schedule.id);
+    
+    // Generate next instances (4 weeks ahead)
+    const nextInstances = await db.generatePlannedInstances(schedule.id, 4);
+    
+    res.json({
+      schedule,
+      blocks,
+      nextInstances
+    });
+  } catch (error) {
+    console.error('Error fetching schedule:', error);
+    res.status(500).json({ error: 'Failed to fetch schedule' });
+  }
+});
+
+app.post('/api/schedule', async (req, res) => {
+  try {
+    const { sessionId, week_anchor = 1 } = req.body;
+    if (!sessionId) {
+      return res.status(400).json({ error: 'sessionId is required' });
+    }
+    
+    // Get user profile
+    const profile = await db.getUserProfileBySessionId(sessionId);
+    if (!profile) {
+      return res.status(404).json({ error: 'User profile not found' });
+    }
+    
+    // Check if user already has a schedule
+    const existingSchedule = await db.getScheduleByUserProfile(profile.id);
+    if (existingSchedule) {
+      return res.status(400).json({ error: 'User already has a schedule' });
+    }
+    
+    // Create new schedule
+    const scheduleData = {
+      user_profile_id: profile.id,
+      week_anchor,
+      is_paused: false
+    };
+    
+    const newSchedule = await db.createSchedule(scheduleData);
+    res.status(201).json(newSchedule);
+  } catch (error) {
+    console.error('Error creating schedule:', error);
+    res.status(500).json({ error: 'Failed to create schedule' });
+  }
+});
+
+app.post('/api/schedule/blocks', async (req, res) => {
+  try {
+    const { sessionId, name, start_dow, start_time, end_dow, end_time, tz_mode = 'local', anchor_tz, notifications } = req.body;
+    
+    if (!sessionId || start_dow === undefined || !start_time || end_dow === undefined || !end_time) {
+      return res.status(400).json({ error: 'Missing required fields' });
+    }
+    
+    // Get user profile
+    const profile = await db.getUserProfileBySessionId(sessionId);
+    if (!profile) {
+      return res.status(404).json({ error: 'User profile not found' });
+    }
+    
+    // Get or create user's schedule
+    let schedule = await db.getScheduleByUserProfile(profile.id);
+    if (!schedule) {
+      // Create schedule if it doesn't exist
+      const scheduleData = {
+        user_profile_id: profile.id,
+        week_anchor: 1,
+        is_paused: false
+      };
+      schedule = await db.createSchedule(scheduleData);
+    }
+    
+    // Create fasting block
+    const blockData = {
+      schedule_id: schedule.id,
+      name,
+      start_dow,
+      start_time,
+      end_dow,
+      end_time,
+      tz_mode,
+      anchor_tz,
+      notifications
+    };
+    
+    const newBlock = await db.createFastingBlock(blockData);
+    res.status(201).json(newBlock);
+  } catch (error) {
+    console.error('Error creating fasting block:', error);
+    res.status(500).json({ error: 'Failed to create fasting block' });
+  }
+});
+
+app.patch('/api/schedule/blocks/:id', async (req, res) => {
+  try {
+    const blockId = parseInt(req.params.id);
+    const { sessionId, name, start_dow, start_time, end_dow, end_time, tz_mode, anchor_tz, notifications } = req.body;
+    
+    if (!sessionId) {
+      return res.status(400).json({ error: 'sessionId is required' });
+    }
+    
+    // Verify the block exists and belongs to the user
+    const block = await db.getFastingBlockById(blockId);
+    if (!block) {
+      return res.status(404).json({ error: 'Fasting block not found' });
+    }
+    
+    // Get user profile to verify ownership
+    const profile = await db.getUserProfileBySessionId(sessionId);
+    if (!profile) {
+      return res.status(404).json({ error: 'User profile not found' });
+    }
+    
+    const schedule = await db.getScheduleByUserProfile(profile.id);
+    if (!schedule || schedule.id !== block.schedule_id) {
+      return res.status(403).json({ error: 'Access denied' });
+    }
+    
+    // Update block
+    const updateData = {};
+    if (name !== undefined) updateData.name = name;
+    if (start_dow !== undefined) updateData.start_dow = start_dow;
+    if (start_time !== undefined) updateData.start_time = start_time;
+    if (end_dow !== undefined) updateData.end_dow = end_dow;
+    if (end_time !== undefined) updateData.end_time = end_time;
+    if (tz_mode !== undefined) updateData.tz_mode = tz_mode;
+    if (anchor_tz !== undefined) updateData.anchor_tz = anchor_tz;
+    if (notifications !== undefined) updateData.notifications = notifications;
+    
+    const result = await db.updateFastingBlock(blockId, updateData);
+    const updatedBlock = await db.getFastingBlockById(blockId);
+    res.json(updatedBlock);
+  } catch (error) {
+    console.error('Error updating fasting block:', error);
+    res.status(500).json({ error: 'Failed to update fasting block' });
+  }
+});
+
+app.delete('/api/schedule/blocks/:id', async (req, res) => {
+  try {
+    const blockId = parseInt(req.params.id);
+    const { sessionId } = req.query;
+    
+    if (!sessionId) {
+      return res.status(400).json({ error: 'sessionId is required' });
+    }
+    
+    // Verify the block exists and belongs to the user
+    const block = await db.getFastingBlockById(blockId);
+    if (!block) {
+      return res.status(404).json({ error: 'Fasting block not found' });
+    }
+    
+    // Get user profile to verify ownership
+    const profile = await db.getUserProfileBySessionId(sessionId);
+    if (!profile) {
+      return res.status(404).json({ error: 'User profile not found' });
+    }
+    
+    const schedule = await db.getScheduleByUserProfile(profile.id);
+    if (!schedule || schedule.id !== block.schedule_id) {
+      return res.status(403).json({ error: 'Access denied' });
+    }
+    
+    const result = await db.deleteFastingBlock(blockId);
+    res.json({ message: 'Fasting block deleted successfully' });
+  } catch (error) {
+    console.error('Error deleting fasting block:', error);
+    res.status(500).json({ error: 'Failed to delete fasting block' });
+  }
+});
+
+app.post('/api/schedule/blocks/:id/overrides', async (req, res) => {
+  try {
+    const blockId = parseInt(req.params.id);
+    const { sessionId, occurrence_date, type, payload, reason } = req.body;
+    
+    if (!sessionId || !occurrence_date || !type) {
+      return res.status(400).json({ error: 'Missing required fields' });
+    }
+    
+    // Verify the block exists and belongs to the user
+    const block = await db.getFastingBlockById(blockId);
+    if (!block) {
+      return res.status(404).json({ error: 'Fasting block not found' });
+    }
+    
+    // Get user profile to verify ownership
+    const profile = await db.getUserProfileBySessionId(sessionId);
+    if (!profile) {
+      return res.status(404).json({ error: 'User profile not found' });
+    }
+    
+    const schedule = await db.getScheduleByUserProfile(profile.id);
+    if (!schedule || schedule.id !== block.schedule_id) {
+      return res.status(403).json({ error: 'Access denied' });
+    }
+    
+    // Create override
+    const overrideData = {
+      block_id: blockId,
+      occurrence_date,
+      type,
+      payload,
+      reason
+    };
+    
+    const newOverride = await db.createOverride(overrideData);
+    res.status(201).json(newOverride);
+  } catch (error) {
+    console.error('Error creating override:', error);
+    res.status(500).json({ error: 'Failed to create override' });
+  }
+});
+
+app.post('/api/schedule/preview', async (req, res) => {
+  try {
+    const { sessionId, blocks } = req.body;
+    
+    if (!sessionId || !blocks || !Array.isArray(blocks)) {
+      return res.status(400).json({ error: 'sessionId and blocks array are required' });
+    }
+    
+    // Get user profile
+    const profile = await db.getUserProfileBySessionId(sessionId);
+    if (!profile) {
+      return res.status(404).json({ error: 'User profile not found' });
+    }
+    
+    // Create a mock schedule for preview
+    const mockSchedule = {
+      id: 'preview',
+      user_profile_id: profile.id,
+      week_anchor: 1,
+      is_paused: false
+    };
+    
+    // Generate preview instances for each block
+    const allInstances = [];
+    const now = new Date();
+    const endDate = new Date();
+    endDate.setDate(endDate.getDate() + 28); // 4 weeks ahead
+    
+    for (let i = 0; i < blocks.length; i++) {
+      const block = {
+        id: `preview-${i}`,
+        ...blocks[i]
+      };
+      
+      // Generate instances for this preview block
+      const blockInstances = await db.generateInstancesForBlock(block, mockSchedule, now, endDate);
+      allInstances.push(...blockInstances);
+    }
+    
+    // Sort instances by start time
+    allInstances.sort((a, b) => new Date(a.start_at_utc) - new Date(b.start_at_utc));
+    
+    res.json({
+      preview: true,
+      blocks,
+      nextInstances: allInstances
+    });
+  } catch (error) {
+    console.error('Error generating schedule preview:', error);
+    res.status(500).json({ error: 'Failed to generate preview' });
+  }
+});
+
+// Get upcoming scheduled instances for Timer integration
+app.get('/api/schedule/upcoming', async (req, res) => {
+  try {
+    const { sessionId } = req.query;
+    
+    if (!sessionId) {
+      return res.status(400).json({ error: 'sessionId is required' });
+    }
+    
+    // Get user profile
+    const profile = await db.getUserProfileBySessionId(sessionId);
+    if (!profile) {
+      return res.status(404).json({ error: 'User profile not found' });
+    }
+    
+    // Get user's schedule
+    const schedule = await db.getScheduleByUserProfile(profile.id);
+    if (!schedule) {
+      return res.json({ upcoming: null }); // No schedule set
+    }
+    
+    // Get active blocks
+    const blocks = await db.getFastingBlocksBySchedule(schedule.id);
+    if (blocks.length === 0) {
+      return res.json({ upcoming: null }); // No blocks
+    }
+    
+    // Generate upcoming instances for next 7 days to catch upcoming fasts
+    const now = new Date();
+    const endDate = new Date();
+    endDate.setDate(endDate.getDate() + 7);
+    
+    const allInstances = [];
+    for (const block of blocks) {
+      const instances = await db.generateInstancesForBlock(block, schedule, now, endDate);
+      allInstances.push(...instances);
+    }
+    
+    // Sort by start time and get the next upcoming instance
+    allInstances.sort((a, b) => new Date(a.start_at_utc) - new Date(b.start_at_utc));
+    
+    const upcoming = allInstances.find(instance => {
+      const startTime = new Date(instance.start_at_utc);
+      return startTime > now;
+    });
+    
+    if (!upcoming) {
+      return res.json({ upcoming: null });
+    }
+    
+    res.json({ 
+      upcoming: {
+        id: upcoming.id,
+        block_id: upcoming.block_id,
+        block_name: upcoming.block_name,
+        start_at_utc: upcoming.start_at_utc,
+        end_at_utc: upcoming.end_at_utc,
+        duration_hours: Math.round((new Date(upcoming.end_at_utc) - new Date(upcoming.start_at_utc)) / (1000 * 60 * 60))
+      }
+    });
+    
+  } catch (error) {
+    console.error('Error getting upcoming scheduled instances:', error);
+    res.status(500).json({ error: 'Failed to get upcoming instances' });
+  }
+});
+
+// Start early endpoint for scheduled fasts
+app.post('/api/schedule/start-early', async (req, res) => {
+  try {
+    const { sessionId, upcomingId } = req.body;
+    
+    if (!sessionId || !upcomingId) {
+      return res.status(400).json({ error: 'sessionId and upcomingId are required' });
+    }
+    
+    // Get user profile
+    const profile = await db.getUserProfileBySessionId(sessionId);
+    if (!profile) {
+      return res.status(404).json({ error: 'User profile not found' });
+    }
+    
+    // Get the upcoming scheduled fast details to get planned duration
+    const schedule = await db.getScheduleByUserProfile(profile.id);
+    if (!schedule) {
+      return res.status(404).json({ error: 'Schedule not found' });
+    }
+    
+    const blocks = await db.getFastingBlocksBySchedule(schedule.id);
+    const now = new Date();
+    const tomorrow = new Date();
+    tomorrow.setHours(tomorrow.getHours() + 24);
+    
+    let upcomingInstance = null;
+    for (const block of blocks) {
+      const instances = await db.generateInstancesForBlock(block, schedule, now, tomorrow);
+      upcomingInstance = instances.find(instance => 
+        new Date(instance.start_at_utc) > now && instance.id === upcomingId
+      );
+      if (upcomingInstance) break;
+    }
+    
+    if (!upcomingInstance) {
+      return res.status(404).json({ error: 'Upcoming fast not found' });
+    }
+    
+    // Calculate planned duration
+    const plannedDuration = Math.round((new Date(upcomingInstance.end_at_utc) - new Date(upcomingInstance.start_at_utc)) / (1000 * 60 * 60));
+    
+    try {
+      const fastEntry = await db.createFastEntry({
+        user_profile_id: profile.id,
+        start_time: now,
+        source: 'scheduled_early',
+        planned_instance_id: upcomingId,
+        planned_duration_hours: plannedDuration,
+        is_active: true
+      });
+      
+      res.json({ 
+        message: 'Scheduled fast started early',
+        fastId: fastEntry.id,
+        startTime: now.toISOString()
+      });
+      
+    } catch (error) {
+      console.error('Error creating fast entry:', error);
+      res.status(500).json({ error: 'Failed to start fast' });
+    }
+    
+  } catch (error) {
+    console.error('Error starting early:', error);
+    res.status(500).json({ error: 'Failed to start early' });
   }
 });
 
@@ -734,6 +1173,11 @@ app.get('/timer', (req, res) => {
 // Serve the welcome page (onboarding)
 app.get('/welcome', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'welcome.html'));
+});
+
+// Serve the schedule page
+app.get('/schedule', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'schedule.html'));
 });
 
 // Serve the calculator page (removed for now, redirects to timer)
