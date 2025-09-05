@@ -1,0 +1,1248 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard - Fasting Forecast</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background: linear-gradient(135deg, #fcd34d 0%, #fb923c 50%, #ec4899 100%);
+            min-height: 100vh;
+            padding-bottom: 85px;
+            overflow-x: hidden;
+        }
+        
+        .container {
+            max-width: 480px;
+            margin: 0 auto;
+            padding: 20px;
+            width: 100%;
+        }
+        
+        .dashboard-card {
+            background: white;
+            border-radius: 20px;
+            margin: 20px 0;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            min-height: calc(100vh - 140px);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+        
+        .header {
+            padding: 30px 30px 20px;
+            text-align: center;
+            border-bottom: 1px solid #f0f0f0;
+        }
+        
+        .header h1 {
+            font-size: 1.8rem;
+            font-weight: 700;
+            color: #333;
+            margin-bottom: 8px;
+        }
+        
+        .header p {
+            color: #666;
+            font-size: 0.95rem;
+        }
+        
+        /* Sub-navigation tabs */
+        .sub-nav {
+            display: flex;
+            background: #f8f9fa;
+            border-bottom: 1px solid #e9ecef;
+        }
+        
+        .sub-nav-item {
+            flex: 1;
+            padding: 16px 12px;
+            text-align: center;
+            background: none;
+            border: none;
+            color: #666;
+            font-size: 0.9rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            position: relative;
+        }
+        
+        .sub-nav-item:hover {
+            color: #fb923c;
+            background: rgba(251, 146, 60, 0.05);
+        }
+        
+        .sub-nav-item.active {
+            color: #fb923c;
+            background: rgba(251, 146, 60, 0.1);
+        }
+        
+        .sub-nav-item.active::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background: #fb923c;
+            border-radius: 3px 3px 0 0;
+        }
+        
+        .sub-nav-item.disabled {
+            color: #ccc;
+            cursor: not-allowed;
+        }
+        
+        .sub-nav-item.disabled:hover {
+            color: #ccc;
+            background: none;
+        }
+        
+        /* Content area */
+        .content {
+            flex: 1;
+            overflow-y: auto;
+        }
+        
+        .tab-content {
+            display: none;
+            padding: 0;
+        }
+        
+        .tab-content.active {
+            display: block;
+        }
+        
+        /* Log tab styles */
+        .log-header {
+            padding: 24px 30px;
+            background: linear-gradient(135deg, rgba(252, 211, 77, 0.1) 0%, rgba(251, 146, 60, 0.05) 100%);
+            border-bottom: 1px solid #f0f0f0;
+        }
+        
+        .log-stats {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 16px;
+        }
+        
+        .log-stat {
+            text-align: center;
+        }
+        
+        .log-stat-value {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: #fb923c;
+            display: block;
+        }
+        
+        .log-stat-label {
+            font-size: 0.8rem;
+            color: #666;
+            font-weight: 500;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        
+        .add-fast-btn {
+            width: 100%;
+            padding: 12px;
+            background: linear-gradient(135deg, #fcd34d 0%, #fb923c 50%, #ec4899 100%);
+            color: white;
+            border: none;
+            border-radius: 12px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+        
+        .add-fast-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(251, 146, 60, 0.3);
+        }
+        
+        /* Fasting log list */
+        .fasting-log {
+            padding: 0;
+        }
+        
+        .log-empty {
+            padding: 60px 30px;
+            text-align: center;
+            color: #666;
+        }
+        
+        .log-empty-icon {
+            width: 64px;
+            height: 64px;
+            margin: 0 auto 16px;
+            opacity: 0.3;
+            stroke-width: 1;
+        }
+        
+        .log-empty h3 {
+            font-size: 1.1rem;
+            margin-bottom: 8px;
+            color: #999;
+        }
+        
+        .log-empty p {
+            font-size: 0.9rem;
+            line-height: 1.4;
+        }
+        
+        .fast-item {
+            padding: 20px 30px;
+            border-bottom: 1px solid #f0f0f0;
+            cursor: pointer;
+            transition: background 0.2s ease;
+        }
+        
+        .fast-item:hover {
+            background: rgba(251, 146, 60, 0.02);
+        }
+        
+        .fast-item:last-child {
+            border-bottom: none;
+        }
+        
+        .fast-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 8px;
+        }
+        
+        .fast-dates {
+            flex: 1;
+        }
+        
+        .fast-date-range {
+            font-size: 0.9rem;
+            color: #333;
+            font-weight: 600;
+            margin-bottom: 2px;
+        }
+        
+        .fast-duration {
+            font-size: 0.8rem;
+            color: #666;
+        }
+        
+        .fast-indicator {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 0.75rem;
+            color: #666;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            font-weight: 500;
+        }
+        
+        .fast-indicator .indicator-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+        }
+        
+        .fast-indicator .indicator-dot.live {
+            background: #28a745;
+        }
+        
+        .fast-indicator .indicator-dot.manual {
+            background: #6c757d;
+        }
+        
+        .fast-details {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 8px;
+        }
+        
+        
+        .fast-milestones {
+            display: flex;
+            gap: 4px;
+        }
+        
+        .milestone-badge {
+            background: rgba(40, 167, 69, 0.1);
+            color: #28a745;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 0.7rem;
+            font-weight: 600;
+        }
+        
+        /* Placeholder content for disabled tabs */
+        .placeholder-content {
+            padding: 60px 30px;
+            text-align: center;
+            color: #666;
+        }
+        
+        .placeholder-icon {
+            width: 64px;
+            height: 64px;
+            margin: 0 auto 16px;
+            opacity: 0.3;
+            stroke-width: 1;
+        }
+        
+        .placeholder-content h3 {
+            font-size: 1.2rem;
+            margin-bottom: 8px;
+            color: #999;
+        }
+        
+        .placeholder-content p {
+            font-size: 0.9rem;
+        }
+        
+        /* Bottom Navigation - copied from timer.html */
+        .bottom-nav {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            width: 100%;
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-top: 1px solid rgba(251, 146, 60, 0.2);
+            display: flex;
+            justify-content: space-around;
+            align-items: center;
+            padding: 8px 0 max(8px, env(safe-area-inset-bottom));
+            z-index: 1000;
+            box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.1);
+        }
+        
+        .nav-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-decoration: none;
+            color: #666;
+            transition: all 0.3s ease;
+            padding: 8px 12px;
+            border-radius: 12px;
+            min-width: 50px;
+            position: relative;
+        }
+        
+        .nav-item:hover {
+            color: #fb923c;
+            transform: translateY(-2px);
+        }
+        
+        .nav-item.active {
+            color: #fb923c;
+            background: rgba(251, 146, 60, 0.1);
+        }
+        
+        .nav-item.nav-primary {
+            transform: scale(1.1);
+            background: linear-gradient(135deg, #fcd34d 0%, #fb923c 50%, #ec4899 100%);
+            color: white;
+            box-shadow: 0 4px 15px rgba(251, 146, 60, 0.3);
+        }
+        
+        .nav-item.nav-primary:hover {
+            transform: scale(1.15) translateY(-2px);
+            box-shadow: 0 6px 20px rgba(251, 146, 60, 0.4);
+            color: white;
+        }
+        
+        .nav-item.nav-primary.active {
+            color: white;
+            background: linear-gradient(135deg, #fcd34d 0%, #fb923c 50%, #ec4899 100%);
+        }
+        
+        .nav-icon {
+            width: 24px;
+            height: 24px;
+            margin-bottom: 4px;
+            stroke-width: 2;
+        }
+        
+        .nav-label {
+            font-size: 11px;
+            font-weight: 600;
+        }
+        
+        /* Loading state */
+        .loading {
+            text-align: center;
+            padding: 40px 20px;
+            color: #666;
+        }
+        
+        .loading-spinner {
+            width: 32px;
+            height: 32px;
+            margin: 0 auto 16px;
+            border: 3px solid #f0f0f0;
+            border-top: 3px solid #fb923c;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        /* Modal styles */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.6);
+            backdrop-filter: blur(4px);
+            z-index: 2000;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        
+        .modal-content {
+            background: white;
+            border-radius: 20px;
+            max-width: 400px;
+            width: 100%;
+            max-height: 90vh;
+            overflow-y: auto;
+            position: relative;
+            animation: modalSlideIn 0.3s ease-out;
+        }
+        
+        @keyframes modalSlideIn {
+            from {
+                opacity: 0;
+                transform: scale(0.9) translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: scale(1) translateY(0);
+            }
+        }
+        
+        .modal-header {
+            padding: 24px 24px 16px;
+            border-bottom: 1px solid #f0f0f0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .modal-header h2 {
+            font-size: 1.3rem;
+            font-weight: 700;
+            color: #333;
+        }
+        
+        .modal-close {
+            background: none;
+            border: none;
+            font-size: 24px;
+            cursor: pointer;
+            color: #666;
+            width: 32px;
+            height: 32px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            transition: background 0.2s ease;
+        }
+        
+        .modal-close:hover {
+            background: rgba(0, 0, 0, 0.1);
+        }
+        
+        .modal-body {
+            padding: 24px;
+        }
+        
+        .form-group {
+            margin-bottom: 20px;
+        }
+        
+        .form-group label {
+            display: block;
+            font-size: 0.9rem;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 6px;
+        }
+        
+        .form-group input,
+        .form-group select,
+        .form-group textarea {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e9ecef;
+            border-radius: 10px;
+            font-size: 1rem;
+            transition: border-color 0.2s ease;
+            font-family: inherit;
+        }
+        
+        .form-group input:focus,
+        .form-group select:focus,
+        .form-group textarea:focus {
+            outline: none;
+            border-color: #fb923c;
+        }
+        
+        .form-group textarea {
+            resize: vertical;
+            min-height: 80px;
+        }
+        
+        .form-row {
+            display: flex;
+            gap: 12px;
+        }
+        
+        .form-row .form-group {
+            flex: 1;
+        }
+        
+        .form-actions {
+            display: flex;
+            gap: 12px;
+            justify-content: flex-end;
+            margin-top: 24px;
+        }
+        
+        .btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 10px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        
+        .btn-secondary {
+            background: #f8f9fa;
+            color: #666;
+        }
+        
+        .btn-secondary:hover {
+            background: #e9ecef;
+        }
+        
+        .btn-primary {
+            background: linear-gradient(135deg, #fcd34d 0%, #fb923c 50%, #ec4899 100%);
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 15px rgba(251, 146, 60, 0.3);
+        }
+        
+        .form-hint {
+            font-size: 0.8rem;
+            color: #666;
+            margin-top: 4px;
+        }
+        
+        @media (max-width: 768px) {
+            .container {
+                padding: 10px;
+            }
+            
+            .log-stats {
+                flex-direction: column;
+                gap: 16px;
+            }
+            
+            .fast-header {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 8px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="dashboard-card">
+            <!-- Header -->
+            <div class="header">
+                <h1>Dashboard</h1>
+                <p>Track your fasting journey and progress</p>
+            </div>
+            
+            <!-- Sub Navigation -->
+            <div class="sub-nav">
+                <button class="sub-nav-item active" data-tab="log">Log</button>
+                <button class="sub-nav-item disabled" data-tab="charts">Charts</button>
+                <button class="sub-nav-item disabled" data-tab="photos">Photos</button>
+            </div>
+            
+            <!-- Content Area -->
+            <div class="content">
+                <!-- Log Tab -->
+                <div id="log-tab" class="tab-content active">
+                    <div class="log-header">
+                        <div class="log-stats">
+                            <div class="log-stat">
+                                <span class="log-stat-value" id="total-fasts">-</span>
+                                <span class="log-stat-label">Total Fasts</span>
+                            </div>
+                            <div class="log-stat">
+                                <span class="log-stat-value" id="current-streak">-</span>
+                                <span class="log-stat-label">Current Streak</span>
+                            </div>
+                            <div class="log-stat">
+                                <span class="log-stat-value" id="total-hours">-</span>
+                                <span class="log-stat-label">Total Hours</span>
+                            </div>
+                        </div>
+                        <button class="add-fast-btn" onclick="showAddFastModal()">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <line x1="12" y1="5" x2="12" y2="19"></line>
+                                <line x1="5" y1="12" x2="19" y2="12"></line>
+                            </svg>
+                            Add Fast
+                        </button>
+                    </div>
+                    
+                    <div class="fasting-log">
+                        <div id="loading-state" class="loading">
+                            <div class="loading-spinner"></div>
+                            <p>Loading your fasting history...</p>
+                        </div>
+                        
+                        <div id="empty-state" class="log-empty" style="display: none;">
+                            <svg class="log-empty-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                                <polyline points="14,2 14,8 20,8"/>
+                                <line x1="16" y1="13" x2="8" y2="13"/>
+                                <line x1="16" y1="17" x2="8" y2="17"/>
+                                <polyline points="10,9 9,9 8,9"/>
+                            </svg>
+                            <h3>No fasts recorded yet</h3>
+                            <p>Start your first fast or add a previous fast manually to begin tracking your journey.</p>
+                        </div>
+                        
+                        <div id="fasts-list">
+                            <!-- Fasts will be populated here by JavaScript -->
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Charts Tab -->
+                <div id="charts-tab" class="tab-content">
+                    <div class="placeholder-content">
+                        <svg class="placeholder-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                            <line x1="18" y1="20" x2="18" y2="10"/>
+                            <line x1="12" y1="20" x2="12" y2="4"/>
+                            <line x1="6" y1="20" x2="6" y2="14"/>
+                        </svg>
+                        <h3>Charts Coming Soon</h3>
+                        <p>Visualize your fasting patterns, streaks, and progress over time.</p>
+                    </div>
+                </div>
+                
+                <!-- Photos Tab -->
+                <div id="photos-tab" class="tab-content">
+                    <div class="placeholder-content">
+                        <svg class="placeholder-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                            <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
+                            <circle cx="8.5" cy="8.5" r="1.5"/>
+                            <polyline points="21,15 16,10 5,21"/>
+                        </svg>
+                        <h3>Photos Coming Soon</h3>
+                        <p>Document your transformation with progress photos.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Bottom Navigation -->
+    <nav class="bottom-nav">
+        <a href="/schedule" class="nav-item" data-page="schedule">
+            <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
+                <line x1="16" y1="2" x2="16" y2="6"/>
+                <line x1="8" y1="2" x2="8" y2="6"/>
+                <line x1="3" y1="10" x2="21" y2="10"/>
+            </svg>
+            <span class="nav-label">Schedule</span>
+        </a>
+        
+        <a href="/dashboard" class="nav-item active" data-page="dashboard">
+            <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <line x1="18" y1="20" x2="18" y2="10"/>
+                <line x1="12" y1="20" x2="12" y2="4"/>
+                <line x1="6" y1="20" x2="6" y2="14"/>
+            </svg>
+            <span class="nav-label">Dashboard</span>
+        </a>
+        
+        <a href="/timer" class="nav-item nav-primary" data-page="timer">
+            <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="12" cy="13" r="9"/>
+                <polyline points="12,7 12,13 16,15"/>
+                <path d="M9,2 L15,2"/>
+                <path d="M12,2 L12,6"/>
+            </svg>
+            <span class="nav-label">Timer</span>
+        </a>
+        
+        <a href="/learning" class="nav-item" data-page="learning">
+            <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/>
+                <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/>
+            </svg>
+            <span class="nav-label">Learning Hub</span>
+        </a>
+        
+        <a href="/more" class="nav-item" data-page="more">
+            <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="12" cy="12" r="1"/>
+                <circle cx="19" cy="12" r="1"/>
+                <circle cx="5" cy="12" r="1"/>
+            </svg>
+            <span class="nav-label">More</span>
+        </a>
+    </nav>
+
+    <!-- Add Fast Modal -->
+    <div id="add-fast-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Add Fast</h2>
+                <button type="button" class="modal-close" onclick="hideAddFastModal()">×</button>
+            </div>
+            <div class="modal-body">
+                <form id="add-fast-form" onsubmit="submitAddFast(event)">
+                    <div class="form-group">
+                        <label for="start-date">Fast Start</label>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <input type="date" id="start-date" name="start-date" required>
+                            </div>
+                            <div class="form-group">
+                                <input type="time" id="start-time" name="start-time" required>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="end-date">Fast End (Optional)</label>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <input type="date" id="end-date" name="end-date">
+                            </div>
+                            <div class="form-group">
+                                <input type="time" id="end-time" name="end-time">
+                            </div>
+                        </div>
+                        <div class="form-hint">Leave empty if fast is ongoing</div>
+                    </div>
+                    
+                    
+                    <div class="form-group">
+                        <label for="weight">Weight (Optional)</label>
+                        <input type="number" id="weight" name="weight" step="0.1" placeholder="Enter weight">
+                        <div class="form-hint">Your weight at the start of the fast</div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="notes">Notes (Optional)</label>
+                        <textarea id="notes" name="notes" placeholder="Add any notes about this fast..."></textarea>
+                    </div>
+                    
+                    <div class="form-actions">
+                        <button type="button" class="btn btn-secondary" onclick="hideAddFastModal()">Cancel</button>
+                        <button type="submit" class="btn btn-primary">Add Fast</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Edit Fast Modal -->
+    <div id="edit-fast-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Edit Fast</h2>
+                <button type="button" class="modal-close" onclick="hideEditFastModal()">×</button>
+            </div>
+            <div class="modal-body">
+                <form id="edit-fast-form" onsubmit="submitEditFast(event)">
+                    <div class="form-group">
+                        <label for="edit-start-date">Fast Start</label>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <input type="date" id="edit-start-date" name="start-date" required>
+                            </div>
+                            <div class="form-group">
+                                <input type="time" id="edit-start-time" name="start-time" required>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="edit-end-date">Fast End (Optional)</label>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <input type="date" id="edit-end-date" name="end-date">
+                            </div>
+                            <div class="form-group">
+                                <input type="time" id="edit-end-time" name="end-time">
+                            </div>
+                        </div>
+                        <div class="form-hint">Leave empty if fast is ongoing</div>
+                    </div>
+                    
+                    
+                    <div class="form-group">
+                        <label for="edit-weight">Weight (Optional)</label>
+                        <input type="number" id="edit-weight" name="weight" step="0.1" placeholder="Enter weight">
+                        <div class="form-hint">Your weight at the start of the fast</div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="edit-notes">Notes (Optional)</label>
+                        <textarea id="edit-notes" name="notes" placeholder="Add any notes about this fast..."></textarea>
+                    </div>
+                    
+                    <div class="form-actions">
+                        <button type="button" class="btn btn-secondary" onclick="deleteFast(editingFastId)" 
+                                style="background: #dc3545; color: white;">Delete</button>
+                        <div style="flex: 1;"></div>
+                        <button type="button" class="btn btn-secondary" onclick="hideEditFastModal()">Cancel</button>
+                        <button type="submit" class="btn btn-primary">Save Changes</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let fasts = [];
+        
+        // Tab switching functionality
+        document.addEventListener('DOMContentLoaded', function() {
+            const subNavItems = document.querySelectorAll('.sub-nav-item');
+            const tabContents = document.querySelectorAll('.tab-content');
+            
+            subNavItems.forEach(item => {
+                item.addEventListener('click', function() {
+                    if (this.classList.contains('disabled')) return;
+                    
+                    // Remove active class from all items and contents
+                    subNavItems.forEach(navItem => navItem.classList.remove('active'));
+                    tabContents.forEach(content => content.classList.remove('active'));
+                    
+                    // Add active class to clicked item
+                    this.classList.add('active');
+                    
+                    // Show corresponding tab content
+                    const tabId = this.getAttribute('data-tab') + '-tab';
+                    document.getElementById(tabId).classList.add('active');
+                });
+            });
+            
+            // Load fasting data
+            loadFasts();
+        });
+        
+        // Load fasting data from API
+        async function loadFasts() {
+            try {
+                // Get session ID for user-specific data
+                const sessionId = localStorage.getItem('fastingForecast_sessionId');
+                const url = sessionId ? `/api/fasts?sessionId=${sessionId}` : '/api/fasts';
+                
+                const response = await fetch(url);
+                if (response.ok) {
+                    fasts = await response.json();
+                    displayFasts();
+                    updateStats();
+                } else {
+                    console.error('Failed to load fasts');
+                    showEmptyState();
+                }
+            } catch (error) {
+                console.error('Error loading fasts:', error);
+                showEmptyState();
+            }
+        }
+        
+        function displayFasts() {
+            const loadingState = document.getElementById('loading-state');
+            const emptyState = document.getElementById('empty-state');
+            const fastsList = document.getElementById('fasts-list');
+            
+            loadingState.style.display = 'none';
+            
+            if (fasts.length === 0) {
+                emptyState.style.display = 'block';
+                fastsList.innerHTML = '';
+                return;
+            }
+            
+            emptyState.style.display = 'none';
+            
+            fastsList.innerHTML = fasts.map(fast => {
+                const startDate = new Date(fast.start_time);
+                const endDate = fast.end_time ? new Date(fast.end_time) : null;
+                
+                // Calculate duration if not stored in database
+                let duration = fast.duration_hours;
+                if (!duration && fast.start_time && fast.end_time) {
+                    duration = (endDate - startDate) / (1000 * 60 * 60); // Convert to hours
+                }
+                duration = duration || 0;
+                
+                const formatDate = (date) => {
+                    return date.toLocaleDateString('en-US', { 
+                        month: 'short', 
+                        day: 'numeric',
+                        hour: '2-digit',
+                        minute: '2-digit'
+                    });
+                };
+                
+                const formatDuration = (hours) => {
+                    if (hours < 24) {
+                        return `${hours.toFixed(1)}h`;
+                    } else {
+                        const days = Math.floor(hours / 24);
+                        const remainingHours = Math.floor(hours % 24);
+                        return `${days}d ${remainingHours}h`;
+                    }
+                };
+                
+                const dateRange = endDate 
+                    ? `${formatDate(startDate)} → ${formatDate(endDate)}`
+                    : `Started ${formatDate(startDate)}`;
+                
+                const milestones = [];
+                if (duration >= 16) milestones.push('16h');
+                if (duration >= 24) milestones.push('24h');
+                if (duration >= 48) milestones.push('48h');
+                if (duration >= 72) milestones.push('72h');
+                
+                return `
+                    <div class="fast-item" onclick="editFast(${fast.id})">
+                        <div class="fast-header">
+                            <div class="fast-dates">
+                                <div class="fast-date-range">${dateRange}</div>
+                                <div class="fast-duration">${formatDuration(duration)}</div>
+                            </div>
+                            <div class="fast-indicator">
+                                <div class="indicator-dot ${fast.is_manual ? 'manual' : 'live'}"></div>
+                                ${fast.is_manual ? 'Manual' : 'Tracked'}
+                            </div>
+                        </div>
+                        <div class="fast-details">
+                            <div class="fast-milestones">
+                                ${milestones.map(m => `<span class="milestone-badge">${m}</span>`).join('')}
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+        
+        function showEmptyState() {
+            document.getElementById('loading-state').style.display = 'none';
+            document.getElementById('empty-state').style.display = 'block';
+            document.getElementById('fasts-list').innerHTML = '';
+        }
+        
+        function updateStats() {
+            const totalFasts = fasts.length;
+            const totalHours = fasts.reduce((sum, fast) => {
+                let duration = fast.duration_hours;
+                
+                // Calculate duration if not stored in database
+                if (!duration && fast.start_time && fast.end_time) {
+                    const startTime = new Date(fast.start_time);
+                    const endTime = new Date(fast.end_time);
+                    duration = (endTime - startTime) / (1000 * 60 * 60); // Convert to hours
+                }
+                
+                return sum + (duration || 0);
+            }, 0);
+            
+            document.getElementById('total-fasts').textContent = totalFasts;
+            document.getElementById('total-hours').textContent = Math.round(totalHours) + 'h';
+            document.getElementById('current-streak').textContent = '1'; // Placeholder - would need streak calculation
+        }
+        
+        function showAddFastModal() {
+            document.getElementById('add-fast-modal').style.display = 'flex';
+        }
+        
+        function hideAddFastModal() {
+            document.getElementById('add-fast-modal').style.display = 'none';
+            document.getElementById('add-fast-form').reset();
+        }
+        
+        async function submitAddFast(event) {
+            event.preventDefault();
+            
+            const formData = new FormData(event.target);
+            const startDate = formData.get('start-date');
+            const startTime = formData.get('start-time');
+            const endDate = formData.get('end-date');
+            const endTime = formData.get('end-time');
+            const notes = formData.get('notes');
+            const weight = formData.get('weight');
+            
+            // Combine date and time inputs
+            const startDateTime = new Date(`${startDate}T${startTime}`).toISOString();
+            const endDateTime = endDate && endTime ? new Date(`${endDate}T${endTime}`).toISOString() : null;
+            
+            // Get session ID for linking to user profile
+            const sessionId = localStorage.getItem('fastingForecast_sessionId');
+            
+            const fastData = {
+                start_time: startDateTime,
+                end_time: endDateTime,
+                notes: notes || null,
+                weight: weight ? parseFloat(weight) : null,
+                is_manual: true,
+                sessionId: sessionId
+            };
+            
+            try {
+                const response = await fetch('/api/fasts', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(fastData)
+                });
+                
+                if (response.ok) {
+                    hideAddFastModal();
+                    loadFasts(); // Reload the fasts list
+                } else {
+                    const error = await response.json();
+                    alert(`Error: ${error.error}`);
+                }
+            } catch (error) {
+                console.error('Error adding fast:', error);
+                alert('Failed to add fast. Please try again.');
+            }
+        }
+        
+        let editingFastId = null;
+        
+        async function editFast(fastId) {
+            editingFastId = fastId;
+            
+            try {
+                const response = await fetch(`/api/fasts/${fastId}`);
+                if (response.ok) {
+                    const fast = await response.json();
+                    populateEditModal(fast);
+                    document.getElementById('edit-fast-modal').style.display = 'flex';
+                } else {
+                    alert('Error loading fast data');
+                }
+            } catch (error) {
+                console.error('Error loading fast:', error);
+                alert('Failed to load fast data');
+            }
+        }
+        
+        function populateEditModal(fast) {
+            const startDate = new Date(fast.start_time);
+            const endDate = fast.end_time ? new Date(fast.end_time) : null;
+            
+            // Format dates for inputs
+            const formatDateForInput = (date) => {
+                const year = date.getFullYear();
+                const month = String(date.getMonth() + 1).padStart(2, '0');
+                const day = String(date.getDate()).padStart(2, '0');
+                return `${year}-${month}-${day}`;
+            };
+            
+            const formatTimeForInput = (date) => {
+                const hours = String(date.getHours()).padStart(2, '0');
+                const minutes = String(date.getMinutes()).padStart(2, '0');
+                return `${hours}:${minutes}`;
+            };
+            
+            document.getElementById('edit-start-date').value = formatDateForInput(startDate);
+            document.getElementById('edit-start-time').value = formatTimeForInput(startDate);
+            
+            if (endDate) {
+                document.getElementById('edit-end-date').value = formatDateForInput(endDate);
+                document.getElementById('edit-end-time').value = formatTimeForInput(endDate);
+            } else {
+                document.getElementById('edit-end-date').value = '';
+                document.getElementById('edit-end-time').value = '';
+            }
+            
+            document.getElementById('edit-notes').value = fast.notes || '';
+            document.getElementById('edit-weight').value = fast.weight || '';
+        }
+        
+        function hideEditFastModal() {
+            document.getElementById('edit-fast-modal').style.display = 'none';
+            document.getElementById('edit-fast-form').reset();
+            editingFastId = null;
+        }
+        
+        async function submitEditFast(event) {
+            event.preventDefault();
+            
+            if (!editingFastId) return;
+            
+            const formData = new FormData(event.target);
+            const startDate = formData.get('start-date');
+            const startTime = formData.get('start-time');
+            const endDate = formData.get('end-date');
+            const endTime = formData.get('end-time');
+            const notes = formData.get('notes');
+            const weight = formData.get('weight');
+            
+            // Combine date and time inputs
+            const startDateTime = new Date(`${startDate}T${startTime}`).toISOString();
+            const endDateTime = endDate && endTime ? new Date(`${endDate}T${endTime}`).toISOString() : null;
+            
+            const fastData = {
+                start_time: startDateTime,
+                end_time: endDateTime,
+                notes: notes || null,
+                weight: weight ? parseFloat(weight) : null
+            };
+            
+            try {
+                const response = await fetch(`/api/fasts/${editingFastId}`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(fastData)
+                });
+                
+                if (response.ok) {
+                    hideEditFastModal();
+                    loadFasts(); // Reload the fasts list
+                } else {
+                    const error = await response.json();
+                    alert(`Error: ${error.error}`);
+                }
+            } catch (error) {
+                console.error('Error updating fast:', error);
+                alert('Failed to update fast. Please try again.');
+            }
+        }
+        
+        async function deleteFast(fastId) {
+            if (!confirm('Are you sure you want to delete this fast? This action cannot be undone.')) {
+                return;
+            }
+            
+            try {
+                const response = await fetch(`/api/fasts/${fastId}`, {
+                    method: 'DELETE'
+                });
+                
+                if (response.ok) {
+                    loadFasts(); // Reload the fasts list
+                } else {
+                    const error = await response.json();
+                    alert(`Error: ${error.error}`);
+                }
+            } catch (error) {
+                console.error('Error deleting fast:', error);
+                alert('Failed to delete fast. Please try again.');
+            }
+        }
+        
+        // Bottom Navigation Functionality (copied from timer.html)
+        function updateActiveNavItem() {
+            const currentPath = window.location.pathname;
+            const navItems = document.querySelectorAll('.nav-item');
+            
+            navItems.forEach(item => {
+                item.classList.remove('active');
+                const href = item.getAttribute('href');
+                
+                if (href === currentPath || (href === '/dashboard' && currentPath === '/dashboard')) {
+                    item.classList.add('active');
+                }
+            });
+        }
+        
+        // Update navigation on page load
+        updateActiveNavItem();
+        
+        // Add click handlers for navigation items
+        const navItems = document.querySelectorAll('.nav-item');
+        navItems.forEach(item => {
+            item.addEventListener('click', (e) => {
+                const href = item.getAttribute('href');
+                
+                // For now, prevent default navigation for pages that don't exist
+                if (href !== '/dashboard' && href !== '/timer') {
+                    e.preventDefault();
+                    
+                    const pageName = item.querySelector('.nav-label').textContent;
+                    alert(`${pageName} page coming soon!`);
+                }
+            });
+        });
+        
+        // Close modals when clicking outside
+        document.getElementById('add-fast-modal').addEventListener('click', function(e) {
+            if (e.target === this) {
+                hideAddFastModal();
+            }
+        });
+        
+        document.getElementById('edit-fast-modal').addEventListener('click', function(e) {
+            if (e.target === this) {
+                hideEditFastModal();
+            }
+        });
+        
+        // Set default start date/time to now
+        const now = new Date();
+        const localISOTime = new Date(now.getTime() - now.getTimezoneOffset() * 60000).toISOString();
+        const [date, time] = localISOTime.split('T');
+        document.getElementById('start-date').value = date;
+        document.getElementById('start-time').value = time.slice(0, 5); // Remove seconds
+    </script>
+</body>
+</html>

@@ -120,6 +120,14 @@
             margin: 0 5px;
         }
         
+        #weightUnit {
+            min-width: 70px;
+        }
+        
+        #lifestyle {
+            min-width: 120px;
+        }
+        
         .story-input:focus {
             border-bottom-color: #ec4899;
             background: rgba(251, 146, 60, 0.05);
@@ -423,6 +431,11 @@
         
         
         @media (max-width: 768px) {
+            /* Fix dropdown positioning by removing transforms on mobile */
+            .question.active {
+                transform: none !important;
+            }
+            
             /* Force left alignment for all inputs and text on mobile */
             .story-text, .responsive-text {
                 text-align: left !important;
@@ -517,13 +530,13 @@
             <div class="question active" id="mainQuestion">
                 <div class="story-text responsive-text">
                     I weigh <input type="number" class="story-input" id="weight" placeholder="175" min="80" max="500" style="width: 80px;"> 
-                    <select class="story-input" id="weightUnit" style="min-width: 70px;">
+                    <select class="story-input" id="weightUnit">
                         <option value="lb">lbs</option>
                         <option value="kg">kg</option>
                     </select> 
                     and have about <input type="number" class="story-input" id="bodyFat" placeholder="20" min="5" max="50" step="0.1" style="width: 60px;">% body fat. 
                     My lifestyle is mostly 
-                    <select class="story-input" id="lifestyle" style="min-width: 120px;">
+                    <select class="story-input" id="lifestyle">
                         <option value="1.2">sedentary</option>
                         <option value="1.375" selected>lightly active</option>
                         <option value="1.55">moderately active</option>
@@ -646,14 +659,15 @@
                     </div>
                 </div>
                 
-                <div style="display: flex; gap: 15px; margin-top: 30px;">
-                    <a href="/timer" style="flex: 1; padding: 15px 20px; border: 2px solid #fb923c; border-radius: 10px; background: linear-gradient(135deg, #fcd34d 0%, #fb923c 50%, #ec4899 100%); color: white; font-size: 1rem; font-weight: 600; text-decoration: none; display: block; text-align: center; transition: all 0.3s ease;">
-                        Start My Journey
-                    </a>
-                    <button onclick="startOver()" style="flex: 1; padding: 15px 20px; border: 2px solid #fb923c; border-radius: 10px; background: transparent; color: #fb923c; font-size: 1rem; font-weight: 600; cursor: pointer; transition: all 0.3s ease;">
-                        Try Different Plan
+                <!-- Save Journey CTA -->
+                <div style="background: linear-gradient(135deg, rgba(40, 167, 69, 0.08), rgba(251, 146, 60, 0.08)); border: 2px solid #28a745; border-radius: 15px; padding: 25px; margin: 25px 0; text-align: center;">
+                    <h3 style="color: #28a745; font-size: 1.3rem; margin-bottom: 12px; font-weight: 700;">🎯 Ready to make this your reality?</h3>
+                    <p style="color: #666; font-size: 1rem; margin-bottom: 20px; line-height: 1.5;">Save your personalized forecast and get guided step-by-step toward your goal. We'll track your progress and keep you motivated!</p>
+                    <button onclick="showSaveJourneyModal()" style="background: linear-gradient(135deg, #28a745 0%, #20c997 100%); color: white; border: none; padding: 18px 35px; border-radius: 12px; font-size: 1.2rem; font-weight: 700; cursor: pointer; transition: all 0.3s ease; box-shadow: 0 6px 20px rgba(40, 167, 69, 0.3);">
+                        Save Forecast & Begin Journey
                     </button>
                 </div>
+
                 
                 <div style="margin-top: 25px; padding-top: 20px; border-top: 1px solid #e9ecef; font-size: 0.8rem; color: #6c757d; line-height: 1.4; text-align: center;">
                     <strong>Important Disclaimer:</strong> This is an estimate. Actual results will vary. Some advanced protocols should only be attempted under medical supervision. Always consult a doctor before making major lifestyle changes.
@@ -677,7 +691,7 @@
             <span class="nav-label">Schedule</span>
         </a>
         
-        <a href="/" class="nav-item active" data-page="dashboard">
+        <a href="/dashboard" class="nav-item active" data-page="dashboard">
             <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <line x1="18" y1="20" x2="18" y2="10"/>
                 <line x1="12" y1="20" x2="12" y2="4"/>
@@ -720,6 +734,62 @@
             <span class="modal-close" onclick="closeProtocolModal()">&times;</span>
             <div id="modalProtocolConfigurator">
                 <!-- Protocol configurator content will be moved here -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Save Journey Modal -->
+    <div id="saveJourneyModal" class="modal">
+        <div class="modal-content" style="max-width: 500px;">
+            <span class="modal-close" onclick="closeSaveJourneyModal()">&times;</span>
+            <div style="padding: 30px;">
+                <div style="text-align: center; margin-bottom: 25px;">
+                    <h2 style="color: #28a745; font-size: 1.8rem; margin-bottom: 10px; font-weight: 700;">🚀 Ready to Begin?</h2>
+                    <p style="color: #666; font-size: 1.1rem; line-height: 1.6;">We'll save your forecast and guide you through your transformation journey!</p>
+                </div>
+                
+                <div style="background: #f8f9fa; padding: 20px; border-radius: 12px; margin-bottom: 25px;">
+                    <h4 style="color: #333; margin-bottom: 15px; font-size: 1rem;">📊 Your Personalized Plan:</h4>
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 10px;">
+                        <span>Current body fat:</span>
+                        <strong><span id="modalCurrentBF">22%</span></strong>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 10px;">
+                        <span>Target body fat:</span>
+                        <strong><span id="modalTargetBF">12%</span></strong>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 10px;">
+                        <span>Estimated timeframe:</span>
+                        <strong><span id="modalTimeframe">12 weeks</span></strong>
+                    </div>
+                    <div style="display: flex; justify-content: space-between;">
+                        <span>Target date:</span>
+                        <strong style="color: #ec4899;"><span id="modalGoalDate">March 15, 2026</span></strong>
+                    </div>
+                </div>
+                
+                <div style="background: rgba(40, 167, 69, 0.05); padding: 15px; border-radius: 10px; border-left: 4px solid #28a745; margin-bottom: 25px;">
+                    <h4 style="color: #28a745; margin-bottom: 8px; font-size: 0.95rem;">✨ What you'll get:</h4>
+                    <ul style="color: #666; font-size: 0.9rem; margin: 0; padding-left: 20px;">
+                        <li>Personalized dashboard tracking your progress</li>
+                        <li>Smart fasting timer with milestone guidance</li>
+                        <li>Progress tracking toward your specific goal</li>
+                        <li>Educational content tailored to your journey</li>
+                    </ul>
+                </div>
+                
+                <div style="display: flex; gap: 12px;">
+                    <button onclick="closeSaveJourneyModal()" style="flex: 1; padding: 15px 20px; border: 2px solid #ddd; border-radius: 10px; background: transparent; color: #666; font-size: 1rem; font-weight: 600; cursor: pointer;">
+                        Maybe Later
+                    </button>
+                    <button onclick="saveJourneyAndContinue()" style="flex: 1; padding: 15px 20px; border: none; border-radius: 10px; background: linear-gradient(135deg, #28a745 0%, #20c997 100%); color: white; font-size: 1rem; font-weight: 600; cursor: pointer; transition: all 0.3s ease;">
+                        Save & Continue
+                    </button>
+                </div>
+                
+                <div style="margin-top: 15px; font-size: 0.8rem; color: #999; text-align: center;">
+                    <span>🔒 Your data is stored locally and securely</span>
+                </div>
             </div>
         </div>
     </div>
@@ -1093,6 +1163,8 @@
                     const result = await response.json();
                     
                     if (response.ok) {
+                        // IMPORTANT: Update apiResults with the new calculation
+                        apiResults = result;
                         updateResultsDisplay(result);
                         updateActiveProtocolButtons();
                     } else {
@@ -1216,6 +1288,134 @@
         
         // Update active nav item when navigating (for SPA-style navigation in the future)
         window.addEventListener('popstate', updateActiveNavItem);
+
+        // Save Journey Modal Functions
+        function showSaveJourneyModal() {
+            // Ensure userData is in sync with current protocol adjustments before showing modal
+            if (currentProtocol) {
+                userData.fastingBlocks = protocolToBlocks(currentProtocol);
+                userData.ketosisStates = protocolToKetosisStates(currentProtocol);
+                userData.fastingExperience = getFastingExperience(currentProtocol);
+            }
+            
+            // Populate modal with current adjusted data (FRESH every time modal is opened)
+            document.getElementById('modalCurrentBF').textContent = `${userData.bodyFat}%`;
+            document.getElementById('modalTargetBF').textContent = `${userData.targetBodyFat}%`;
+            document.getElementById('modalTimeframe').textContent = `${userData.weeks} weeks`;
+            
+            // Calculate and show adjusted goal date based on current weeks
+            const startDate = new Date(userData.startDate);
+            const adjustedGoalDate = new Date(startDate);
+            adjustedGoalDate.setDate(adjustedGoalDate.getDate() + (userData.weeks * 7));
+            const goalDateString = adjustedGoalDate.toLocaleDateString('en-US', { 
+                year: 'numeric',
+                month: 'long', 
+                day: 'numeric' 
+            });
+            document.getElementById('modalGoalDate').textContent = goalDateString;
+            
+            // Show modal
+            const modal = document.getElementById('saveJourneyModal');
+            modal.style.display = 'flex';
+            setTimeout(() => {
+                modal.classList.add('show');
+            }, 10);
+        }
+
+        function closeSaveJourneyModal() {
+            const modal = document.getElementById('saveJourneyModal');
+            modal.classList.remove('show');
+            setTimeout(() => {
+                modal.style.display = 'none';
+            }, 300);
+        }
+
+        async function saveJourneyAndContinue() {
+            try {
+                // Generate session ID if not exists
+                let sessionId = localStorage.getItem('fastingForecast_sessionId');
+                if (!sessionId) {
+                    sessionId = 'fs_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+                    localStorage.setItem('fastingForecast_sessionId', sessionId);
+                }
+
+                // IMPORTANT: Sync userData with current protocol adjustments before saving
+                if (currentProtocol) {
+                    userData.fastingBlocks = protocolToBlocks(currentProtocol);
+                    userData.ketosisStates = protocolToKetosisStates(currentProtocol);
+                    userData.fastingExperience = getFastingExperience(currentProtocol);
+                    // Keep the current weeks from the latest calculation
+                    // Keep the current apiResults from the latest calculation
+                }
+
+                // Calculate goal date using current weeks (which may have been adjusted)
+                const startDate = new Date(userData.startDate);
+                const goalDate = new Date(startDate);
+                goalDate.setDate(goalDate.getDate() + (userData.weeks * 7));
+                const goalDateString = goalDate.toISOString().split('T')[0];
+
+                // Prepare profile data with adjusted protocol parameters
+                const profileData = {
+                    sessionId: sessionId,
+                    weight: userData.weight,
+                    weightUnit: userData.weightUnit,
+                    bodyFat: userData.bodyFat,
+                    targetBodyFat: userData.targetBodyFat,
+                    activityLevel: userData.activityLevel,
+                    goalDate: goalDateString,
+                    forecastData: {
+                        weeks: userData.weeks, // This reflects adjusted protocol
+                        fastingBlocks: userData.fastingBlocks, // This reflects adjusted protocol
+                        ketosisStates: userData.ketosisStates, // This reflects adjusted protocol
+                        fastingExperience: userData.fastingExperience,
+                        insulinSensitivity: userData.insulinSensitivity,
+                        startDate: userData.startDate,
+                        currentProtocol: currentProtocol, // Save the actual protocol settings
+                        results: apiResults // This reflects adjusted calculations
+                    }
+                };
+
+                // Save to server
+                const response = await fetch('/api/user/profile', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(profileData)
+                });
+
+                if (response.ok) {
+                    const savedProfile = await response.json();
+                    console.log('Profile saved successfully:', savedProfile);
+                    
+                    // Store success in localStorage
+                    localStorage.setItem('fastingForecast_profileSaved', 'true');
+                    
+                    // Close modal and redirect to welcome page
+                    closeSaveJourneyModal();
+                    
+                    // Small delay to allow modal to close smoothly
+                    setTimeout(() => {
+                        window.location.href = '/welcome';
+                    }, 400);
+                } else {
+                    const error = await response.json();
+                    console.error('Failed to save profile:', error);
+                    alert('Failed to save your forecast. Please try again.');
+                }
+            } catch (error) {
+                console.error('Error saving profile:', error);
+                alert('An error occurred while saving your forecast. Please try again.');
+            }
+        }
+
+        // Close save journey modal when clicking outside
+        document.addEventListener('click', function(event) {
+            const modal = document.getElementById('saveJourneyModal');
+            if (event.target === modal) {
+                closeSaveJourneyModal();
+            }
+        });
     </script>
 </body>
 </html>

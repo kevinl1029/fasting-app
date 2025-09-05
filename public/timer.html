@@ -358,6 +358,101 @@
             line-height: 1.4;
         }
         
+        .new-user-welcome {
+            background: linear-gradient(135deg, rgba(40, 167, 69, 0.08), rgba(251, 146, 60, 0.08));
+            padding: 25px;
+            border-radius: 15px;
+            margin: 20px 0;
+            border-left: 4px solid #28a745;
+            text-align: center;
+        }
+        
+        .welcome-title {
+            color: #28a745;
+            font-weight: 700;
+            font-size: 1.3rem;
+            margin-bottom: 12px;
+        }
+        
+        .welcome-subtitle {
+            color: #666;
+            font-size: 1rem;
+            line-height: 1.4;
+            margin-bottom: 15px;
+        }
+        
+        .welcome-hint {
+            color: #999;
+            font-size: 0.85rem;
+            margin-top: 15px;
+            font-style: italic;
+        }
+        
+        .schedule-setup-state {
+            background: linear-gradient(135deg, rgba(251, 146, 60, 0.08), rgba(236, 72, 153, 0.08));
+            padding: 25px;
+            border-radius: 15px;
+            margin: 20px 0;
+            border-left: 4px solid #fb923c;
+            text-align: center;
+        }
+        
+        .schedule-title {
+            color: #fb923c;
+            font-weight: 700;
+            font-size: 1.3rem;
+            margin-bottom: 12px;
+        }
+        
+        .schedule-subtitle {
+            color: #666;
+            font-size: 1rem;
+            line-height: 1.4;
+            margin-bottom: 15px;
+        }
+        
+        .dual-button-group {
+            display: flex;
+            gap: 12px;
+            margin-top: 20px;
+        }
+        
+        .schedule-btn-primary {
+            flex: 1;
+            padding: 15px 20px;
+            border: none;
+            border-radius: 10px;
+            background: linear-gradient(135deg, #fb923c 0%, #ec4899 100%);
+            color: white;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .schedule-btn-secondary {
+            flex: 1;
+            padding: 15px 20px;
+            border: 2px solid #fb923c;
+            border-radius: 10px;
+            background: transparent;
+            color: #fb923c;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .schedule-btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(251, 146, 60, 0.3);
+        }
+        
+        .schedule-btn-secondary:hover {
+            transform: translateY(-2px);
+            background: rgba(251, 146, 60, 0.05);
+        }
+        
         .time-display {
             margin: 20px 0;
             padding: 15px;
@@ -1071,17 +1166,36 @@
         <div class="timer-card">
             <!-- Pre-Fast State -->
             <div id="preFastState">
-                <div class="scheduled-fast">
+                <!-- New User Welcome State -->
+                <div id="newUserWelcome" class="new-user-welcome" style="display: none;">
+                    <div class="welcome-title">🎉 Welcome to Your Fasting Journey!</div>
+                    <div class="welcome-subtitle">Ready to start your first fast?</div>
+                </div>
+                
+                <!-- Schedule Setup State (for returning users) -->
+                <div id="scheduleSetupState" class="schedule-setup-state" style="display: none;">
+                    <div class="schedule-title">📅 Want to make fasting easier?</div>
+                    <div class="schedule-subtitle">Set up a regular schedule to stay on track</div>
+                    <button class="schedule-btn-secondary" onclick="showScheduleSetup()" style="margin-top: 15px;">Set My Schedule</button>
+                </div>
+                
+                <!-- Scheduled Fast State -->
+                <div id="scheduledFastInfo" class="scheduled-fast" style="display: none;">
                     <div class="scheduled-title">🗓️ Next Scheduled Fast</div>
                     <div class="scheduled-info">
-                        Tomorrow at 8:00 PM • 24-hour fast<br>
+                        <span id="scheduledFastDetails">Tomorrow at 8:00 PM • 24-hour fast</span><br>
                         <small style="opacity: 0.7;">Tap to modify schedule</small>
                     </div>
                 </div>
                 
                 <button class="start-fast-btn" id="startFastBtn" onclick="startFast()">
-                    Start 24h Fast
+                    Start Your First Fast
                 </button>
+                
+                <div id="newUserHint" class="welcome-hint" style="display: none;">
+                    Choose your duration below or start with 24 hours
+                </div>
+                
                 
                 <div class="customize-duration">
                     <button class="customize-btn" onclick="toggleDurationSelector()">
@@ -1633,7 +1747,7 @@
         }
         
         // Start a fast
-        function startFast() {
+        async function startFast() {
             // Use selected duration for this fast
             fastDuration = selectedDuration;
             
@@ -1647,6 +1761,9 @@
             // Use selected start time or current time
             fastStartTime = selectedStartTime || new Date();
             elapsedTime = selectedStartTime ? Date.now() - selectedStartTime.getTime() : 0;
+            
+            // Create fast entry in database
+            await createFastEntry();
             
             // Create milestone markers
             createMilestoneMarkers();
@@ -1671,10 +1788,13 @@
         }
         
         // End a fast
-        function endFast() {
+        async function endFast() {
             if (isRunning) {
                 clearInterval(timerInterval);
                 isRunning = false;
+                
+                // End fast entry in database
+                await endFastEntry();
             }
             
             // Show completion state instead of going back to pre-fast
@@ -1879,6 +1999,94 @@
             // This would connect to user data in a real app
             document.getElementById('totalFasts').textContent = '0';
             document.getElementById('longestFast').textContent = '0h';
+        }
+        
+        // Initialize user state and determine what to show
+        async function initializeUserState() {
+            try {
+                const sessionId = localStorage.getItem('fastingForecast_sessionId');
+                
+                if (sessionId) {
+                    // Check if user has any fasts in database
+                    const response = await fetch(`/api/fasts?sessionId=${sessionId}&limit=1`);
+                    if (response.ok) {
+                        const fasts = await response.json();
+                        
+                        if (fasts.length === 0) {
+                            // New user - show welcome state
+                            showNewUserWelcome();
+                        } else {
+                            // User has completed fasts - check if they have actual scheduled fasts
+                            // For now, we don't have scheduling feature, so assume no real schedule
+                            const hasActualSchedule = false; // TODO: Replace when scheduling is implemented
+                            
+                            if (hasActualSchedule) {
+                                // User has real scheduled fasts
+                                showScheduledFastState();
+                            } else {
+                                // User has fasts but no schedule - encourage them to set up schedule
+                                showScheduleSetupState();
+                            }
+                        }
+                    } else {
+                        // API error - default to new user welcome
+                        showNewUserWelcome();
+                    }
+                } else {
+                    // No session ID - definitely new user
+                    showNewUserWelcome();
+                }
+            } catch (error) {
+                console.error('Error checking user state:', error);
+                // Default to new user welcome on error
+                showNewUserWelcome();
+            }
+        }
+        
+        function showNewUserWelcome() {
+            document.getElementById('newUserWelcome').style.display = 'block';
+            document.getElementById('scheduleSetupState').style.display = 'none';
+            document.getElementById('scheduledFastInfo').style.display = 'none';
+            document.getElementById('newUserHint').style.display = 'block';
+            
+            // Show main start button
+            document.getElementById('startFastBtn').style.display = 'block';
+            
+            // Update button text for new users
+            document.getElementById('startFastBtn').textContent = 'Start Your First Fast';
+        }
+        
+        function showScheduleSetupState() {
+            document.getElementById('newUserWelcome').style.display = 'none';
+            document.getElementById('scheduleSetupState').style.display = 'block';
+            document.getElementById('scheduledFastInfo').style.display = 'none';
+            document.getElementById('newUserHint').style.display = 'none';
+            
+            // Keep main start button visible as primary action
+            document.getElementById('startFastBtn').style.display = 'block';
+            document.getElementById('startFastBtn').textContent = 'Start Fast Now';
+        }
+        
+        function showScheduledFastState() {
+            document.getElementById('newUserWelcome').style.display = 'none';
+            document.getElementById('scheduleSetupState').style.display = 'none';
+            document.getElementById('scheduledFastInfo').style.display = 'block';
+            document.getElementById('newUserHint').style.display = 'none';
+            
+            // Show main start button
+            document.getElementById('startFastBtn').style.display = 'block';
+            
+            // Update button text for users with schedules
+            document.getElementById('startFastBtn').textContent = 'Start 24h Fast';
+            
+            // TODO: Load actual scheduled fast data when scheduling feature is implemented
+            // For now, keep the placeholder scheduled fast info
+        }
+        
+        // Handle schedule setup button click
+        function showScheduleSetup() {
+            // TODO: Navigate to schedule setup page when implemented
+            alert('🗓️ Schedule Setup Coming Soon!\n\nWe\'re building a smart scheduling system that will let you:\n\n• Set regular fasting windows\n• Plan around your calendar\n• Get reminders and motivation\n• Track your routine\n\nFor now, you can start individual fasts and we\'ll help you build the habit!');
         }
         
         // Confetti Animation
@@ -2149,6 +2357,7 @@
         // Update navigation on page load
         document.addEventListener('DOMContentLoaded', () => {
             updateActiveNavItem();
+            initializeUserState();
             
             // Add click handlers for navigation items
             const navItems = document.querySelectorAll('.nav-item');
@@ -2157,7 +2366,7 @@
                     const href = item.getAttribute('href');
                     
                     // For now, prevent default navigation for pages that don't exist
-                    if (href !== '/' && href !== '/timer') {
+                    if (href !== '/dashboard' && href !== '/timer') {
                         e.preventDefault();
                         
                         // Show a temporary message for unimplemented pages
@@ -2170,6 +2379,91 @@
         
         // Update active nav item when navigating (for SPA-style navigation in the future)
         window.addEventListener('popstate', updateActiveNavItem);
+        
+        // Database integration functions
+        let currentFastId = null;
+        
+        async function createFastEntry() {
+            try {
+                // Get session ID to link fast to user profile
+                const sessionId = localStorage.getItem('fastingForecast_sessionId');
+                console.log('Creating fast entry with sessionId:', sessionId);
+                
+                const fastData = {
+                    start_time: fastStartTime.toISOString(),
+                    notes: null,
+                    weight: null,
+                    is_manual: false,
+                    sessionId: sessionId
+                };
+                
+                console.log('Sending fast data:', fastData);
+                
+                const response = await fetch('/api/fasts/start', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(fastData)
+                });
+                
+                if (response.ok) {
+                    const fast = await response.json();
+                    currentFastId = fast.id;
+                    console.log('Fast entry created:', fast);
+                } else {
+                    console.error('Failed to create fast entry');
+                }
+            } catch (error) {
+                console.error('Error creating fast entry:', error);
+            }
+        }
+        
+        async function endFastEntry() {
+            if (!currentFastId) return;
+            
+            try {
+                const endTime = new Date().toISOString();
+                
+                const response = await fetch(`/api/fasts/${currentFastId}/end`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ end_time: endTime })
+                });
+                
+                if (response.ok) {
+                    const fast = await response.json();
+                    console.log('Fast entry completed:', fast);
+                    currentFastId = null;
+                } else {
+                    console.error('Failed to end fast entry');
+                }
+            } catch (error) {
+                console.error('Error ending fast entry:', error);
+            }
+        }
+        
+        // Check for active fast on page load
+        async function checkForActiveFast() {
+            try {
+                const response = await fetch('/api/fasts/active');
+                if (response.ok) {
+                    const activeFast = await response.json();
+                    if (activeFast) {
+                        currentFastId = activeFast.id;
+                        console.log('Found active fast:', activeFast);
+                        // Could potentially restore timer state here if needed
+                    }
+                }
+            } catch (error) {
+                console.error('Error checking for active fast:', error);
+            }
+        }
+        
+        // Check for active fast when page loads
+        checkForActiveFast();
     </script>
     
     <!-- Bottom Navigation -->
@@ -2184,7 +2478,7 @@
             <span class="nav-label">Schedule</span>
         </a>
         
-        <a href="/" class="nav-item" data-page="dashboard">
+        <a href="/dashboard" class="nav-item" data-page="dashboard">
             <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <line x1="18" y1="20" x2="18" y2="10"/>
                 <line x1="12" y1="20" x2="12" y2="4"/>

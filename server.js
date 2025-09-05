@@ -1,6 +1,7 @@
 const express = require('express');
 const cors = require('cors');
 const path = require('path');
+const db = require('./database/db');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -8,7 +9,6 @@ const PORT = process.env.PORT || 3000;
 // Middleware
 app.use(cors());
 app.use(express.json());
-app.use(express.static('public'));
 
 // API Routes
 app.get('/api/hello', (req, res) => {
@@ -20,6 +20,298 @@ app.get('/api/time', (req, res) => {
     currentTime: new Date().toISOString(),
     message: 'Current server time'
   });
+});
+
+// Fasting Log API Endpoints
+app.get('/api/fasts', async (req, res) => {
+  try {
+    const limit = parseInt(req.query.limit) || 50;
+    const offset = parseInt(req.query.offset) || 0;
+    const sessionId = req.query.sessionId;
+    
+    if (sessionId) {
+      // Get user profile first to find user_profile_id
+      const profile = await db.getUserProfileBySessionId(sessionId);
+      if (profile) {
+        const fasts = await db.getFastsByUserProfile(profile.id, limit, offset);
+        res.json(fasts);
+      } else {
+        // Return empty array if no profile found
+        res.json([]);
+      }
+    } else {
+      // Fallback to all fasts (for backward compatibility)
+      const fasts = await db.getFasts(limit, offset);
+      res.json(fasts);
+    }
+  } catch (error) {
+    console.error('Error fetching fasts:', error);
+    res.status(500).json({ error: 'Failed to fetch fasts' });
+  }
+});
+
+app.get('/api/fasts/active', async (req, res) => {
+  try {
+    const activeFast = await db.getActiveFast();
+    res.json(activeFast);
+  } catch (error) {
+    console.error('Error fetching active fast:', error);
+    res.status(500).json({ error: 'Failed to fetch active fast' });
+  }
+});
+
+app.get('/api/fasts/:id', async (req, res) => {
+  try {
+    const fastId = parseInt(req.params.id);
+    const fast = await db.getFastById(fastId);
+    
+    if (!fast) {
+      return res.status(404).json({ error: 'Fast not found' });
+    }
+    
+    const milestones = await db.getFastMilestones(fastId);
+    res.json({ ...fast, milestones });
+  } catch (error) {
+    console.error('Error fetching fast:', error);
+    res.status(500).json({ error: 'Failed to fetch fast' });
+  }
+});
+
+app.post('/api/fasts', async (req, res) => {
+  try {
+    const { start_time, end_time, notes, weight, photos, is_manual = true, sessionId } = req.body;
+    
+    if (!start_time) {
+      return res.status(400).json({ error: 'start_time is required' });
+    }
+    
+    // Calculate duration if end_time is provided
+    let duration_hours = null;
+    if (end_time) {
+      const start = new Date(start_time);
+      const end = new Date(end_time);
+      duration_hours = (end - start) / (1000 * 60 * 60);
+    }
+    
+    // Get user profile ID if session ID is provided
+    let userProfileId = null;
+    if (sessionId) {
+      const profile = await db.getUserProfileBySessionId(sessionId);
+      if (profile) {
+        userProfileId = profile.id;
+      }
+    }
+    
+    const fastData = {
+      start_time,
+      end_time,
+      duration_hours,
+      notes,
+      weight,
+      photos,
+      is_manual,
+      is_active: !end_time,
+      user_profile_id: userProfileId
+    };
+    
+    const newFast = await db.createFast(fastData);
+    res.status(201).json(newFast);
+  } catch (error) {
+    console.error('Error creating fast:', error);
+    res.status(500).json({ error: 'Failed to create fast' });
+  }
+});
+
+app.post('/api/fasts/start', async (req, res) => {
+  try {
+    const { notes, weight, sessionId } = req.body;
+    console.log('Starting fast with sessionId:', sessionId);
+    
+    // Check if there's already an active fast
+    const activeFast = await db.getActiveFast();
+    if (activeFast) {
+      return res.status(400).json({ error: 'There is already an active fast' });
+    }
+    
+    // Get user profile ID if session ID is provided
+    let userProfileId = null;
+    if (sessionId) {
+      const profile = await db.getUserProfileBySessionId(sessionId);
+      console.log('Found user profile:', profile ? profile.id : 'null');
+      if (profile) {
+        userProfileId = profile.id;
+      }
+    }
+    
+    const fastData = {
+      start_time: new Date().toISOString(),
+      notes,
+      weight,
+      is_manual: false,
+      is_active: true,
+      user_profile_id: userProfileId
+    };
+    
+    console.log('Creating fast with data:', fastData);
+    const newFast = await db.createFast(fastData);
+    console.log('Fast created:', newFast);
+    res.status(201).json(newFast);
+  } catch (error) {
+    console.error('Error starting fast:', error);
+    res.status(500).json({ error: 'Failed to start fast' });
+  }
+});
+
+app.post('/api/fasts/:id/end', async (req, res) => {
+  try {
+    const fastId = parseInt(req.params.id);
+    const endTime = req.body.end_time || new Date().toISOString();
+    
+    const updatedFast = await db.endFast(fastId, endTime);
+    res.json(updatedFast);
+  } catch (error) {
+    console.error('Error ending fast:', error);
+    res.status(500).json({ error: 'Failed to end fast' });
+  }
+});
+
+app.put('/api/fasts/:id', async (req, res) => {
+  try {
+    const fastId = parseInt(req.params.id);
+    const { start_time, end_time, notes, weight, photos } = req.body;
+    
+    let updateData = { start_time, end_time, notes, weight, photos };
+    
+    // Remove undefined values
+    Object.keys(updateData).forEach(key => 
+      updateData[key] === undefined && delete updateData[key]
+    );
+    
+    // Recalculate duration if times are being updated
+    if (updateData.start_time || updateData.end_time) {
+      const fast = await db.getFastById(fastId);
+      if (!fast) {
+        return res.status(404).json({ error: 'Fast not found' });
+      }
+      
+      const startTime = updateData.start_time || fast.start_time;
+      const endTime = updateData.end_time || fast.end_time;
+      
+      if (startTime && endTime) {
+        const start = new Date(startTime);
+        const end = new Date(endTime);
+        updateData.duration_hours = (end - start) / (1000 * 60 * 60);
+        updateData.is_active = false;
+      }
+    }
+    
+    const result = await db.updateFast(fastId, updateData);
+    
+    if (result.changes === 0) {
+      return res.status(404).json({ error: 'Fast not found' });
+    }
+    
+    const updatedFast = await db.getFastById(fastId);
+    res.json(updatedFast);
+  } catch (error) {
+    console.error('Error updating fast:', error);
+    res.status(500).json({ error: 'Failed to update fast' });
+  }
+});
+
+app.delete('/api/fasts/:id', async (req, res) => {
+  try {
+    const fastId = parseInt(req.params.id);
+    const result = await db.deleteFast(fastId);
+    
+    if (!result.deleted) {
+      return res.status(404).json({ error: 'Fast not found' });
+    }
+    
+    res.json({ message: 'Fast deleted successfully' });
+  } catch (error) {
+    console.error('Error deleting fast:', error);
+    res.status(500).json({ error: 'Failed to delete fast' });
+  }
+});
+
+// User Profile API Endpoints
+app.post('/api/user/profile', async (req, res) => {
+  try {
+    const { sessionId, weight, weightUnit, bodyFat, targetBodyFat, activityLevel, goalDate, forecastData } = req.body;
+    
+    if (!sessionId || !weight || !bodyFat || !targetBodyFat) {
+      return res.status(400).json({ error: 'Missing required fields' });
+    }
+    
+    const profileData = {
+      session_id: sessionId,
+      weight: weight,
+      weight_unit: weightUnit || 'lb',
+      body_fat: bodyFat,
+      target_body_fat: targetBodyFat,
+      activity_level: activityLevel,
+      goal_date: goalDate,
+      forecast_data: forecastData ? JSON.stringify(forecastData) : null
+    };
+    
+    // Try to update existing profile first
+    const existingProfile = await db.getUserProfileBySessionId(sessionId);
+    if (existingProfile) {
+      const result = await db.updateUserProfile(sessionId, profileData);
+      const updatedProfile = await db.getUserProfileBySessionId(sessionId);
+      res.json(updatedProfile);
+    } else {
+      // Create new profile
+      const newProfile = await db.createUserProfile(profileData);
+      res.status(201).json(newProfile);
+    }
+  } catch (error) {
+    console.error('Error saving user profile:', error);
+    res.status(500).json({ error: 'Failed to save user profile' });
+  }
+});
+
+app.get('/api/user/profile/:sessionId', async (req, res) => {
+  try {
+    const sessionId = req.params.sessionId;
+    const profile = await db.getUserProfileBySessionId(sessionId);
+    
+    if (!profile) {
+      return res.status(404).json({ error: 'User profile not found' });
+    }
+    
+    // Parse forecast_data if it exists
+    if (profile.forecast_data) {
+      try {
+        profile.forecast_data = JSON.parse(profile.forecast_data);
+      } catch (e) {
+        console.error('Error parsing forecast_data:', e);
+      }
+    }
+    
+    res.json(profile);
+  } catch (error) {
+    console.error('Error fetching user profile:', error);
+    res.status(500).json({ error: 'Failed to fetch user profile' });
+  }
+});
+
+app.post('/api/user/onboard/:sessionId', async (req, res) => {
+  try {
+    const sessionId = req.params.sessionId;
+    const result = await db.markUserOnboarded(sessionId);
+    
+    if (result.changes === 0) {
+      return res.status(404).json({ error: 'User profile not found' });
+    }
+    
+    const updatedProfile = await db.getUserProfileBySessionId(sessionId);
+    res.json(updatedProfile);
+  } catch (error) {
+    console.error('Error marking user onboarded:', error);
+    res.status(500).json({ error: 'Failed to mark user as onboarded' });
+  }
 });
 
 // Fasting forecast calculation endpoint
@@ -394,14 +686,54 @@ app.post('/api/calculate', (req, res) => {
   }
 });
 
-// Serve the main page (conversational landing)
+// Smart routing for root path
 app.get('/', (req, res) => {
+  // For now, serve a simple HTML page that does client-side routing
+  // This allows us to check localStorage for existing users
+  res.send(`
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <title>Fasting Forecast</title>
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    </head>
+    <body>
+      <script>
+        // Check if user has saved profile data
+        const sessionId = localStorage.getItem('fastingForecast_sessionId');
+        const profileSaved = localStorage.getItem('fastingForecast_profileSaved');
+        
+        if (sessionId && profileSaved === 'true') {
+          // Existing user - redirect to timer (home page)
+          window.location.href = '/timer';
+        } else {
+          // New user - redirect to forecaster (onboarding)
+          window.location.href = '/forecaster';
+        }
+      </script>
+    </body>
+    </html>
+  `);
+});
+
+// Serve the forecaster page (onboarding for new users)
+app.get('/forecaster', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
-// Serve the timer page (home screen for onboarded users)
+// Serve the dashboard page (with Log, Charts, Photos tabs)
+app.get('/dashboard', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'dashboard.html'));
+});
+
+// Serve the timer page 
 app.get('/timer', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'timer.html'));
+});
+
+// Serve the welcome page (onboarding)
+app.get('/welcome', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'welcome.html'));
 });
 
 // Serve the calculator page (removed for now, redirects to timer)
@@ -409,9 +741,24 @@ app.get('/calculator', (req, res) => {
   res.redirect('/timer');
 });
 
-// Start server
-app.listen(PORT, () => {
-  console.log(`Server is running on 
-    http://localhost:${PORT}`);
-  console.log(`API available at http://localhost:${PORT}/api/hello`);
-});
+// Serve static files (after custom routes)
+app.use(express.static('public'));
+
+// Initialize database and start server
+async function startServer() {
+  try {
+    await db.initialize();
+    console.log('Database initialized successfully');
+    
+    app.listen(PORT, () => {
+      console.log(`Server is running on http://localhost:${PORT}`);
+      console.log(`API available at http://localhost:${PORT}/api/hello`);
+      console.log(`Fasting Log API available at http://localhost:${PORT}/api/fasts`);
+    });
+  } catch (error) {
+    console.error('Failed to initialize database:', error);
+    process.exit(1);
+  }
+}
+
+startServer();
