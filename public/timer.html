@@ -2082,11 +2082,76 @@
             fastStartTime = null;
         }
         
-        // Load saved stats (placeholder for now)
-        function loadStats() {
-            // This would connect to user data in a real app
-            document.getElementById('totalFasts').textContent = '0';
-            document.getElementById('longestFast').textContent = '0h';
+        // Load saved stats from API
+        async function loadStats() {
+            try {
+                const sessionId = localStorage.getItem('fastingForecast_sessionId');
+                if (!sessionId) {
+                    document.getElementById('totalFasts').textContent = '0';
+                    document.getElementById('longestFast').textContent = '0h';
+                    return;
+                }
+                
+                // Fetch all completed fasts for this user
+                const response = await fetch(`/api/fasts?sessionId=${sessionId}&limit=1000`);
+                if (response.ok) {
+                    const fasts = await response.json();
+                    
+                    // Filter for completed fasts only (those with end_time)
+                    const completedFasts = fasts.filter(fast => fast.end_time);
+                    
+                    // Calculate total completed fasts
+                    const totalFasts = completedFasts.length;
+                    document.getElementById('totalFasts').textContent = totalFasts.toString();
+                    
+                    // Calculate longest fast duration
+                    let longestDuration = 0;
+                    completedFasts.forEach(fast => {
+                        let duration = 0;
+                        
+                        // Use stored duration_hours if available, otherwise calculate it
+                        if (fast.duration_hours && fast.duration_hours > 0) {
+                            duration = fast.duration_hours;
+                        } else if (fast.start_time && fast.end_time) {
+                            // Fallback calculation if duration_hours is missing or zero
+                            const startTime = new Date(fast.start_time);
+                            const endTime = new Date(fast.end_time);
+                            duration = (endTime - startTime) / (1000 * 60 * 60); // Convert to hours
+                        }
+                        
+                        if (duration > longestDuration) {
+                            longestDuration = duration;
+                        }
+                    });
+                    
+                    // Format longest duration for display
+                    let longestDisplayText = '0h';
+                    if (longestDuration > 0) {
+                        const days = Math.floor(longestDuration / 24);
+                        const hours = Math.floor(longestDuration % 24);
+                        
+                        if (days > 0) {
+                            longestDisplayText = days === 1 ? '1 day' : `${days} days`;
+                            if (hours > 0) {
+                                longestDisplayText += ` ${hours}h`;
+                            }
+                        } else {
+                            longestDisplayText = `${hours}h`;
+                        }
+                    }
+                    
+                    document.getElementById('longestFast').textContent = longestDisplayText;
+                } else {
+                    // Fallback to defaults if API call fails
+                    document.getElementById('totalFasts').textContent = '0';
+                    document.getElementById('longestFast').textContent = '0h';
+                }
+            } catch (error) {
+                console.error('Error loading stats:', error);
+                // Fallback to defaults if there's an error
+                document.getElementById('totalFasts').textContent = '0';
+                document.getElementById('longestFast').textContent = '0h';
+            }
         }
         
         // Initialize user state and determine what to show
@@ -2424,7 +2489,7 @@
         }
         
         // Initialize
-        loadStats();
+        loadStats(); // Async call - no need to await in initialization
         
         // Bottom Navigation Functionality
         function updateActiveNavItem() {
@@ -2523,6 +2588,9 @@
                     const fast = await response.json();
                     console.log('Fast entry completed:', fast);
                     currentFastId = null;
+                    
+                    // Update stats display after completing a fast
+                    loadStats();
                 } else {
                     console.error('Failed to end fast entry');
                 }
