@@ -20,6 +20,12 @@
             min-height: 100vh;
             padding-bottom: 85px;
             overflow-x: hidden;
+            transition: padding-bottom 0.3s ease;
+        }
+        
+        /* Adjust body padding when navigation is hidden during onboarding */
+        body.nav-hidden {
+            padding-bottom: 20px;
         }
         
         .container {
@@ -361,6 +367,11 @@
             padding: 8px 0 max(8px, env(safe-area-inset-bottom));
             z-index: 1000;
             box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.1);
+        }
+        
+        /* Hide navigation during onboarding */
+        .bottom-nav.hidden-onboarding {
+            display: none;
         }
         
         .nav-item {
@@ -1264,6 +1275,21 @@
             });
         }
         
+        // Check if user has completed onboarding and update navigation visibility
+        function updateNavigationVisibility() {
+            const isProfileSaved = localStorage.getItem('fastingForecast_profileSaved') === 'true';
+            const bottomNav = document.querySelector('.bottom-nav');
+            const body = document.body;
+            
+            if (isProfileSaved) {
+                bottomNav.classList.remove('hidden-onboarding');
+                body.classList.remove('nav-hidden');
+            } else {
+                bottomNav.classList.add('hidden-onboarding');
+                body.classList.add('nav-hidden');
+            }
+        }
+
         // Update navigation on page load
         document.addEventListener('DOMContentLoaded', () => {
             // Generate session ID if not exists on page load
@@ -1272,6 +1298,9 @@
                 sessionId = 'fs_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
                 localStorage.setItem('fastingForecast_sessionId', sessionId);
             }
+            
+            // Check and update navigation visibility based on onboarding status
+            updateNavigationVisibility();
             
             updateActiveNavItem();
             
@@ -1397,6 +1426,9 @@
                     
                     // Store success in localStorage
                     localStorage.setItem('fastingForecast_profileSaved', 'true');
+                    
+                    // Update navigation visibility since user has now completed onboarding
+                    updateNavigationVisibility();
                     
                     // Close modal and redirect to welcome page
                     closeSaveJourneyModal();

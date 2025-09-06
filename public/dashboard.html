@@ -985,6 +985,51 @@
             document.getElementById('fasts-list').innerHTML = '';
         }
         
+        function calculateCurrentStreak(fasts) {
+            if (!fasts || fasts.length === 0) {
+                return 0;
+            }
+            
+            // Sort fasts by end time (most recent first)
+            const sortedFasts = fasts
+                .filter(fast => fast.end_time) // Only completed fasts
+                .sort((a, b) => new Date(b.end_time) - new Date(a.end_time));
+            
+            if (sortedFasts.length === 0) {
+                return 0;
+            }
+            
+            let streak = 0;
+            const now = new Date();
+            const oneDayMs = 24 * 60 * 60 * 1000;
+            
+            for (let i = 0; i < sortedFasts.length; i++) {
+                const fastEndTime = new Date(sortedFasts[i].end_time);
+                
+                if (i === 0) {
+                    // For the first (most recent) fast, check if it's within the last 7 days
+                    const timeSinceLastFast = now - fastEndTime;
+                    if (timeSinceLastFast > 7 * oneDayMs) {
+                        break; // Too long since last fast, streak is 0
+                    }
+                    streak = 1;
+                } else {
+                    // Check if this fast is within a reasonable timeframe of the previous one
+                    const prevFastEndTime = new Date(sortedFasts[i - 1].end_time);
+                    const timeBetweenFasts = prevFastEndTime - fastEndTime;
+                    
+                    // Allow up to 7 days between fasts to maintain streak
+                    if (timeBetweenFasts <= 7 * oneDayMs) {
+                        streak++;
+                    } else {
+                        break; // Gap too large, end of streak
+                    }
+                }
+            }
+            
+            return streak;
+        }
+
         function updateStats() {
             const totalFasts = fasts.length;
             const totalHours = fasts.reduce((sum, fast) => {
@@ -1000,9 +1045,12 @@
                 return sum + (duration || 0);
             }, 0);
             
+            // Calculate current streak
+            const currentStreak = calculateCurrentStreak(fasts);
+            
             document.getElementById('total-fasts').textContent = totalFasts;
             document.getElementById('total-hours').textContent = Math.round(totalHours) + 'h';
-            document.getElementById('current-streak').textContent = '1'; // Placeholder - would need streak calculation
+            document.getElementById('current-streak').textContent = currentStreak;
         }
         
         function showAddFastModal() {
