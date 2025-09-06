@@ -1853,6 +1853,15 @@
             // Create fast entry in database
             await createFastEntry();
             
+            // Save timer state to localStorage for persistence across navigation
+            const timerState = {
+                isRunning: true,
+                fastStartTime: fastStartTime.toISOString(),
+                fastDuration: fastDuration,
+                currentFastId: currentFastId
+            };
+            localStorage.setItem('fastingForecast_timerState', JSON.stringify(timerState));
+            
             // Create milestone markers
             createMilestoneMarkers();
             
@@ -1883,6 +1892,9 @@
                 
                 // End fast entry in database
                 await endFastEntry();
+                
+                // Clear timer state from localStorage
+                localStorage.removeItem('fastingForecast_timerState');
             }
             
             // Show completion state instead of going back to pre-fast
@@ -2080,6 +2092,9 @@
             
             elapsedTime = 0;
             fastStartTime = null;
+            
+            // Clear timer state from localStorage
+            localStorage.removeItem('fastingForecast_timerState');
         }
         
         // Load saved stats from API
@@ -2602,17 +2617,83 @@
         // Check for active fast on page load
         async function checkForActiveFast() {
             try {
+                // First check if we have timer state in localStorage
+                const savedTimerState = localStorage.getItem('fastingForecast_timerState');
+                
                 const response = await fetch('/api/fasts/active');
                 if (response.ok) {
                     const activeFast = await response.json();
-                    if (activeFast) {
+                    if (activeFast && savedTimerState) {
+                        // Restore timer state if both database and localStorage indicate active fast
+                        await restoreTimerState(savedTimerState, activeFast);
+                    } else if (!activeFast && savedTimerState) {
+                        // Clear stale localStorage if database shows no active fast
+                        console.log('Clearing stale timer state from localStorage');
+                        localStorage.removeItem('fastingForecast_timerState');
+                    } else if (activeFast && !savedTimerState) {
+                        // Database has active fast but no localStorage state - just set currentFastId
                         currentFastId = activeFast.id;
-                        console.log('Found active fast:', activeFast);
-                        // Could potentially restore timer state here if needed
+                        console.log('Found active fast but no localStorage state:', activeFast);
                     }
                 }
             } catch (error) {
                 console.error('Error checking for active fast:', error);
+            }
+        }
+        
+        // Restore timer state from localStorage
+        async function restoreTimerState(savedStateString, activeFast) {
+            try {
+                const savedState = JSON.parse(savedStateString);
+                
+                // Validate saved state matches database
+                if (savedState.currentFastId !== activeFast.id) {
+                    console.log('Saved timer state does not match active fast, clearing localStorage');
+                    localStorage.removeItem('fastingForecast_timerState');
+                    return;
+                }
+                
+                // Restore timer variables
+                currentFastId = savedState.currentFastId;
+                fastStartTime = new Date(savedState.fastStartTime);
+                fastDuration = savedState.fastDuration;
+                isRunning = true;
+                
+                // Calculate current elapsed time
+                elapsedTime = Date.now() - fastStartTime.getTime();
+                
+                console.log('Restoring timer state:', {
+                    fastStartTime: fastStartTime,
+                    fastDuration: fastDuration,
+                    elapsedTime: Math.round(elapsedTime / 1000) + 's'
+                });
+                
+                // Update UI to show active fast state
+                document.getElementById('preFastState').style.display = 'none';
+                document.getElementById('activeFastState').style.display = 'block';
+                
+                // Create milestone markers
+                createMilestoneMarkers();
+                
+                // Set start and end times
+                updateTimeDisplay();
+                
+                // Update timer display immediately
+                updateTimerDisplay();
+                
+                // Update milestone states based on elapsed time
+                updateMilestoneStates();
+                
+                // Start the timer interval
+                timerInterval = setInterval(() => {
+                    elapsedTime = Date.now() - fastStartTime.getTime();
+                    updateTimerDisplay();
+                    checkFastCompletion();
+                }, 1000);
+                
+            } catch (error) {
+                console.error('Error restoring timer state:', error);
+                localStorage.removeItem('fastingForecast_timerState');
             }
         }
         
@@ -2751,8 +2832,43 @@
                     // Set the fast ID for tracking
                     currentFastId = result.fastId;
                     
-                    // Start the timer UI
-                    startTimer();
+                    // Start the timer UI by setting up the state similar to startFast()
+                    isRunning = true;
+                    fastStartTime = new Date(); // Starting now for early start
+                    elapsedTime = 0;
+                    
+                    // For early start, we need to get the duration from the result
+                    // Assuming the API returns the duration
+                    if (result.duration) {
+                        fastDuration = result.duration;
+                    } else {
+                        fastDuration = 16; // Default to 16 hours if not provided
+                    }
+                    
+                    // Save timer state to localStorage for persistence
+                    const earlyStartTimerState = {
+                        isRunning: true,
+                        fastStartTime: fastStartTime.toISOString(),
+                        fastDuration: fastDuration,
+                        currentFastId: currentFastId
+                    };
+                    localStorage.setItem('fastingForecast_timerState', JSON.stringify(earlyStartTimerState));
+                    
+                    // Show active fast UI
+                    document.getElementById('preFastState').style.display = 'none';
+                    document.getElementById('activeFastState').style.display = 'block';
+                    
+                    // Create milestone markers and update display
+                    createMilestoneMarkers();
+                    updateTimeDisplay();
+                    updateTimerDisplay();
+                    
+                    // Start the timer interval
+                    timerInterval = setInterval(() => {
+                        elapsedTime = Date.now() - fastStartTime.getTime();
+                        updateTimerDisplay();
+                        checkFastCompletion();
+                    }, 1000);
                     
                     // Hide the upcoming notice
                     const upcomingDiv = document.getElementById('upcoming-fast-notice');

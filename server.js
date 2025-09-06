@@ -33,25 +33,16 @@ app.get('/api/fasts', async (req, res) => {
       // Get user profile first to find user_profile_id
       const profile = await db.getUserProfileBySessionId(sessionId);
       if (profile) {
-        // Get both user-specific fasts and orphaned fasts (for backward compatibility)
+        // Get only user-specific fasts
         const userFasts = await db.getFastsByUserProfile(profile.id, limit, offset);
-        const orphanedFasts = await db.getOrphanedFasts(limit, offset);
-        
-        // Combine and sort by start_time desc
-        const allFasts = [...userFasts, ...orphanedFasts];
-        allFasts.sort((a, b) => new Date(b.start_time) - new Date(a.start_time));
-        
-        // Apply limit after combining
-        const limitedFasts = allFasts.slice(offset, offset + limit);
-        res.json(limitedFasts);
+        res.json(userFasts);
       } else {
         // Return empty array if no profile found
         res.json([]);
       }
     } else {
-      // Fallback to all fasts (for backward compatibility)
-      const fasts = await db.getFasts(limit, offset);
-      res.json(fasts);
+      // No sessionId provided - return empty array to maintain data isolation
+      res.json([]);
     }
   } catch (error) {
     console.error('Error fetching fasts:', error);

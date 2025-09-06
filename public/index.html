@@ -1266,6 +1266,13 @@
         
         // Update navigation on page load
         document.addEventListener('DOMContentLoaded', () => {
+            // Generate session ID if not exists on page load
+            let sessionId = localStorage.getItem('fastingForecast_sessionId');
+            if (!sessionId) {
+                sessionId = 'fs_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+                localStorage.setItem('fastingForecast_sessionId', sessionId);
+            }
+            
             updateActiveNavItem();
             
             // Add click handlers for navigation items
@@ -1275,7 +1282,7 @@
                     const href = item.getAttribute('href');
                     
                     // For now, prevent default navigation for pages that don't exist
-                    if (href !== '/' && href !== '/timer') {
+                    if (href !== '/' && href !== '/timer' && href !== '/dashboard' && href !== '/schedule') {
                         e.preventDefault();
                         
                         // Show a temporary message for unimplemented pages
