@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test Session ID</title>
+</head>
+<body>
+    <h1>Current Session ID:</h1>
+    <p id="sessionId"></p>
+    
+    <h2>Test Upcoming API:</h2>
+    <button onclick="testUpcoming()">Test API</button>
+    <pre id="apiResult"></pre>
+
+    <script>
+        const sessionId = localStorage.getItem('fastingForecast_sessionId');
+        document.getElementById('sessionId').textContent = sessionId || 'No session ID found';
+        
+        async function testUpcoming() {
+            if (!sessionId) {
+                document.getElementById('apiResult').textContent = 'No session ID found';
+                return;
+            }
+            
+            try {
+                const response = await fetch(`/api/schedule/upcoming?sessionId=${sessionId}`);
+                const data = await response.json();
+                document.getElementById('apiResult').textContent = JSON.stringify(data, null, 2);
+            } catch (error) {
+                document.getElementById('apiResult').textContent = 'Error: ' + error.message;
+            }
+        }
+    </script>
+</body>
+</html>
