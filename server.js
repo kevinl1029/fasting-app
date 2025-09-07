@@ -1171,9 +1171,9 @@ app.get('/schedule', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'schedule.html'));
 });
 
-// Serve the calculator page (removed for now, redirects to timer)
+// Serve the calculator page
 app.get('/calculator', (req, res) => {
-  res.redirect('/timer');
+  res.sendFile(path.join(__dirname, 'public', 'calculator.html'));
 });
 
 // Serve static files (after custom routes)
