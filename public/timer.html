@@ -388,6 +388,51 @@
             box-shadow: 0 12px 35px rgba(251, 146, 60, 0.5);
         }
         
+        .sticky-start-btn {
+            position: fixed;
+            bottom: 90px; /* Space above bottom nav (75px) + extra margin */
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 1000;
+            width: calc(100% - 40px);
+            max-width: 350px;
+            padding: 16px 32px;
+            border: none;
+            border-radius: 15px;
+            font-size: 1.2rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            background: linear-gradient(135deg, #fcd34d 0%, #fb923c 50%, #ec4899 100%);
+            color: white;
+            box-shadow: 0 8px 25px rgba(251, 146, 60, 0.6), 0 0 0 1px rgba(255,255,255,0.1);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            display: none;
+        }
+        
+        /* Adjust for mobile safe area */
+        @media (max-width: 768px) {
+            .sticky-start-btn {
+                bottom: max(90px, calc(75px + env(safe-area-inset-bottom) + 15px));
+            }
+        }
+        
+        .sticky-start-btn:hover {
+            transform: translateX(-50%) translateY(-3px);
+            box-shadow: 0 12px 35px rgba(251, 146, 60, 0.7), 0 0 0 1px rgba(255,255,255,0.2);
+        }
+        
+        .sticky-start-btn .duration-badge {
+            display: block;
+            font-size: 0.9rem;
+            opacity: 0.9;
+            font-weight: 500;
+            margin-top: 2px;
+            text-transform: none;
+            letter-spacing: normal;
+        }
+        
         .control-buttons {
             display: flex;
             gap: 15px;
@@ -738,6 +783,7 @@
         }
         
         .preset-btn {
+            position: relative;
             background: white;
             border: 2px solid #e9ecef;
             border-radius: 10px;
@@ -757,6 +803,33 @@
             border-color: #fb923c;
             background: linear-gradient(135deg, rgba(251, 146, 60, 0.1), rgba(236, 72, 153, 0.1));
             box-shadow: 0 4px 12px rgba(251, 146, 60, 0.3);
+        }
+        
+        .preset-btn.selected-confirmation {
+            background: linear-gradient(135deg, rgba(34, 197, 94, 0.15), rgba(251, 146, 60, 0.1));
+            border-color: #22c55e;
+            box-shadow: 0 4px 12px rgba(34, 197, 94, 0.4);
+            transform: scale(1.02);
+        }
+        
+        .preset-btn .checkmark {
+            position: absolute;
+            top: 8px;
+            right: 8px;
+            width: 20px;
+            height: 20px;
+            background: #22c55e;
+            border-radius: 50%;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            color: white;
+            font-weight: bold;
+        }
+        
+        .preset-btn.selected-confirmation .checkmark {
+            display: flex;
         }
         
         .preset-btn .duration {
@@ -1295,6 +1368,11 @@
                     Start Your First Fast
                 </button>
                 
+                <button class="sticky-start-btn" id="stickyStartBtn" onclick="startFast()" style="display: none;">
+                    <span id="stickyBtnText">Start 24h Fast</span>
+                    <span class="duration-badge" id="stickyBtnBadge">Selected: 24 hours</span>
+                </button>
+                
                 <div id="newUserHint" class="welcome-hint" style="display: none;">
                     Choose your duration below or start with 24 hours
                 </div>
@@ -1313,18 +1391,22 @@
                             <button class="preset-btn active" data-hours="24" onclick="selectDuration(24)">
                                 <span class="duration">24h</span>
                                 <span class="description">Metabolic reset & fat burning</span>
+                                <span class="checkmark">✓</span>
                             </button>
                             <button class="preset-btn" data-hours="36" onclick="selectDuration(36)">
                                 <span class="duration">36h</span>
                                 <span class="description">Deep ketosis & mental clarity</span>
+                                <span class="checkmark">✓</span>
                             </button>
                             <button class="preset-btn" data-hours="48" onclick="selectDuration(48)">
                                 <span class="duration">48h</span>
                                 <span class="description">Peak autophagy & cellular renewal</span>
+                                <span class="checkmark">✓</span>
                             </button>
                             <button class="preset-btn" data-hours="72" onclick="selectDuration(72)">
                                 <span class="duration">72h</span>
                                 <span class="description">Extended therapeutic benefits</span>
+                                <span class="checkmark">✓</span>
                             </button>
                         </div>
                         
@@ -1333,7 +1415,7 @@
                             <div class="custom-input">
                                 <input type="number" id="customHours" min="1" max="168" placeholder="24">
                                 <span>hours</span>
-                                <button class="apply-custom-btn" onclick="applyCustomDuration()">Apply</button>
+                                <button class="apply-custom-btn" onclick="applyCustomDuration()">Apply Custom Duration</button>
                             </div>
                         </div>
                         
@@ -1655,6 +1737,9 @@
             } else {
                 selector.style.display = 'block';
             }
+            
+            // Update sticky button visibility when selector is toggled
+            setTimeout(updateStickyButtonVisibility, 50); // Small delay to let display change take effect
         }
         
         // Select a preset duration
@@ -1663,15 +1748,25 @@
             
             // Update active state on buttons
             document.querySelectorAll('.preset-btn').forEach(btn => {
-                btn.classList.remove('active');
+                btn.classList.remove('active', 'selected-confirmation');
             });
-            document.querySelector(`[data-hours="${hours}"]`).classList.add('active');
+            const selectedBtn = document.querySelector(`[data-hours="${hours}"]`);
+            selectedBtn.classList.add('active');
+            
+            // Add confirmation animation
+            selectedBtn.classList.add('selected-confirmation');
+            setTimeout(() => {
+                selectedBtn.classList.remove('selected-confirmation');
+            }, 1200); // Remove after 1.2 seconds
             
             // Clear custom input
             document.getElementById('customHours').value = '';
             
             // Update start button text
             updateStartButtonText();
+            
+            // Update sticky button visibility
+            updateStickyButtonVisibility();
         }
         
         // Apply custom duration
@@ -1694,6 +1789,9 @@
             
             // Update start button text
             updateStartButtonText();
+            
+            // Update sticky button visibility
+            updateStickyButtonVisibility();
         }
         
         // Toggle start time inputs visibility
@@ -1762,6 +1860,9 @@
         // Update start button text based on selected duration and start time
         function updateStartButtonText() {
             const btn = document.getElementById('startFastBtn');
+            const stickyBtn = document.getElementById('stickyStartBtn');
+            const stickyBtnText = document.getElementById('stickyBtnText');
+            const stickyBtnBadge = document.getElementById('stickyBtnBadge');
             
             if (selectedStartTime) {
                 const startTimeStr = selectedStartTime.toLocaleTimeString('en-US', {
@@ -1770,8 +1871,38 @@
                     hour12: true
                 });
                 btn.textContent = `Resume ${selectedDuration}h Fast (started ${startTimeStr})`;
+                stickyBtnText.textContent = `Resume ${selectedDuration}h Fast`;
+                stickyBtnBadge.textContent = `Started: ${startTimeStr}`;
             } else {
                 btn.textContent = `Start ${selectedDuration}h Fast`;
+                stickyBtnText.textContent = `Start ${selectedDuration}h Fast`;
+                stickyBtnBadge.textContent = `Selected: ${selectedDuration} hours`;
+            }
+        }
+        
+        // Update sticky button visibility based on scroll position and duration selection
+        function updateStickyButtonVisibility() {
+            const mainButton = document.getElementById('startFastBtn');
+            const stickyButton = document.getElementById('stickyStartBtn');
+            const durationSelector = document.getElementById('durationSelector');
+            
+            // Only show sticky button if:
+            // 1. Duration selector is visible (user is customizing)
+            // 2. A preset duration was selected (not default 24h)
+            // 3. Main button is not visible in viewport
+            
+            if (!mainButton || !stickyButton || !durationSelector) return;
+            
+            const mainButtonRect = mainButton.getBoundingClientRect();
+            const isMainButtonVisible = mainButtonRect.top >= 0 && mainButtonRect.bottom <= window.innerHeight;
+            const isDurationSelectorVisible = durationSelector.style.display !== 'none';
+            const hasCustomDuration = selectedDuration !== 24 || selectedStartTime !== null;
+            
+            // Show sticky button when main button is not visible AND user has made a selection
+            if (!isMainButtonVisible && isDurationSelectorVisible && hasCustomDuration) {
+                stickyButton.style.display = 'block';
+            } else {
+                stickyButton.style.display = 'none';
             }
         }
         
@@ -2583,6 +2714,15 @@
                         createMilestoneMarkers();
                     }
                 }, 150); // Debounce resize events
+            });
+            
+            // Add scroll event listener for sticky button
+            let scrollTimeout;
+            window.addEventListener('scroll', () => {
+                clearTimeout(scrollTimeout);
+                scrollTimeout = setTimeout(() => {
+                    updateStickyButtonVisibility();
+                }, 10); // Debounce scroll events
             });
         });
         
