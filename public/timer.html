@@ -36,10 +36,12 @@
             box-shadow: 0 10px 30px rgba(0,0,0,0.2);
             text-align: center;
             min-height: 600px;
-            max-height: calc(100vh - 80px);
+            max-height: none;
             display: flex;
             flex-direction: column;
             overflow: visible;
+            transition: min-height 0.3s ease;
+            justify-content: flex-start;
         }
         
         .status-indicator {
@@ -1081,8 +1083,9 @@
             
             .timer-card {
                 min-height: 500px;
-                max-height: calc(100vh - 60px);
+                max-height: none;
                 padding: 18px 20px 25px 20px;
+                justify-content: flex-start;
             }
             
             .control-buttons {
@@ -1092,8 +1095,8 @@
             }
             
             .circular-timer {
-                width: min(240px, 65vw);
-                height: min(240px, 65vw);
+                width: min(280px, 70vw);
+                height: min(280px, 70vw);
                 margin: 20px auto 15px;
             }
             
@@ -1493,7 +1496,7 @@
         let selectedStartTime = null; // Selected start time (null = start now)
         
         // Session management
-        const sessionId = localStorage.getItem('fastingForecast_sessionId');
+        const globalSessionId = localStorage.getItem('fastingForecast_sessionId');
         let currentFastId = null;
         
         // Milestone definitions
@@ -1560,12 +1563,15 @@
             }
         };
         
-        // Create milestone markers on the outer ring
+        // Create milestone markers on the outer ring with responsive positioning
         function createMilestoneMarkers() {
             const container = document.getElementById('milestoneMarkers');
             // Clear any existing markers first
             container.innerHTML = '';
-            const containerRadius = 140; // Distance from center to outer ring
+            
+            // Get the actual current size of the circular timer
+            const timerSize = Math.min(280, window.innerWidth * 0.7); // matches min(280px, 70vw)
+            const containerRadius = (timerSize - 20) / 2; // Outer ring radius
             
             milestones.forEach(milestone => {
                 // Only show milestones that are within the fast duration
@@ -2026,8 +2032,8 @@
         function updateTimeDisplay() {
             if (!fastStartTime) return;
             
-            const startTime = fastStartTime;
-            const endTime = new Date(fastStartTime.getTime() + (fastDuration * 60 * 60 * 1000));
+            const displayStartTime = fastStartTime;
+            const displayEndTime = new Date(fastStartTime.getTime() + (fastDuration * 60 * 60 * 1000));
             
             const formatDateTime = (date) => {
                 const timeStr = date.toLocaleTimeString('en-US', { 
@@ -2055,8 +2061,8 @@
                 }
             };
             
-            document.getElementById('startTime').textContent = formatDateTime(startTime);
-            document.getElementById('endTime').textContent = formatDateTime(endTime);
+            document.getElementById('startTime').textContent = formatDateTime(displayStartTime);
+            document.getElementById('endTime').textContent = formatDateTime(displayEndTime);
         }
         
         // Update phase information based on elapsed hours
@@ -2122,20 +2128,20 @@
         // Load saved stats from API
         async function loadStats() {
             try {
-                const sessionId = localStorage.getItem('fastingForecast_sessionId');
-                if (!sessionId) {
+                const loadStatsSessionId = localStorage.getItem('fastingForecast_sessionId');
+                if (!loadStatsSessionId) {
                     document.getElementById('totalFasts').textContent = '0';
                     document.getElementById('longestFast').textContent = '0h';
                     return;
                 }
                 
                 // Fetch all completed fasts for this user
-                const response = await fetch(`/api/fasts?sessionId=${sessionId}&limit=1000`);
-                if (response.ok) {
-                    const fasts = await response.json();
+                const statsResponse = await fetch(`/api/fasts?sessionId=${loadStatsSessionId}&limit=1000`);
+                if (statsResponse.ok) {
+                    const statsFasts = await statsResponse.json();
                     
                     // Filter for completed fasts only (those with end_time)
-                    const completedFasts = fasts.filter(fast => fast.end_time);
+                    const completedFasts = statsFasts.filter(fast => fast.end_time);
                     
                     // Calculate total completed fasts
                     const totalFasts = completedFasts.length;
@@ -2151,9 +2157,9 @@
                             duration = fast.duration_hours;
                         } else if (fast.start_time && fast.end_time) {
                             // Fallback calculation if duration_hours is missing or zero
-                            const startTime = new Date(fast.start_time);
-                            const endTime = new Date(fast.end_time);
-                            duration = (endTime - startTime) / (1000 * 60 * 60); // Convert to hours
+                            const fastRecordStartTime = new Date(fast.start_time);
+                            const fastEndTime = new Date(fast.end_time);
+                            duration = (fastEndTime - fastRecordStartTime) / (1000 * 60 * 60); // Convert to hours
                         }
                         
                         if (duration > longestDuration) {
@@ -2165,15 +2171,15 @@
                     let longestDisplayText = '0h';
                     if (longestDuration > 0) {
                         const days = Math.floor(longestDuration / 24);
-                        const hours = Math.floor(longestDuration % 24);
+                        const remainingHours = Math.floor(longestDuration % 24);
                         
                         if (days > 0) {
                             longestDisplayText = days === 1 ? '1 day' : `${days} days`;
-                            if (hours > 0) {
-                                longestDisplayText += ` ${hours}h`;
+                            if (remainingHours > 0) {
+                                longestDisplayText += ` ${remainingHours}h`;
                             }
                         } else {
-                            longestDisplayText = `${hours}h`;
+                            longestDisplayText = `${remainingHours}h`;
                         }
                     }
                     
@@ -2194,15 +2200,15 @@
         // Initialize user state and determine what to show
         async function initializeUserState() {
             try {
-                const sessionId = localStorage.getItem('fastingForecast_sessionId');
+                const initSessionId = localStorage.getItem('fastingForecast_sessionId');
                 
-                if (sessionId) {
+                if (initSessionId) {
                     // Check if user has any fasts in database
-                    const response = await fetch(`/api/fasts?sessionId=${sessionId}&limit=1`);
-                    if (response.ok) {
-                        const fasts = await response.json();
+                    const initResponse = await fetch(`/api/fasts?sessionId=${initSessionId}&limit=1`);
+                    if (initResponse.ok) {
+                        const initFasts = await initResponse.json();
                         
-                        if (fasts.length === 0) {
+                        if (initFasts.length === 0) {
                             // New user - show welcome state
                             showNewUserWelcome();
                         } else {
@@ -2537,13 +2543,13 @@
             initializeUserState();
             
             // Add click handlers for navigation items
-            const navItems = document.querySelectorAll('.nav-item');
-            navItems.forEach(item => {
+            const clickNavItems = document.querySelectorAll('.nav-item');
+            clickNavItems.forEach(item => {
                 item.addEventListener('click', (e) => {
-                    const href = item.getAttribute('href');
+                    const clickHref = item.getAttribute('href');
                     
                     // For now, prevent default navigation for pages that don't exist
-                    if (href !== '/dashboard' && href !== '/timer' && href !== '/schedule') {
+                    if (clickHref !== '/dashboard' && clickHref !== '/timer' && clickHref !== '/schedule') {
                         e.preventDefault();
                         
                         // Show a temporary message for unimplemented pages
@@ -2551,6 +2557,18 @@
                         alert(`${pageName} page coming soon!`);
                     }
                 });
+            });
+            
+            // Add resize handler to recalculate milestone positions
+            let resizeTimeout;
+            window.addEventListener('resize', () => {
+                clearTimeout(resizeTimeout);
+                resizeTimeout = setTimeout(() => {
+                    // Only recalculate if milestones are currently visible
+                    if (document.getElementById('milestoneMarkers').children.length > 0) {
+                        createMilestoneMarkers();
+                    }
+                }, 150); // Debounce resize events
             });
         });
         
@@ -2561,20 +2579,20 @@
         async function createFastEntry() {
             try {
                 // Get session ID to link fast to user profile
-                const sessionId = localStorage.getItem('fastingForecast_sessionId');
-                console.log('Creating fast entry with sessionId:', sessionId);
+                const createSessionId = localStorage.getItem('fastingForecast_sessionId');
+                console.log('Creating fast entry with sessionId:', createSessionId);
                 
                 const fastData = {
                     start_time: fastStartTime.toISOString(),
                     notes: null,
                     weight: null,
                     is_manual: false,
-                    sessionId: sessionId
+                    sessionId: createSessionId
                 };
                 
                 console.log('Sending fast data:', fastData);
                 
-                const response = await fetch('/api/fasts/start', {
+                const createResponse = await fetch('/api/fasts/start', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json'
@@ -2582,10 +2600,10 @@
                     body: JSON.stringify(fastData)
                 });
                 
-                if (response.ok) {
-                    const fast = await response.json();
-                    currentFastId = fast.id;
-                    console.log('Fast entry created:', fast);
+                if (createResponse.ok) {
+                    const createdFast = await createResponse.json();
+                    currentFastId = createdFast.id;
+                    console.log('Fast entry created:', createdFast);
                 } else {
                     console.error('Failed to create fast entry');
                 }
@@ -2598,19 +2616,19 @@
             if (!currentFastId) return;
             
             try {
-                const endTime = new Date().toISOString();
+                const endTimeISO = new Date().toISOString();
                 
-                const response = await fetch(`/api/fasts/${currentFastId}/end`, {
+                const endResponse = await fetch(`/api/fasts/${currentFastId}/end`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json'
                     },
-                    body: JSON.stringify({ end_time: endTime })
+                    body: JSON.stringify({ end_time: endTimeISO })
                 });
                 
-                if (response.ok) {
-                    const fast = await response.json();
-                    console.log('Fast entry completed:', fast);
+                if (endResponse.ok) {
+                    const completedFast = await endResponse.json();
+                    console.log('Fast entry completed:', completedFast);
                     currentFastId = null;
                     
                     // Update stats display after completing a fast
@@ -2629,9 +2647,9 @@
                 // First check if we have timer state in localStorage
                 const savedTimerState = localStorage.getItem('fastingForecast_timerState');
                 
-                const response = await fetch('/api/fasts/active');
-                if (response.ok) {
-                    const activeFast = await response.json();
+                const activeResponse = await fetch('/api/fasts/active');
+                if (activeResponse.ok) {
+                    const activeFast = await activeResponse.json();
                     if (activeFast && savedTimerState) {
                         // Restore timer state if both database and localStorage indicate active fast
                         await restoreTimerState(savedTimerState, activeFast);
@@ -2718,8 +2736,8 @@
                     }
                 } else if (upcomingResponse.status === 404) {
                     // If user profile not found (database was reset), clear localStorage and redirect to onboarding
-                    const errorData = await upcomingResponse.json();
-                    if (errorData.error && errorData.error.includes('User profile not found')) {
+                    const upcomingErrorData = await upcomingResponse.json();
+                    if (upcomingErrorData.error && upcomingErrorData.error.includes('User profile not found')) {
                         console.log('User profile missing after server restart - redirecting to onboarding');
                         localStorage.removeItem('fastingForecast_sessionId');
                         localStorage.removeItem('fastingForecast_profileSaved');
@@ -2744,8 +2762,8 @@
                     }
                 } else if (scheduleResponse.status === 404) {
                     // If user profile not found (database was reset), clear localStorage and redirect to onboarding
-                    const errorData = await scheduleResponse.json();
-                    if (errorData.error && errorData.error.includes('User profile not found')) {
+                    const scheduleErrorData = await scheduleResponse.json();
+                    if (scheduleErrorData.error && scheduleErrorData.error.includes('User profile not found')) {
                         console.log('User profile missing after server restart - redirecting to onboarding');
                         localStorage.removeItem('fastingForecast_sessionId');
                         localStorage.removeItem('fastingForecast_profileSaved');
@@ -2763,16 +2781,16 @@
             // Only show if no active timer (pre-timer page)
             if (isRunning) return;
             
-            const startTime = new Date(upcomingFast.start_at_utc);
+            const upcomingStartTime = new Date(upcomingFast.start_at_utc);
             const now = new Date();
-            const hoursUntil = Math.round((startTime - now) / (1000 * 60 * 60));
+            const hoursUntil = Math.round((upcomingStartTime - now) / (1000 * 60 * 60));
             const isActionable = hoursUntil <= 6; // Within 6 hours = actionable with Start Early
             
             // Create upcoming fast display
             const upcomingDiv = document.getElementById('upcoming-fast-notice') || createUpcomingNotice();
             
-            const dayName = startTime.toLocaleDateString('en-US', { weekday: 'short' });
-            const timeStr = startTime.toLocaleTimeString('en-US', { 
+            const dayName = upcomingStartTime.toLocaleDateString('en-US', { weekday: 'short' });
+            const upcomingTimeStr = upcomingStartTime.toLocaleTimeString('en-US', { 
                 hour: 'numeric', 
                 minute: '2-digit',
                 hour12: true 
@@ -2801,7 +2819,7 @@
             upcomingDiv.innerHTML = `
                 <div class="upcoming-fast-content">
                     <div class="upcoming-text">
-                        <strong>${label}</strong> ${dayName} ${timeStr}${timeUntilText}
+                        <strong>${label}</strong> ${dayName} ${upcomingTimeStr}${timeUntilText}
                         <br><small>${upcomingFast.block_name || 'Scheduled Fast'} • ${upcomingFast.duration_hours}h</small>
                     </div>
                     ${startEarlyButton}
@@ -2815,23 +2833,23 @@
         
         // Create upcoming fast notice element (pre-timer page only)
         function createUpcomingNotice() {
-            const upcomingDiv = document.createElement('div');
-            upcomingDiv.id = 'upcoming-fast-notice';
-            upcomingDiv.className = 'upcoming-fast-notice';
-            upcomingDiv.style.display = 'none';
+            const newUpcomingDiv = document.createElement('div');
+            newUpcomingDiv.id = 'upcoming-fast-notice';
+            newUpcomingDiv.className = 'upcoming-fast-notice';
+            newUpcomingDiv.style.display = 'none';
             
             // Insert before START FAST NOW button on pre-timer page
             const startButton = document.querySelector('.start-fast-btn') || 
                               document.querySelector('#startFastBtn') ||
                               document.querySelector('button[onclick="startFast()"]');
             if (startButton) {
-                startButton.parentNode.insertBefore(upcomingDiv, startButton);
+                startButton.parentNode.insertBefore(newUpcomingDiv, startButton);
             } else {
                 // Final fallback: add to body
-                document.body.appendChild(upcomingDiv);
+                document.body.appendChild(newUpcomingDiv);
             }
             
-            return upcomingDiv;
+            return newUpcomingDiv;
         }
         
         // Handle start early action
@@ -2846,17 +2864,17 @@
                 }
                 
                 // Call the start early API
-                const response = await fetch('/api/schedule/start-early', {
+                const earlyResponse = await fetch('/api/schedule/start-early', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
-                        sessionId: sessionId,
+                        sessionId: globalSessionId,
                         upcomingId: upcomingId
                     })
                 });
                 
-                if (response.ok) {
-                    const result = await response.json();
+                if (earlyResponse.ok) {
+                    const result = await earlyResponse.json();
                     
                     // Set the fast ID for tracking
                     currentFastId = result.fastId;
@@ -2900,14 +2918,14 @@
                     }, 1000);
                     
                     // Hide the upcoming notice
-                    const upcomingDiv = document.getElementById('upcoming-fast-notice');
-                    if (upcomingDiv) {
-                        upcomingDiv.style.display = 'none';
+                    const hideUpcomingDiv = document.getElementById('upcoming-fast-notice');
+                    if (hideUpcomingDiv) {
+                        hideUpcomingDiv.style.display = 'none';
                     }
                     
                     console.log('Scheduled fast started early:', result);
                 } else {
-                    const error = await response.json();
+                    const error = await earlyResponse.json();
                     alert('Failed to start early: ' + (error.error || 'Unknown error'));
                 }
                 
