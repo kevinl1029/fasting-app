@@ -1002,6 +1002,14 @@
                 const data = await response.json();
                 
                 if (!response.ok) {
+                    // If user profile not found (database was reset), clear localStorage and redirect to onboarding
+                    if (response.status === 404 && data.error && data.error.includes('User profile not found')) {
+                        console.log('User profile missing after server restart - redirecting to onboarding');
+                        localStorage.removeItem('fastingForecast_sessionId');
+                        localStorage.removeItem('fastingForecast_profileSaved');
+                        window.location.href = '/forecaster';
+                        return;
+                    }
                     throw new Error(data.error || 'Failed to load schedule');
                 }
                 

@@ -505,6 +505,13 @@
                     
                     // Mark user as onboarded
                     markUserOnboarded(sessionId);
+                } else if (response.status === 404) {
+                    // If user profile not found (database was reset), clear localStorage and redirect to onboarding
+                    console.log('User profile missing after server restart - redirecting to onboarding');
+                    localStorage.removeItem('fastingForecast_sessionId');
+                    localStorage.removeItem('fastingForecast_profileSaved');
+                    window.location.href = '/forecaster';
+                    return;
                 } else {
                     console.error('Failed to load user profile');
                     // Could redirect to home or show error

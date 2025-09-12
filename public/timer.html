@@ -2706,6 +2706,16 @@
                     if (upcomingData.upcoming) {
                         showUpcomingFast(upcomingData.upcoming);
                     }
+                } else if (upcomingResponse.status === 404) {
+                    // If user profile not found (database was reset), clear localStorage and redirect to onboarding
+                    const errorData = await upcomingResponse.json();
+                    if (errorData.error && errorData.error.includes('User profile not found')) {
+                        console.log('User profile missing after server restart - redirecting to onboarding');
+                        localStorage.removeItem('fastingForecast_sessionId');
+                        localStorage.removeItem('fastingForecast_profileSaved');
+                        window.location.href = '/forecaster';
+                        return;
+                    }
                 }
                 
                 // Check if user has a schedule and hide setup prompt if they do
@@ -2721,6 +2731,16 @@
                             // User doesn't have a schedule, show the setup prompt
                             scheduleSetupElement.style.display = 'block';
                         }
+                    }
+                } else if (scheduleResponse.status === 404) {
+                    // If user profile not found (database was reset), clear localStorage and redirect to onboarding
+                    const errorData = await scheduleResponse.json();
+                    if (errorData.error && errorData.error.includes('User profile not found')) {
+                        console.log('User profile missing after server restart - redirecting to onboarding');
+                        localStorage.removeItem('fastingForecast_sessionId');
+                        localStorage.removeItem('fastingForecast_profileSaved');
+                        window.location.href = '/forecaster';
+                        return;
                     }
                 }
             } catch (error) {
