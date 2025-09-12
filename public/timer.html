@@ -1880,7 +1880,6 @@
             timerInterval = setInterval(() => {
                 elapsedTime = Date.now() - fastStartTime.getTime();
                 updateTimerDisplay();
-                checkFastCompletion();
             }, 1000);
         }
         
@@ -1906,15 +1905,20 @@
             const totalFastDuration = fastDuration * 60 * 60 * 1000; // Convert hours to milliseconds
             const remainingTime = Math.max(0, totalFastDuration - elapsedTime);
             const isShowingElapsed = elapsedTime <= totalFastDuration / 2;
+            const isPastOriginalGoal = elapsedTime > totalFastDuration;
             
             let displayTime, label;
             
-            if (isShowingElapsed) {
+            if (isPastOriginalGoal) {
+                // Past original goal - always show total elapsed time
+                displayTime = elapsedTime;
+                label = 'EXTENDED FAST';
+            } else if (isShowingElapsed) {
                 displayTime = elapsedTime;
                 label = 'ELAPSED';
             } else {
                 displayTime = remainingTime;
-                label = remainingTime > 0 ? 'REMAINING' : 'COMPLETE';
+                label = 'REMAINING';
             }
             
             const hours = Math.floor(displayTime / (1000 * 60 * 60));
@@ -2487,20 +2491,8 @@
             updateStartButtonText();
         }
         
-        // Check for fast completion
-        function checkFastCompletion() {
-            if (!isRunning) return;
-            
-            const completionFastDuration = fastDuration * 60 * 60 * 1000;
-            const completionRemainingTime = completionFastDuration - elapsedTime;
-            
-            // If fast is complete (remaining time <= 0)
-            if (completionRemainingTime <= 0) {
-                clearInterval(timerInterval);
-                isRunning = false;
-                showFastCompletion();
-            }
-        }
+        // Note: Timer now continues indefinitely until user manually ends the fast
+        // The checkFastCompletion() function has been removed to allow fasting beyond planned duration
         
         // Initialize
         loadStats(); // Async call - no need to await in initialization
@@ -2687,7 +2679,6 @@
                 timerInterval = setInterval(() => {
                     elapsedTime = Date.now() - fastStartTime.getTime();
                     updateTimerDisplay();
-                    checkFastCompletion();
                 }, 1000);
                 
             } catch (error) {
@@ -2886,7 +2877,6 @@
                     timerInterval = setInterval(() => {
                         elapsedTime = Date.now() - fastStartTime.getTime();
                         updateTimerDisplay();
-                        checkFastCompletion();
                     }, 1000);
                     
                     // Hide the upcoming notice
