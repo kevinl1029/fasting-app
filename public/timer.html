@@ -31,16 +31,15 @@
         .timer-card {
             background: white;
             border-radius: 20px;
-            padding: 30px;
+            padding: 25px 30px 30px 30px;
             margin: 20px 0;
             box-shadow: 0 10px 30px rgba(0,0,0,0.2);
             text-align: center;
-            min-height: 500px;
-            max-height: calc(100vh - 140px);
+            min-height: 600px;
+            max-height: calc(100vh - 80px);
             display: flex;
             flex-direction: column;
-            justify-content: center;
-            overflow-y: auto;
+            overflow: visible;
         }
         
         .status-indicator {
@@ -64,7 +63,7 @@
             font-size: 1.1rem;
             font-weight: 600;
             color: #666;
-            margin-bottom: 20px;
+            margin: 30px 0 20px 0;
         }
         
         .circular-timer {
@@ -390,7 +389,9 @@
         .control-buttons {
             display: flex;
             gap: 15px;
-            margin: 20px 0;
+            margin-top: auto;
+            margin-bottom: 15px;
+            padding-top: 20px;
             justify-content: center;
         }
         
@@ -1078,6 +1079,33 @@
                 padding: 15px;
             }
             
+            .timer-card {
+                min-height: 500px;
+                max-height: calc(100vh - 60px);
+                padding: 18px 20px 25px 20px;
+            }
+            
+            .control-buttons {
+                margin-top: auto;
+                margin-bottom: 12px;
+                padding-top: 15px;
+            }
+            
+            .circular-timer {
+                width: min(240px, 65vw);
+                height: min(240px, 65vw);
+                margin: 20px auto 15px;
+            }
+            
+            .status-text {
+                margin: 25px 0 15px 0;
+                font-size: 1rem;
+            }
+            
+            .control-buttons {
+                margin: 15px 0 25px 0;
+            }
+            
             .timer-display {
                 font-size: 2.5rem;
             }
@@ -1219,18 +1247,6 @@
             
             body {
                 padding-bottom: 75px;
-            }
-            
-            .timer-card {
-                min-height: 450px;
-                max-height: calc(100vh - 120px);
-                padding: 20px;
-            }
-            
-            .circular-timer {
-                width: min(240px, 65vw);
-                height: min(240px, 65vw);
-                margin: 20px auto 15px;
             }
             
             html, body {
@@ -1844,6 +1860,7 @@
             
             document.getElementById('preFastState').style.display = 'none';
             document.getElementById('activeFastState').style.display = 'block';
+            document.querySelector('.welcome-message').style.display = 'none';
             
             isRunning = true;
             // Use selected start time or current time
@@ -2093,6 +2110,7 @@
             // Reset to pre-fast state
             document.getElementById('activeFastState').style.display = 'none';
             document.getElementById('preFastState').style.display = 'block';
+            document.querySelector('.welcome-message').style.display = 'block';
             
             elapsedTime = 0;
             fastStartTime = null;
@@ -2662,6 +2680,7 @@
                 // Update UI to show active fast state
                 document.getElementById('preFastState').style.display = 'none';
                 document.getElementById('activeFastState').style.display = 'block';
+                document.querySelector('.welcome-message').style.display = 'none';
                 
                 // Create milestone markers
                 createMilestoneMarkers();
@@ -2867,6 +2886,7 @@
                     // Show active fast UI
                     document.getElementById('preFastState').style.display = 'none';
                     document.getElementById('activeFastState').style.display = 'block';
+                    document.querySelector('.welcome-message').style.display = 'none';
                     
                     // Create milestone markers and update display
                     createMilestoneMarkers();
