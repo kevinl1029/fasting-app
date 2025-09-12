@@ -2213,16 +2213,7 @@
                             showNewUserWelcome();
                         } else {
                             // User has completed fasts - check if they have actual scheduled fasts
-                            // For now, we don't have scheduling feature, so assume no real schedule
-                            const hasActualSchedule = false; // TODO: Replace when scheduling is implemented
-                            
-                            if (hasActualSchedule) {
-                                // User has real scheduled fasts
-                                showScheduledFastState();
-                            } else {
-                                // User has fasts but no schedule - encourage them to set up schedule
-                                showScheduleSetupState();
-                            }
+                            await checkUserScheduleStatus(initSessionId);
                         }
                     } else {
                         // API error - default to new user welcome
@@ -2279,6 +2270,29 @@
             // For now, keep the placeholder scheduled fast info
         }
         
+        // Check user schedule status and show appropriate state
+        async function checkUserScheduleStatus(sessionId) {
+            try {
+                const userScheduleResponse = await fetch(`/api/schedule?sessionId=${sessionId}`);
+                if (userScheduleResponse.ok) {
+                    const userScheduleData = await userScheduleResponse.json();
+                    if (userScheduleData.schedule && userScheduleData.blocks && userScheduleData.blocks.length > 0) {
+                        // User has a schedule with fasting blocks
+                        showScheduledFastState();
+                    } else {
+                        // User has no schedule or no fasting blocks - encourage setup
+                        showScheduleSetupState();
+                    }
+                } else {
+                    // API error - default to schedule setup
+                    showScheduleSetupState();
+                }
+            } catch (error) {
+                console.error('Error checking schedule status:', error);
+                showScheduleSetupState();
+            }
+        }
+
         // Handle schedule setup button click
         function showScheduleSetup() {
             window.location.href = '/schedule';
@@ -2747,7 +2761,7 @@
                 }
                 
                 // Check if user has a schedule and hide setup prompt if they do
-                const scheduleResponse = await fetch(`/api/schedule?sessionId=${sessionId}`);
+                const scheduleResponse = await fetch(`/api/schedule?sessionId=${globalSessionId}`);
                 if (scheduleResponse.ok) {
                     const scheduleData = await scheduleResponse.json();
                     const scheduleSetupElement = document.getElementById('scheduleSetupState');
