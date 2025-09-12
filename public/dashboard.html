@@ -1084,6 +1084,17 @@
             const startDateTime = new Date(`${startDate}T${startTime}`).toISOString();
             const endDateTime = endDate && endTime ? new Date(`${endDate}T${endTime}`).toISOString() : null;
             
+            // Validate that end time is after start time if both are provided
+            if (endDateTime) {
+                const startTime = new Date(startDateTime);
+                const endTime = new Date(endDateTime);
+                
+                if (endTime <= startTime) {
+                    alert('Fast end time must be after the start time. Please check your dates and times.');
+                    return;
+                }
+            }
+            
             // Get session ID for linking to user profile
             const sessionId = localStorage.getItem('fastingForecast_sessionId');
             
@@ -1193,6 +1204,17 @@
             // Combine date and time inputs
             const startDateTime = new Date(`${startDate}T${startTime}`).toISOString();
             const endDateTime = endDate && endTime ? new Date(`${endDate}T${endTime}`).toISOString() : null;
+            
+            // Validate that end time is after start time if both are provided
+            if (endDateTime) {
+                const startTime = new Date(startDateTime);
+                const endTime = new Date(endDateTime);
+                
+                if (endTime <= startTime) {
+                    alert('Fast end time must be after the start time. Please check your dates and times.');
+                    return;
+                }
+            }
             
             const fastData = {
                 start_time: startDateTime,
