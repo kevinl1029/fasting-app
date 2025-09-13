@@ -587,7 +587,129 @@
             transform: translateY(-2px);
             background: rgba(251, 146, 60, 0.05);
         }
-        
+
+        /* Hunger Coach Card - Updated Design System */
+        .hunger-coach-card {
+            margin: 25px 0;
+            padding: 24px;
+            background: linear-gradient(135deg, rgba(96, 165, 250, 0.08), rgba(34, 197, 94, 0.06));
+            border-radius: 16px;
+            border: 1px solid rgba(96, 165, 250, 0.15);
+            box-shadow: 0 4px 16px rgba(96, 165, 250, 0.08);
+            min-height: 140px;
+            transition: all 0.4s ease;
+            opacity: 1;
+            transform: translateY(0);
+            cursor: pointer;
+        }
+
+        .hunger-coach-card.hidden {
+            display: none;
+        }
+
+        .hunger-coach-card.slide-in {
+            animation: slideInUp 0.5s ease-out;
+        }
+
+        .hunger-coach-card.fading {
+            opacity: 0.6;
+        }
+
+        /* Card Content Container */
+        .card-content {
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+            justify-content: space-between;
+        }
+
+        /* Inline Icon + Message */
+        .card-message {
+            font-size: 17px;
+            font-weight: 500;
+            line-height: 1.5;
+            color: #1f2937;
+            margin: 0 0 16px 0;
+            opacity: 1;
+            transition: opacity 0.4s ease;
+        }
+
+        .card-message.fading {
+            opacity: 0;
+        }
+
+        .inline-icon {
+            font-size: 1.3rem;
+            margin-right: 8px;
+            vertical-align: baseline;
+        }
+
+        /* Extended Content */
+        .card-extended {
+            margin: 16px 0;
+            padding-top: 16px;
+            border-top: 1px solid rgba(96, 165, 250, 0.15);
+            transition: all 0.3s ease;
+        }
+
+        .extended-text {
+            font-size: 15px;
+            font-weight: 400;
+            line-height: 1.4;
+            color: #6b7280;
+            margin: 0;
+        }
+
+        /* Expanded state */
+        .hunger-coach-card.expanded {
+            min-height: 200px;
+        }
+
+        /* See More Link */
+        .see-more-link {
+            color: #1e40af;
+            font-size: 14px;
+            font-weight: 600;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            margin-top: auto;
+            transition: all 0.2s ease;
+        }
+
+        .see-more-link:hover {
+            color: #1e3a8a;
+            text-decoration: underline;
+        }
+
+        .see-more-link:after {
+            content: "→";
+            margin-left: 4px;
+            transition: transform 0.2s ease;
+        }
+
+        .see-more-link:hover:after {
+            transform: translateX(2px);
+        }
+
+        /* Slide-in Animation */
+        @keyframes slideInUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* Hover Effect */
+        .hunger-coach-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 24px rgba(96, 165, 250, 0.12);
+        }
+
         .time-display {
             margin: 20px 0;
             padding: 15px;
@@ -1479,7 +1601,26 @@
                         <div class="timer-label" id="timerLabel">ELAPSED</div>
                     </div>
                 </div>
-                
+
+                <!-- Hunger Coach Card -->
+                <div class="hunger-coach-card hidden" id="hungerCoachCard" onclick="handleCardTap(event)">
+                    <!-- Inline Icon + Message Content -->
+                    <div class="card-content">
+                        <p class="card-message" id="hungerCardMessage">
+                            <span class="inline-icon" id="hungerCardIcon">🍵</span>
+                            <span id="hungerCardText">Loading helpful tips...</span>
+                        </p>
+
+                        <!-- Extended content shown on tap -->
+                        <div class="card-extended" id="hungerCardExtended" style="display: none;">
+                            <p class="extended-text" id="hungerExtendedText">Additional context and tips will appear here when you tap the card.</p>
+                        </div>
+
+                        <!-- See More Link -->
+                        <a href="#" class="see-more-link" id="hungerSeeMoreLink" onclick="handleSeeMoreClick(event)">See More</a>
+                    </div>
+                </div>
+
                 <div class="time-display">
                     <div class="time-item">
                         <span class="time-label">Started</span>
@@ -1569,7 +1710,10 @@
     
     <!-- Confetti Canvas -->
     <canvas id="confettiCanvas"></canvas>
-    
+
+    <!-- Hunger Coach Module -->
+    <script src="/js/modules/hunger-coach.js"></script>
+
     <script>
         // Timer state
         let isRunning = false;
@@ -1583,7 +1727,12 @@
         // Session management
         const globalSessionId = localStorage.getItem('fastingForecast_sessionId');
         let currentFastId = null;
-        
+
+        // Hunger Coach
+        let hungerCoach = null;
+        let tipRotationInterval = null;
+        const TIP_ROTATION_INTERVAL = 18000; // 18 seconds
+
         // Milestone definitions
         const milestones = [
             {
@@ -1647,7 +1796,197 @@
                 description: "Maximum autophagy, growth hormone elevation, and metabolic optimization."
             }
         };
-        
+
+        // Hunger Coach Functions
+        async function initializeHungerCoach() {
+            try {
+                hungerCoach = new HungerCoach();
+                await hungerCoach.init();
+                console.log('Hunger Coach initialized');
+            } catch (error) {
+                console.error('Failed to initialize Hunger Coach:', error);
+                hungerCoach = null;
+            }
+        }
+
+        function showHungerCoachCard() {
+            const card = document.getElementById('hungerCoachCard');
+            if (card && hungerCoach && isRunning) {
+                card.classList.remove('hidden');
+                card.classList.add('slide-in');
+                updateHungerCard();
+                startTipRotation();
+            }
+        }
+
+        function hideHungerCoachCard() {
+            const card = document.getElementById('hungerCoachCard');
+            if (card) {
+                card.classList.add('hidden');
+                card.classList.remove('slide-in');
+                stopTipRotation();
+            }
+        }
+
+        function updateHungerCard() {
+            if (!hungerCoach) return;
+
+            const textElement = document.getElementById('hungerCardText');
+            const iconElement = document.getElementById('hungerCardIcon');
+
+            if (!textElement || !iconElement) return;
+
+            try {
+                // Get contextual tip based on current fast state
+                const contextualTip = hungerCoach.getContextualTip(fastStartTime, getUserMealtimes());
+
+                // Add fade effect to content that will change
+                const messageElement = document.getElementById('hungerCardMessage');
+                messageElement.classList.add('fading');
+
+                setTimeout(() => {
+                    // Update icon based on tip type and context
+                    const icons = {
+                        'educational': '🧠',
+                        'action': getActionIcon(contextualTip.text),
+                        'motivational': '⭐',
+                        'reassurance': '🍵'
+                    };
+                    iconElement.textContent = icons[contextualTip.type] || '🍵';
+
+                    // Update message text (inline format)
+                    textElement.textContent = contextualTip.text;
+
+                    // Remove fade effect
+                    messageElement.classList.remove('fading');
+                }, 300);
+
+            } catch (error) {
+                console.error('Error updating hunger card:', error);
+                textElement.textContent = 'Remember: hunger comes in waves, not constant streams. This feeling will pass.';
+                iconElement.textContent = '🍵';
+            }
+        }
+
+        function getActionIcon(tipText) {
+            if (tipText.includes('water') || tipText.includes('drink') || tipText.includes('tea')) {
+                return '💧';
+            } else if (tipText.includes('walk') || tipText.includes('movement') || tipText.includes('exercise')) {
+                return '🚶';
+            } else if (tipText.includes('breath') || tipText.includes('meditation') || tipText.includes('mindful')) {
+                return '🧘';
+            } else {
+                return '💪';
+            }
+        }
+
+
+        function handleCardTap(event) {
+            // Prevent card tap when See More link is clicked
+            if (event.target.id === 'hungerSeeMoreLink') {
+                return;
+            }
+
+            const card = document.getElementById('hungerCoachCard');
+            const extendedContent = document.getElementById('hungerCardExtended');
+            const extendedText = document.getElementById('hungerExtendedText');
+
+            if (!card || !extendedContent) return;
+
+            const isExpanded = card.classList.contains('expanded');
+
+            if (isExpanded) {
+                // Collapse
+                extendedContent.style.display = 'none';
+                card.classList.remove('expanded');
+            } else {
+                // Expand with additional context
+                const contextualInfo = getExtendedTipContent();
+                extendedText.textContent = contextualInfo;
+
+                extendedContent.style.display = 'block';
+                card.classList.add('expanded');
+
+                // Add slight bounce animation
+                card.style.transform = 'scale(1.02)';
+                setTimeout(() => {
+                    card.style.transform = '';
+                }, 200);
+            }
+        }
+
+        function getExtendedTipContent() {
+            if (!fastStartTime) return 'Keep up the great work with your fast!';
+
+            const elapsedHours = (Date.now() - new Date(fastStartTime).getTime()) / (1000 * 60 * 60);
+
+            if (elapsedHours < 6) {
+                return 'You\'re in the early stages. Your body is still adjusting to the fasting state. Stay hydrated and keep busy.';
+            } else if (elapsedHours < 12) {
+                return 'Your glycogen stores are being depleted. This is when hunger can feel strongest, but it will pass.';
+            } else if (elapsedHours < 18) {
+                return 'You\'re entering deeper metabolic changes. Many people find hunger actually decreases around this time.';
+            } else if (elapsedHours < 24) {
+                return 'You\'re approaching or in ketosis. Mental clarity often improves and hunger becomes more manageable.';
+            } else {
+                return 'You\'re in extended fasting territory. Your body has adapted well. Trust the process and listen to your body.';
+            }
+        }
+
+        function handleSeeMoreClick(event) {
+            // Prevent event bubbling to card tap handler
+            event.preventDefault();
+            event.stopPropagation();
+
+            // TODO: When learning library is implemented, navigate to hunger management section
+            // For now, provide feedback that the feature will be available soon
+            console.log('See More clicked - will navigate to learning library');
+
+            // Show temporary feedback
+            const seeMoreLink = document.getElementById('hungerSeeMoreLink');
+            const originalText = seeMoreLink.textContent;
+
+            seeMoreLink.textContent = 'Coming Soon!';
+            seeMoreLink.style.color = '#059669';
+
+            setTimeout(() => {
+                seeMoreLink.textContent = originalText;
+                seeMoreLink.style.color = '';
+            }, 2000);
+
+            // Show next tip to keep engagement
+            setTimeout(() => {
+                updateHungerCard();
+            }, 3000);
+        }
+
+        function startTipRotation() {
+            stopTipRotation(); // Clear any existing interval
+
+            if (hungerCoach && isRunning) {
+                tipRotationInterval = setInterval(() => {
+                    updateHungerCard();
+                }, TIP_ROTATION_INTERVAL);
+            }
+        }
+
+        function stopTipRotation() {
+            if (tipRotationInterval) {
+                clearInterval(tipRotationInterval);
+                tipRotationInterval = null;
+            }
+        }
+
+        function getUserMealtimes() {
+            // For now, return default mealtimes
+            // TODO: Integrate with user profile/settings when that system is implemented
+            return {
+                breakfast: '08:00',
+                lunch: '12:00',
+                dinner: '18:00'
+            };
+        }
+
         // Create milestone markers on the outer ring with responsive positioning
         function createMilestoneMarkers() {
             const container = document.getElementById('milestoneMarkers');
@@ -2051,6 +2390,12 @@
             
             // Create milestone markers
             createMilestoneMarkers();
+
+            // Initialize and show hunger coach
+            if (!hungerCoach) {
+                await initializeHungerCoach();
+            }
+            showHungerCoachCard();
             
             // Set start and end times
             updateTimeDisplay();
@@ -2075,10 +2420,13 @@
             if (isRunning) {
                 clearInterval(timerInterval);
                 isRunning = false;
-                
+
+                // Hide hunger coach
+                hideHungerCoachCard();
+
                 // End fast entry in database
                 await endFastEntry();
-                
+
                 // Clear timer state from localStorage
                 localStorage.removeItem('fastingForecast_timerState');
             }
@@ -2889,7 +3237,13 @@
                 
                 // Create milestone markers
                 createMilestoneMarkers();
-                
+
+                // Initialize and show hunger coach
+                if (!hungerCoach) {
+                    await initializeHungerCoach();
+                }
+                showHungerCoachCard();
+
                 // Set start and end times
                 updateTimeDisplay();
                 

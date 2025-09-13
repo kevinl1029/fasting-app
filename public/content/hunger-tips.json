@@ -1,0 +1,237 @@
+{
+  "categories": {
+    "general": {
+      "name": "General Hunger Management",
+      "tips": [
+        {
+          "id": "general_1",
+          "text": "Hunger pangs are often habit signals — most waves pass within 15–20 minutes.",
+          "type": "educational"
+        },
+        {
+          "id": "general_2",
+          "text": "Your body is simply responding to routine. This feeling will fade as you adapt.",
+          "type": "reassurance"
+        },
+        {
+          "id": "general_3",
+          "text": "Remember: hunger comes in waves, not constant streams. Ride this one out.",
+          "type": "motivational"
+        },
+        {
+          "id": "general_4",
+          "text": "You're not actually starving — your body has plenty of stored energy to use.",
+          "type": "educational"
+        }
+      ]
+    },
+    "hydration": {
+      "name": "Hydration Strategies",
+      "tips": [
+        {
+          "id": "hydration_1",
+          "text": "Try a glass of water — it can help reset hunger cues and fill your stomach.",
+          "type": "action"
+        },
+        {
+          "id": "hydration_2",
+          "text": "Sip some herbal tea or black coffee to satisfy the oral fixation of eating.",
+          "type": "action"
+        },
+        {
+          "id": "hydration_3",
+          "text": "Add a pinch of sea salt to water — dehydration can disguise itself as hunger.",
+          "type": "action"
+        },
+        {
+          "id": "hydration_4",
+          "text": "Try sparkling water with lemon — the bubbles and flavor can be surprisingly satisfying.",
+          "type": "action"
+        }
+      ]
+    },
+    "movement": {
+      "name": "Movement & Distraction",
+      "tips": [
+        {
+          "id": "movement_1",
+          "text": "Go for a short walk — movement makes cravings fade faster.",
+          "type": "action"
+        },
+        {
+          "id": "movement_2",
+          "text": "Do 10 jumping jacks or push-ups — physical activity redirects your focus.",
+          "type": "action"
+        },
+        {
+          "id": "movement_3",
+          "text": "Step outside for fresh air — changing your environment can reset your mindset.",
+          "type": "action"
+        },
+        {
+          "id": "movement_4",
+          "text": "Try gentle stretching — it activates your parasympathetic nervous system.",
+          "type": "action"
+        }
+      ]
+    },
+    "mindfulness": {
+      "name": "Mindfulness & Mental Strategies",
+      "tips": [
+        {
+          "id": "mindfulness_1",
+          "text": "Take 5 deep breaths and notice: is this true hunger or just habit?",
+          "type": "action"
+        },
+        {
+          "id": "mindfulness_2",
+          "text": "Observe the sensation without judgment — hunger is just information, not a command.",
+          "type": "educational"
+        },
+        {
+          "id": "mindfulness_3",
+          "text": "Focus on your 'why' — remember the benefits you're working toward.",
+          "type": "motivational"
+        },
+        {
+          "id": "mindfulness_4",
+          "text": "Practice the '10-minute rule' — tell yourself you'll eat in 10 minutes, then reassess.",
+          "type": "action"
+        }
+      ]
+    },
+    "mealtime_specific": {
+      "breakfast": {
+        "name": "Breakfast Time Support",
+        "tips": [
+          {
+            "id": "breakfast_1",
+            "text": "Morning hunger is often the strongest — your body expects breakfast out of habit.",
+            "type": "educational"
+          },
+          {
+            "id": "breakfast_2",
+            "text": "Try black coffee or tea — caffeine can naturally suppress appetite.",
+            "type": "action"
+          },
+          {
+            "id": "breakfast_3",
+            "text": "Remember: skipping breakfast won't slow your metabolism as once believed.",
+            "type": "educational"
+          }
+        ]
+      },
+      "lunch": {
+        "name": "Lunch Time Support",
+        "tips": [
+          {
+            "id": "lunch_1",
+            "text": "It's lunchtime — if you're hungry, remember this wave will fade. Try water or a 10-min walk.",
+            "type": "action"
+          },
+          {
+            "id": "lunch_2",
+            "text": "Midday hunger often peaks around your usual lunch hour — this is normal and temporary.",
+            "type": "educational"
+          },
+          {
+            "id": "lunch_3",
+            "text": "Keep busy with a task or project — mental engagement is a powerful appetite suppressant.",
+            "type": "action"
+          }
+        ]
+      },
+      "dinner": {
+        "name": "Dinner Time Support",
+        "tips": [
+          {
+            "id": "dinner_1",
+            "text": "Evening hunger can feel social and emotional — acknowledge these feelings without acting.",
+            "type": "educational"
+          },
+          {
+            "id": "dinner_2",
+            "text": "Try an evening walk instead of dinner — movement and fresh air work wonders.",
+            "type": "action"
+          },
+          {
+            "id": "dinner_3",
+            "text": "Remember: you've made it this far today. You're stronger than you think.",
+            "type": "motivational"
+          }
+        ]
+      }
+    },
+    "duration_specific": {
+      "early": {
+        "name": "Early Fast (0-16 hours)",
+        "description": "Tips for the beginning of your fast when habits are strongest",
+        "tips": [
+          {
+            "id": "early_1",
+            "text": "You're in the habit-breaking phase — hunger now is mostly psychological.",
+            "type": "educational"
+          },
+          {
+            "id": "early_2",
+            "text": "Stay hydrated and keep busy — the first 16 hours are about breaking routine.",
+            "type": "action"
+          },
+          {
+            "id": "early_3",
+            "text": "Each hour you complete makes the next one easier. You're building momentum.",
+            "type": "motivational"
+          }
+        ]
+      },
+      "transition": {
+        "name": "Transition Phase (16-24 hours)",
+        "description": "Tips for when your body starts shifting to fat-burning mode",
+        "tips": [
+          {
+            "id": "transition_1",
+            "text": "Your body is starting to switch to fat-burning mode — hunger may actually decrease soon.",
+            "type": "educational"
+          },
+          {
+            "id": "transition_2",
+            "text": "You're entering the metabolic switching phase — power through this transition.",
+            "type": "motivational"
+          },
+          {
+            "id": "transition_3",
+            "text": "Many people find hunger subsides significantly after 20-24 hours.",
+            "type": "reassurance"
+          }
+        ]
+      },
+      "extended": {
+        "name": "Extended Fast (24+ hours)",
+        "description": "Tips for longer fasts when ketosis deepens",
+        "tips": [
+          {
+            "id": "extended_1",
+            "text": "You're likely in ketosis now — many report decreased appetite at this stage.",
+            "type": "educational"
+          },
+          {
+            "id": "extended_2",
+            "text": "Focus on electrolytes — hunger might actually be your body needing minerals.",
+            "type": "action"
+          },
+          {
+            "id": "extended_3",
+            "text": "You've entered the zone where fasting becomes easier — trust your body's wisdom.",
+            "type": "motivational"
+          }
+        ]
+      }
+    }
+  },
+  "metadata": {
+    "version": "1.0.0",
+    "last_updated": "2024-09-13",
+    "total_tips": 31,
+    "tip_types": ["educational", "action", "motivational", "reassurance"]
+  }
+}
