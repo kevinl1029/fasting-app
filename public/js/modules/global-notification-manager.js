@@ -280,7 +280,7 @@ class GlobalNotificationManager {
                     badge: '/favicon.svg',
                     tag: 'hunger-coach-' + meal.name.toLowerCase(),
                     requireInteraction: false,
-                    silent: false // Changed to match service worker setting
+                    silent: true
                 });
 
                 console.log('📢 Direct notification created:', notification);

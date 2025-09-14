@@ -145,7 +145,7 @@ function sendHungerTipNotification(data) {
         badge: '/favicon.svg',
         tag: tag || NOTIFICATION_TAG,
         requireInteraction: false,
-        silent: false // Changed from true to false to make notifications visible
+        silent: true
     });
 
     notificationPromise.then(() => {
