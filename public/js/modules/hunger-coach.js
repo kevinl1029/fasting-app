@@ -219,14 +219,15 @@ class HungerCoach {
 
     /**
      * Get a notification message for hunger support
+     * Returns just the hunger tip without mealtime references
      */
     getNotificationMessage(mealType = null, fastStartTime = null) {
         const contextualTip = this.getContextualTip(fastStartTime,
             mealType ? { [mealType]: null } : null
         );
 
-        const prefix = mealType ? `It's ${mealType} time — ` : '';
-        return `${prefix}${contextualTip.text}`;
+        // Just return the tip content without mealtime prefix
+        return contextualTip.text;
     }
 
     /**

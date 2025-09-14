@@ -67,6 +67,9 @@ class Database {
           goal_date TEXT,
           forecast_data TEXT,
           onboarded_at DATETIME,
+          hunger_coach_enabled BOOLEAN DEFAULT TRUE,
+          custom_mealtimes TEXT,
+          last_hunger_notification DATETIME,
           created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
           updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
         )
@@ -151,6 +154,37 @@ class Database {
             return;
           }
           console.log('User profiles table created successfully');
+        });
+
+        // Add hunger coach columns to existing user_profiles table if they don't exist
+        this.db.all("PRAGMA table_info(user_profiles)", (err, columns) => {
+          if (err) {
+            console.error('Error checking user_profiles columns:', err);
+            return;
+          }
+
+          const columnNames = columns.map(col => col.name);
+
+          if (!columnNames.includes('hunger_coach_enabled')) {
+            this.db.run("ALTER TABLE user_profiles ADD COLUMN hunger_coach_enabled BOOLEAN DEFAULT TRUE", (err) => {
+              if (err) console.error('Error adding hunger_coach_enabled column:', err);
+              else console.log('Added hunger_coach_enabled column to user_profiles');
+            });
+          }
+
+          if (!columnNames.includes('custom_mealtimes')) {
+            this.db.run("ALTER TABLE user_profiles ADD COLUMN custom_mealtimes TEXT", (err) => {
+              if (err) console.error('Error adding custom_mealtimes column:', err);
+              else console.log('Added custom_mealtimes column to user_profiles');
+            });
+          }
+
+          if (!columnNames.includes('last_hunger_notification')) {
+            this.db.run("ALTER TABLE user_profiles ADD COLUMN last_hunger_notification DATETIME", (err) => {
+              if (err) console.error('Error adding last_hunger_notification column:', err);
+              else console.log('Added last_hunger_notification column to user_profiles');
+            });
+          }
         });
 
         // Create new fasts table

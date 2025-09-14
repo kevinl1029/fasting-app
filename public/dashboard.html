@@ -386,6 +386,18 @@
         }
         
         .nav-label {
+            font-size: 10px;
+            font-weight: 500;
+            text-align: center;
+            line-height: 1.2;
+        }
+
+        .nav-primary .nav-icon {
+            width: 28px;
+            height: 28px;
+        }
+
+        .nav-primary .nav-label {
             font-size: 11px;
             font-weight: 600;
         }
@@ -589,6 +601,24 @@
                 align-items: flex-start;
                 gap: 8px;
             }
+
+            .bottom-nav {
+                padding: 6px 0 max(6px, env(safe-area-inset-bottom));
+            }
+
+            .nav-item {
+                padding: 6px 8px;
+            }
+
+            .nav-icon {
+                width: 20px;
+                height: 20px;
+            }
+
+            .nav-primary .nav-icon {
+                width: 24px;
+                height: 24px;
+            }
         }
     </style>
 </head>
@@ -728,13 +758,12 @@
             <span class="nav-label">Learning Hub</span>
         </a>
         
-        <a href="/more" class="nav-item" data-page="more">
+        <a href="/settings" class="nav-item" data-page="settings">
             <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <circle cx="12" cy="12" r="1"/>
-                <circle cx="19" cy="12" r="1"/>
-                <circle cx="5" cy="12" r="1"/>
+                <circle cx="12" cy="12" r="3"/>
+                <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/>
             </svg>
-            <span class="nav-label">More</span>
+            <span class="nav-label">Settings</span>
         </a>
     </nav>
 
@@ -850,6 +879,10 @@
             </div>
         </div>
     </div>
+
+    <!-- Global Notification Manager -->
+    <script src="/js/modules/hunger-coach.js"></script>
+    <script src="/js/modules/global-notification-manager.js"></script>
 
     <script>
         let fasts = [];
@@ -1292,7 +1325,7 @@
                 const href = item.getAttribute('href');
                 
                 // For now, prevent default navigation for pages that don't exist
-                if (href !== '/dashboard' && href !== '/timer' && href !== '/schedule') {
+                if (href !== '/dashboard' && href !== '/timer' && href !== '/schedule' && href !== '/settings') {
                     e.preventDefault();
                     
                     const pageName = item.querySelector('.nav-label').textContent;

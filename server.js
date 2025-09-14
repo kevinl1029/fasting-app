@@ -96,10 +96,14 @@ app.post('/api/fasts', async (req, res) => {
     // Get user profile ID if session ID is provided
     let userProfileId = null;
     if (sessionId) {
-      const profile = await db.getUserProfileBySessionId(sessionId);
-      if (profile) {
-        userProfileId = profile.id;
+      let profile = await db.getUserProfileBySessionId(sessionId);
+      if (!profile) {
+        // Auto-create user profile if it doesn't exist
+        console.log('Creating new user profile for sessionId:', sessionId);
+        profile = await db.createUserProfile({ session_id: sessionId });
       }
+      userProfileId = profile.id;
+      console.log('Using user profile ID:', userProfileId);
     }
     
     const fastData = {
@@ -136,11 +140,14 @@ app.post('/api/fasts/start', async (req, res) => {
     // Get user profile ID if session ID is provided
     let userProfileId = null;
     if (sessionId) {
-      const profile = await db.getUserProfileBySessionId(sessionId);
-      console.log('Found user profile:', profile ? profile.id : 'null');
-      if (profile) {
-        userProfileId = profile.id;
+      let profile = await db.getUserProfileBySessionId(sessionId);
+      if (!profile) {
+        // Auto-create user profile if it doesn't exist
+        console.log('Creating new user profile for sessionId:', sessionId);
+        profile = await db.createUserProfile({ session_id: sessionId });
       }
+      console.log('Found user profile:', profile ? profile.id : 'null');
+      userProfileId = profile.id;
     }
     
     const fastData = {
@@ -744,6 +751,116 @@ app.post('/api/schedule/start-early', async (req, res) => {
   }
 });
 
+// Hunger Coach Settings API Endpoints
+app.get('/api/user/:sessionId/hunger-settings', async (req, res) => {
+  try {
+    const { sessionId } = req.params;
+
+    const profile = await db.getUserProfileBySessionId(sessionId);
+    if (!profile) {
+      return res.status(404).json({ error: 'User profile not found' });
+    }
+
+    // Parse custom mealtimes from JSON or use defaults
+    let customMealtimes;
+    if (profile.custom_mealtimes) {
+      try {
+        customMealtimes = JSON.parse(profile.custom_mealtimes);
+      } catch (e) {
+        console.error('Error parsing custom_mealtimes:', e);
+        customMealtimes = null;
+      }
+    }
+
+    // Default mealtimes if none set
+    if (!customMealtimes || !Array.isArray(customMealtimes) || customMealtimes.length === 0) {
+      customMealtimes = [
+        { name: 'Breakfast', time: '08:00' },
+        { name: 'Lunch', time: '12:00' },
+        { name: 'Dinner', time: '18:00' }
+      ];
+    }
+
+    res.json({
+      hunger_coach_enabled: profile.hunger_coach_enabled !== false, // Default to true if null
+      custom_mealtimes: customMealtimes,
+      last_hunger_notification: profile.last_hunger_notification
+    });
+
+  } catch (error) {
+    console.error('Error fetching hunger settings:', error);
+    res.status(500).json({ error: 'Failed to fetch hunger settings' });
+  }
+});
+
+app.put('/api/user/:sessionId/hunger-settings', async (req, res) => {
+  try {
+    const { sessionId } = req.params;
+    const { hunger_coach_enabled, custom_mealtimes } = req.body;
+
+    // Validate mealtimes if provided
+    if (custom_mealtimes && Array.isArray(custom_mealtimes)) {
+      for (const meal of custom_mealtimes) {
+        if (!meal.name || !meal.time) {
+          return res.status(400).json({ error: 'Each meal must have a name and time' });
+        }
+        // Validate time format (HH:MM)
+        if (!/^([01]?[0-9]|2[0-3]):[0-5][0-9]$/.test(meal.time)) {
+          return res.status(400).json({ error: 'Time must be in HH:MM format' });
+        }
+      }
+    }
+
+    const updateData = {};
+    if (hunger_coach_enabled !== undefined) {
+      updateData.hunger_coach_enabled = hunger_coach_enabled;
+    }
+    if (custom_mealtimes !== undefined) {
+      updateData.custom_mealtimes = JSON.stringify(custom_mealtimes);
+    }
+
+    const result = await db.updateUserProfile(sessionId, updateData);
+
+    if (result.changes === 0) {
+      return res.status(404).json({ error: 'User profile not found' });
+    }
+
+    res.json({
+      message: 'Hunger coach settings updated successfully',
+      updated: updateData
+    });
+
+  } catch (error) {
+    console.error('Error updating hunger settings:', error);
+    res.status(500).json({ error: 'Failed to update hunger settings' });
+  }
+});
+
+app.post('/api/user/:sessionId/hunger-notification', async (req, res) => {
+  try {
+    const { sessionId } = req.params;
+
+    const updateData = {
+      last_hunger_notification: new Date().toISOString()
+    };
+
+    const result = await db.updateUserProfile(sessionId, updateData);
+
+    if (result.changes === 0) {
+      return res.status(404).json({ error: 'User profile not found' });
+    }
+
+    res.json({
+      message: 'Notification time logged',
+      timestamp: updateData.last_hunger_notification
+    });
+
+  } catch (error) {
+    console.error('Error logging notification:', error);
+    res.status(500).json({ error: 'Failed to log notification' });
+  }
+});
+
 // Fasting forecast calculation endpoint
 app.post('/api/calculate', (req, res) => {
   try {
@@ -1174,6 +1291,11 @@ app.get('/schedule', (req, res) => {
 // Serve the calculator page
 app.get('/calculator', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'calculator.html'));
+});
+
+// Serve the settings page
+app.get('/settings', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'settings.html'));
 });
 
 // Serve static files (after custom routes)

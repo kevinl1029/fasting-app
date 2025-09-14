@@ -4,6 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Fasting Timer - Your Journey</title>
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+    <link rel="icon" type="image/x-icon" href="/favicon.ico">
     <style>
         * {
             margin: 0;
@@ -1713,6 +1715,8 @@
 
     <!-- Hunger Coach Module -->
     <script src="/js/modules/hunger-coach.js"></script>
+    <script src="/js/modules/notification-service.js"></script>
+    <script src="/js/modules/global-notification-manager.js"></script>
 
     <script>
         // Timer state
@@ -1730,6 +1734,7 @@
 
         // Hunger Coach
         let hungerCoach = null;
+        let notificationService = null;
         let tipRotationInterval = null;
         const TIP_ROTATION_INTERVAL = 18000; // 18 seconds
 
@@ -1809,12 +1814,28 @@
             }
         }
 
-        function showHungerCoachCard() {
+        // Notification Service Functions
+        async function initializeNotificationService() {
+            try {
+                notificationService = new NotificationService();
+                console.log('Notification Service initialized');
+
+                // Request permission on first initialization
+                if (notificationService.permission === 'default') {
+                    await notificationService.requestPermission();
+                }
+            } catch (error) {
+                console.error('Failed to initialize Notification Service:', error);
+                notificationService = null;
+            }
+        }
+
+        async function showHungerCoachCard() {
             const card = document.getElementById('hungerCoachCard');
             if (card && hungerCoach && isRunning) {
                 card.classList.remove('hidden');
                 card.classList.add('slide-in');
-                updateHungerCard();
+                await updateHungerCard();
                 startTipRotation();
             }
         }
@@ -1828,7 +1849,7 @@
             }
         }
 
-        function updateHungerCard() {
+        async function updateHungerCard() {
             if (!hungerCoach) return;
 
             const textElement = document.getElementById('hungerCardText');
@@ -1838,7 +1859,8 @@
 
             try {
                 // Get contextual tip based on current fast state
-                const contextualTip = hungerCoach.getContextualTip(fastStartTime, getUserMealtimes());
+                const mealtimes = await getUserMealtimes();
+                const contextualTip = hungerCoach.getContextualTip(fastStartTime, mealtimes);
 
                 // Add fade effect to content that will change
                 const messageElement = document.getElementById('hungerCardMessage');
@@ -1955,8 +1977,8 @@
             }, 2000);
 
             // Show next tip to keep engagement
-            setTimeout(() => {
-                updateHungerCard();
+            setTimeout(async () => {
+                await updateHungerCard();
             }, 3000);
         }
 
@@ -1964,8 +1986,8 @@
             stopTipRotation(); // Clear any existing interval
 
             if (hungerCoach && isRunning) {
-                tipRotationInterval = setInterval(() => {
-                    updateHungerCard();
+                tipRotationInterval = setInterval(async () => {
+                    await updateHungerCard();
                 }, TIP_ROTATION_INTERVAL);
             }
         }
@@ -1977,14 +1999,81 @@
             }
         }
 
-        function getUserMealtimes() {
-            // For now, return default mealtimes
-            // TODO: Integrate with user profile/settings when that system is implemented
-            return {
-                breakfast: '08:00',
-                lunch: '12:00',
-                dinner: '18:00'
-            };
+        // User mealtimes cache
+        let userMealtimes = null;
+        let mealtimesLoaded = false;
+
+        async function getUserMealtimes() {
+            // Return cached mealtimes if already loaded
+            if (mealtimesLoaded && userMealtimes) {
+                return userMealtimes;
+            }
+
+            const sessionId = localStorage.getItem('fastingForecast_sessionId');
+            if (!sessionId) {
+                // Return defaults if no session
+                const defaults = {
+                    breakfast: '08:00',
+                    lunch: '12:00',
+                    dinner: '18:00'
+                };
+                userMealtimes = defaults;
+                mealtimesLoaded = true;
+                return defaults;
+            }
+
+            try {
+                const response = await fetch(`/api/user/${sessionId}/hunger-settings`);
+                if (response.ok) {
+                    const settings = await response.json();
+
+                    // Convert custom_mealtimes array to object format expected by HungerCoach
+                    const mealtimes = {};
+                    if (settings.custom_mealtimes && Array.isArray(settings.custom_mealtimes)) {
+                        settings.custom_mealtimes.forEach(meal => {
+                            // Use meal name as key, but convert to lowercase for consistency
+                            const key = meal.name.toLowerCase().replace(/\s+/g, '_');
+                            mealtimes[key] = meal.time;
+                        });
+                    }
+
+                    // Fallback to defaults if no custom mealtimes
+                    if (Object.keys(mealtimes).length === 0) {
+                        userMealtimes = {
+                            breakfast: '08:00',
+                            lunch: '12:00',
+                            dinner: '18:00'
+                        };
+                    } else {
+                        userMealtimes = mealtimes;
+                    }
+
+                    mealtimesLoaded = true;
+                    return userMealtimes;
+                } else {
+                    console.error('Failed to load user mealtimes:', response.status);
+                    // Return defaults on failure
+                    const defaults = {
+                        breakfast: '08:00',
+                        lunch: '12:00',
+                        dinner: '18:00'
+                    };
+                    userMealtimes = defaults;
+                    mealtimesLoaded = true;
+                    return defaults;
+                }
+            } catch (error) {
+                console.error('Error loading user mealtimes:', error);
+                // Return defaults on error
+                const defaults = {
+                    breakfast: '08:00',
+                    lunch: '12:00',
+                    dinner: '18:00'
+                };
+                userMealtimes = defaults;
+                mealtimesLoaded = true;
+                return defaults;
+            }
         }
 
         // Create milestone markers on the outer ring with responsive positioning
@@ -2395,7 +2484,12 @@
             if (!hungerCoach) {
                 await initializeHungerCoach();
             }
-            showHungerCoachCard();
+            await showHungerCoachCard();
+
+            // Start global notifications for the fast
+            if (globalNotificationManager) {
+                await globalNotificationManager.startNotificationsForFast(fastStartTime, fastDuration);
+            }
             
             // Set start and end times
             updateTimeDisplay();
@@ -2421,8 +2515,11 @@
                 clearInterval(timerInterval);
                 isRunning = false;
 
-                // Hide hunger coach
+                // Hide hunger coach and stop global notifications
                 hideHungerCoachCard();
+                if (globalNotificationManager) {
+                    globalNotificationManager.stopNotificationsForFast();
+                }
 
                 // End fast entry in database
                 await endFastEntry();
@@ -3075,7 +3172,7 @@
                     const clickHref = item.getAttribute('href');
                     
                     // For now, prevent default navigation for pages that don't exist
-                    if (clickHref !== '/dashboard' && clickHref !== '/timer' && clickHref !== '/schedule') {
+                    if (clickHref !== '/dashboard' && clickHref !== '/timer' && clickHref !== '/schedule' && clickHref !== '/settings') {
                         e.preventDefault();
                         
                         // Show a temporary message for unimplemented pages
@@ -3242,7 +3339,12 @@
                 if (!hungerCoach) {
                     await initializeHungerCoach();
                 }
-                showHungerCoachCard();
+                await showHungerCoachCard();
+
+                // Resume global notifications for the fast
+                if (globalNotificationManager) {
+                    await globalNotificationManager.startNotificationsForFast(fastStartTime, fastDuration);
+                }
 
                 // Set start and end times
                 updateTimeDisplay();
@@ -3520,13 +3622,12 @@
             <span class="nav-label">Learning Hub</span>
         </a>
         
-        <a href="/more" class="nav-item" data-page="more">
+        <a href="/settings" class="nav-item" data-page="settings">
             <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <circle cx="12" cy="12" r="1"/>
-                <circle cx="19" cy="12" r="1"/>
-                <circle cx="5" cy="12" r="1"/>
+                <circle cx="12" cy="12" r="3"/>
+                <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/>
             </svg>
-            <span class="nav-label">More</span>
+            <span class="nav-label">Settings</span>
         </a>
     </nav>
 </body>
