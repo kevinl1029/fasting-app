@@ -540,7 +540,8 @@
                 </div>
 
                 <!-- Manual Test Button -->
-                <div class="setting-item">
+                <!-- Development-only test button -->
+                <div class="setting-item" id="testNotificationSection" style="display: none;">
                     <div class="setting-label">
                         <div class="setting-title">Test Notifications</div>
                         <div class="setting-description">Send a test notification to verify everything works</div>
@@ -675,6 +676,12 @@
 
         // Initialize page
         document.addEventListener('DOMContentLoaded', async () => {
+            // Show test button only in development
+            const isDevelopment = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+            if (isDevelopment) {
+                document.getElementById('testNotificationSection').style.display = 'flex';
+            }
+
             if (!sessionId) {
                 alert('No session found. Please go through onboarding first.');
                 window.location.href = '/';
@@ -815,6 +822,94 @@
                 nextNotificationSection.style.display = 'none';
             }
         }
+
+        // === DEBUGGING HELPERS ===
+
+        // Add global debugging functions for console use
+        window.debugNotifications = {
+            // Check current notification status
+            async getStatus() {
+                const status = await globalNotificationManager.getNotificationStatus();
+                console.table(status);
+                return status;
+            },
+
+            // Check active fast state
+            checkActiveFast() {
+                const fast = globalNotificationManager.getActiveFastState();
+                console.log('Active Fast:', fast);
+                return fast;
+            },
+
+            // Clear notification history (for testing)
+            clearHistory() {
+                localStorage.removeItem('fasting_last_notification');
+                console.log('✅ Cleared notification history');
+            },
+
+            // Manually trigger notification check
+            async triggerCheck() {
+                console.log('🔍 Manually triggering notification check...');
+                await globalNotificationManager.checkAndSendPendingNotifications();
+            },
+
+            // Show scheduled notifications
+            showScheduled() {
+                const scheduled = Array.from(globalNotificationManager.scheduledNotifications.values());
+                console.log('📅 Scheduled Notifications:');
+                console.table(scheduled);
+                return scheduled;
+            },
+
+            // Force direct notifications (bypass service worker)
+            forceDirectNotifications() {
+                globalNotificationManager.serviceWorkerRegistration = null;
+                console.log('🔄 Service worker disabled - notifications will use direct path');
+            },
+
+            // Re-enable service worker notifications
+            async reEnableServiceWorker() {
+                await globalNotificationManager.registerServiceWorker();
+                console.log('🔄 Service worker re-enabled');
+            },
+
+            // Check service worker status
+            async checkServiceWorker() {
+                const reg = await navigator.serviceWorker.getRegistration();
+                console.log('🔧 Service Worker Registration:', reg);
+                console.log('🔍 Active:', reg?.active);
+                console.log('🔍 Installing:', reg?.installing);
+                console.log('🔍 Waiting:', reg?.waiting);
+                return reg;
+            },
+
+            // Test both notification paths
+            async testBothPaths() {
+                console.log('🧪 Testing both notification paths...');
+
+                // Test service worker path
+                console.log('1️⃣ Testing SERVICE WORKER path:');
+                await window.debugNotifications.reEnableServiceWorker();
+                await new Promise(resolve => setTimeout(resolve, 100)); // Brief wait
+
+                const testMeal = { name: 'Test-SW', time: '00:00' };
+                await globalNotificationManager.sendHungerNotification(testMeal);
+
+                await new Promise(resolve => setTimeout(resolve, 2000)); // Wait 2 seconds
+
+                // Test direct path
+                console.log('2️⃣ Testing DIRECT path:');
+                window.debugNotifications.forceDirectNotifications();
+                await new Promise(resolve => setTimeout(resolve, 100)); // Brief wait
+
+                const testMeal2 = { name: 'Test-Direct', time: '00:00' };
+                await globalNotificationManager.sendHungerNotification(testMeal2);
+
+                console.log('✅ Both tests completed');
+            }
+        };
+
+        console.log('🔧 Debug tools available: window.debugNotifications');
 
         // Test notification function
         async function testNotification() {

@@ -148,27 +148,48 @@ class GlobalNotificationManager {
 
         const now = new Date();
         const lastNotification = this.getLastNotificationTime();
+        const isDevelopment = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+
+        console.log('🔔 Scheduling notifications for', mealtimes.length, 'meal times');
+        console.log('📅 Current time:', now.toLocaleString());
+        console.log('🕐 Last notification:', lastNotification ? new Date(lastNotification).toLocaleString() : 'Never');
 
         mealtimes.forEach(meal => {
             const mealTime = this.getNextMealTime(meal.time);
+            console.log(`🍽️ Processing ${meal.name} at ${meal.time} -> Next occurrence: ${mealTime.toLocaleString()}`);
 
             // Only schedule if meal time is in the future
             if (mealTime > now) {
                 const delay = mealTime.getTime() - now.getTime();
+                const delayMinutes = Math.round(delay / (1000 * 60));
 
-                // Check if we should show notification (not too soon after last one)
-                if (!lastNotification || (mealTime.getTime() - new Date(lastNotification).getTime()) > (60 * 60 * 1000)) {
+                // Check cooldown - but be more lenient in development
+                const cooldownTime = isDevelopment ? (5 * 60 * 1000) : (60 * 60 * 1000); // 5 min in dev, 1 hour in prod
+                const shouldSchedule = !lastNotification ||
+                    (mealTime.getTime() - new Date(lastNotification).getTime()) > cooldownTime;
+
+                console.log(`⏱️ ${meal.name}: ${delayMinutes} minutes away, cooldown check: ${shouldSchedule}`);
+
+                if (shouldSchedule) {
                     this.scheduleNotification(meal, delay, mealTime);
+                } else {
+                    console.log(`🚫 Skipped ${meal.name} due to cooldown period`);
                 }
+            } else {
+                console.log(`⏭️ Skipped ${meal.name} - meal time has passed`);
             }
         });
 
         // Also schedule for same times tomorrow
+        console.log('🌅 Scheduling for tomorrow...');
         mealtimes.forEach(meal => {
             const tomorrowMealTime = this.getNextMealTime(meal.time);
             tomorrowMealTime.setDate(tomorrowMealTime.getDate() + 1);
 
             const delay = tomorrowMealTime.getTime() - now.getTime();
+            const delayHours = Math.round(delay / (1000 * 60 * 60));
+            console.log(`🌙 Tomorrow's ${meal.name}: ${delayHours} hours away`);
+
             this.scheduleNotification(meal, delay, tomorrowMealTime);
         });
     }
@@ -200,29 +221,37 @@ class GlobalNotificationManager {
         // Store schedule in localStorage
         this.storeNotificationSchedule();
 
-        console.log(`📅 Scheduled notification for ${meal.name} at ${scheduledTime.toLocaleString()}`);
+        const delayMinutes = Math.round(delay / (1000 * 60));
+        console.log(`📅 Scheduled notification for ${meal.name} at ${scheduledTime.toLocaleString()} (in ${delayMinutes} minutes)`);
     }
 
     /**
      * Send a hunger notification
      */
     async sendHungerNotification(meal) {
-        if (!this.isNotificationAvailable()) return;
+        console.log(`🔥 ATTEMPTING to send hunger notification for ${meal.name} at ${new Date().toLocaleString()}`);
+
+        if (!this.isNotificationAvailable()) {
+            console.log('❌ Notifications not available - permission denied or not supported');
+            return;
+        }
 
         try {
             // Get active fast to determine if notifications should still be sent
             const activeFast = this.getActiveFastState();
             if (!activeFast || !activeFast.isActive) {
-                console.log('No active fast, skipping notification');
+                console.log('❌ No active fast, skipping notification');
                 return;
             }
+            console.log('✅ Active fast confirmed');
 
             // Check if user has notifications enabled
             const userSettings = await this.getUserSettings();
             if (userSettings?.hunger_coach_enabled === false) {
-                console.log('User has disabled hunger coach notifications');
+                console.log('❌ User has disabled hunger coach notifications');
                 return;
             }
+            console.log('✅ User has notifications enabled');
 
             // Get hunger tip
             const message = this.hungerCoach ?
@@ -231,26 +260,37 @@ class GlobalNotificationManager {
 
             // Send via service worker if available, otherwise use direct notification
             if (this.serviceWorkerRegistration && this.serviceWorkerRegistration.active) {
+                console.log('🔄 Using SERVICE WORKER for notification');
+                console.log('📤 Sending message to service worker:', {
+                    type: 'SEND_HUNGER_TIP',
+                    data: { message, tag: 'hunger-coach-' + meal.name.toLowerCase() }
+                });
                 this.serviceWorkerRegistration.active.postMessage({
                     type: 'SEND_HUNGER_TIP',
                     data: { message, tag: 'hunger-coach-' + meal.name.toLowerCase() }
                 });
+                console.log('✅ Message sent to service worker');
             } else {
+                console.log('🔄 Using DIRECT NOTIFICATION (no service worker)');
+                console.log('📊 Service worker registration:', this.serviceWorkerRegistration);
+                console.log('🔍 Service worker active:', this.serviceWorkerRegistration?.active);
+
                 const notification = new Notification(message, {
                     icon: '/favicon.svg',
                     badge: '/favicon.svg',
                     tag: 'hunger-coach-' + meal.name.toLowerCase(),
                     requireInteraction: false,
-                    silent: true
+                    silent: false // Changed to match service worker setting
                 });
 
+                console.log('📢 Direct notification created:', notification);
                 setTimeout(() => notification.close(), 6000);
             }
 
             // Record notification time
             this.setLastNotificationTime(new Date().toISOString());
 
-            console.log(`🔔 Sent hunger notification: ${message}`);
+            console.log(`🎉 SUCCESS! Sent hunger notification for ${meal.name}: ${message}`);
 
         } catch (error) {
             console.error('Error sending hunger notification:', error);

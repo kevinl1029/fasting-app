@@ -92,18 +92,26 @@ async function checkAndSendHungerNotifications() {
 self.addEventListener('message', event => {
     const { type, data } = event.data;
 
+    console.log('📨 SERVICE WORKER: Received message:', type, data);
+
     switch (type) {
         case 'SCHEDULE_NOTIFICATION':
+            console.log('⏰ SERVICE WORKER: Scheduling notification');
             scheduleNotification(data);
             break;
 
         case 'CANCEL_NOTIFICATIONS':
+            console.log('🚫 SERVICE WORKER: Canceling notifications');
             cancelAllNotifications();
             break;
 
         case 'SEND_HUNGER_TIP':
+            console.log('💡 SERVICE WORKER: Sending hunger tip');
             sendHungerTipNotification(data);
             break;
+
+        default:
+            console.log('❓ SERVICE WORKER: Unknown message type:', type);
     }
 });
 
@@ -127,13 +135,23 @@ function scheduleNotification(data) {
 function sendHungerTipNotification(data) {
     const { message, tag } = data;
 
-    self.registration.showNotification('Hunger Coach', {
+    console.log('🔥 SERVICE WORKER: Attempting to send hunger tip notification');
+    console.log('📝 Message:', message);
+    console.log('🏷️ Tag:', tag);
+
+    const notificationPromise = self.registration.showNotification('Hunger Coach', {
         body: message,
         icon: '/favicon.svg',
         badge: '/favicon.svg',
         tag: tag || NOTIFICATION_TAG,
         requireInteraction: false,
-        silent: true
+        silent: false // Changed from true to false to make notifications visible
+    });
+
+    notificationPromise.then(() => {
+        console.log('✅ SERVICE WORKER: Notification displayed successfully');
+    }).catch(error => {
+        console.error('❌ SERVICE WORKER: Failed to display notification:', error);
     });
 }
 
