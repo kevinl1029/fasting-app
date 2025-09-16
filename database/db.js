@@ -187,32 +187,50 @@ class Database {
           }
         });
 
-        // Create new fasts table
-        this.db.run(migrateFastsTable, (err) => {
+        // Check if migration is needed by checking if user_profile_id column exists
+        this.db.all("PRAGMA table_info(fasts)", (err, columns) => {
           if (err) {
-            console.error('Error creating new fasts table:', err);
+            console.error('Error checking fasts table:', err);
             reject(err);
             return;
           }
-        });
 
-        // Copy existing data if old table exists
-        this.db.run(copyDataFromOldTable, (err) => {
-          // Ignore error if old table doesn't exist
-        });
+          const columnNames = columns.map(col => col.name);
+          const needsMigration = !columnNames.includes('user_profile_id');
 
-        // Drop old table and rename new one
-        this.db.run(dropOldTable, (err) => {
-          // Ignore error if old table doesn't exist
-        });
+          if (needsMigration) {
+            console.log('Migrating fasts table to add user_profile_id...');
 
-        this.db.run(renameNewTable, (err) => {
-          if (err) {
-            console.error('Error renaming fasts table:', err);
-            reject(err);
-            return;
+            // Create new fasts table
+            this.db.run(migrateFastsTable, (err) => {
+              if (err) {
+                console.error('Error creating new fasts table:', err);
+                reject(err);
+                return;
+              }
+            });
+
+            // Copy existing data if old table exists
+            this.db.run(copyDataFromOldTable, (err) => {
+              // Ignore error if old table doesn't exist
+            });
+
+            // Drop old table and rename new one
+            this.db.run(dropOldTable, (err) => {
+              // Ignore error if old table doesn't exist
+            });
+
+            this.db.run(renameNewTable, (err) => {
+              if (err) {
+                console.error('Error renaming fasts table:', err);
+                reject(err);
+                return;
+              }
+              console.log('Fasts table migrated successfully (added user_profile_id)');
+            });
+          } else {
+            console.log('Fasts table migration not needed - user_profile_id column already exists');
           }
-          console.log('Fasts table migrated successfully (added user_profile_id)');
         });
 
         this.db.run(createMilestonesTable, (err) => {
@@ -913,15 +931,19 @@ class Database {
 
       // Calculate end date using end_dow and end_time
       const instanceEndDate = new Date(current);
-      instanceEndDate.setDate(instanceEndDate.getDate() + block.end_dow);
-      
+
+      // Calculate days from start_dow to end_dow
+      let daysDifference = (block.end_dow - block.start_dow + 7) % 7;
+
+      // If end_dow equals start_dow, the fast spans to the same day next week
+      if (daysDifference === 0) {
+        daysDifference = 7;
+      }
+
+      instanceEndDate.setDate(instanceEndDate.getDate() + daysDifference);
+
       const [endHour, endMinute] = block.end_time.split(':').map(Number);
       instanceEndDate.setHours(endHour, endMinute, 0, 0);
-
-      // Handle cases where end is in the next week (end_dow < start_dow)
-      if (block.end_dow < block.start_dow) {
-        instanceEndDate.setDate(instanceEndDate.getDate() + 7);
-      }
 
       // Only include instances that start after the current time
       if (instanceStartDate >= startDate) {

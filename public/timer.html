@@ -2389,27 +2389,27 @@
         }
         
         // Apply start time adjustment
-        function applyStartTimeAdjustment() {
+        async function applyStartTimeAdjustment() {
             const adjustTimeInput = document.getElementById('adjustTimeInput');
             const adjustDateOffset = document.getElementById('adjustDateOffset');
-            
+
             if (!adjustTimeInput.value) {
                 alert('Please enter a start time.');
                 return;
             }
-            
+
             // Calculate new start time
             const adjustmentTime = new Date();
             const [hours, minutes] = adjustTimeInput.value.split(':').map(Number);
             const adjustmentDateOffset = parseInt(adjustDateOffset.value);
-            
+
             const newStartTime = new Date(adjustmentTime);
             newStartTime.setHours(hours, minutes, 0, 0);
             newStartTime.setDate(newStartTime.getDate() - adjustmentDateOffset);
-            
+
             // Validation
             const adjustmentMaxBackdate = new Date(adjustmentTime.getTime() - (7 * 24 * 60 * 60 * 1000));
-            
+
             if (newStartTime > adjustmentTime) {
                 alert('Start time cannot be in the future!');
                 return;
@@ -2417,12 +2417,31 @@
                 alert('Start time cannot be more than 7 days ago!');
                 return;
             }
-            
+
             // Update the fast start time
             fastStartTime = newStartTime;
             elapsedTime = Date.now() - fastStartTime.getTime();
-            
-            // Save updated timer state to localStorage
+
+            // 1. Update database record
+            if (currentFastId) {
+                try {
+                    const response = await fetch(`/api/fasts/${currentFastId}`, {
+                        method: 'PUT',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({ start_time: fastStartTime.toISOString() })
+                    });
+
+                    if (!response.ok) {
+                        console.error('Failed to update fast start time in database');
+                    }
+                } catch (error) {
+                    console.error('Error updating fast start time:', error);
+                }
+            }
+
+            // 2. Save updated timer state to localStorage
             const timerState = {
                 fastStartTime: fastStartTime.toISOString(),
                 fastDuration: fastDuration,
@@ -2430,11 +2449,33 @@
                 currentFastId: currentFastId
             };
             localStorage.setItem('fastingForecast_timerState', JSON.stringify(timerState));
-            
-            // Recalculate everything
+
+            // 3. Restart notifications with new start time
+            if (globalNotificationManager) {
+                try {
+                    globalNotificationManager.stopNotificationsForFast();
+                    await globalNotificationManager.startNotificationsForFast(fastStartTime, fastDuration);
+                } catch (error) {
+                    console.error('Error updating notifications:', error);
+                }
+            }
+
+            // 4. Update hunger coach with new elapsed time
+            if (hungerCoach) {
+                try {
+                    await updateHungerCard();
+                } catch (error) {
+                    console.error('Error updating hunger coach:', error);
+                }
+            }
+
+            // 5. Update UI displays
             updateTimeDisplay();
             updateTimerDisplay();
-            
+
+            // 6. Update milestone states based on new elapsed time
+            updateMilestoneStates();
+
             // Hide adjustment controls
             cancelStartTimeAdjustment();
         }

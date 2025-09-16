@@ -1266,6 +1266,22 @@
                 });
                 
                 if (response.ok) {
+                    // Check if this is the currently active fast and update timer localStorage
+                    const timerState = localStorage.getItem('fastingForecast_timerState');
+                    if (timerState) {
+                        try {
+                            const parsedState = JSON.parse(timerState);
+                            if (parsedState.currentFastId === editingFastId) {
+                                // Update timer state with new start time
+                                parsedState.fastStartTime = startDateTime;
+                                localStorage.setItem('fastingForecast_timerState', JSON.stringify(parsedState));
+                                console.log('Updated timer localStorage with new start time');
+                            }
+                        } catch (error) {
+                            console.error('Error updating timer localStorage:', error);
+                        }
+                    }
+
                     hideEditFastModal();
                     loadFasts(); // Reload the fasts list
                 } else {
