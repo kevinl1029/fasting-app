@@ -128,15 +128,15 @@ app.post('/api/fasts', async (req, res) => {
 
 app.post('/api/fasts/start', async (req, res) => {
   try {
-    const { notes, weight, sessionId } = req.body;
+    const { start_time, notes, weight, sessionId } = req.body;
     console.log('Starting fast with sessionId:', sessionId);
-    
+
     // Check if there's already an active fast
     const activeFast = await db.getActiveFast();
     if (activeFast) {
       return res.status(400).json({ error: 'There is already an active fast' });
     }
-    
+
     // Get user profile ID if session ID is provided
     let userProfileId = null;
     if (sessionId) {
@@ -149,9 +149,9 @@ app.post('/api/fasts/start', async (req, res) => {
       console.log('Found user profile:', profile ? profile.id : 'null');
       userProfileId = profile.id;
     }
-    
+
     const fastData = {
-      start_time: new Date().toISOString(),
+      start_time: start_time || new Date().toISOString(),
       notes,
       weight,
       is_manual: false,
