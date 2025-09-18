@@ -480,6 +480,14 @@
             border-radius: 15px;
             margin: 20px 0;
             border-left: 4px solid #fb923c;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .scheduled-fast:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(251, 146, 60, 0.15);
+            background: linear-gradient(135deg, rgba(251, 146, 60, 0.12), rgba(236, 72, 153, 0.12));
         }
         
         .scheduled-title {
@@ -1520,7 +1528,7 @@
                 </div>
                 
                 <!-- Scheduled Fast State -->
-                <div id="scheduledFastInfo" class="scheduled-fast" style="display: none;">
+                <div id="scheduledFastInfo" class="scheduled-fast" style="display: none;" onclick="showScheduleSetup()">
                     <div class="scheduled-title">🗓️ Next Scheduled Fast</div>
                     <div class="scheduled-info">
                         <span id="scheduledFastDetails">Tomorrow at 8:00 PM • 24-hour fast</span><br>
@@ -3109,20 +3117,83 @@
             document.getElementById('startFastBtn').textContent = 'Start Fast Now';
         }
         
-        function showScheduledFastState() {
+        async function showScheduledFastState() {
             document.getElementById('newUserWelcome').style.display = 'none';
             document.getElementById('scheduleSetupState').style.display = 'none';
             document.getElementById('scheduledFastInfo').style.display = 'block';
             document.getElementById('newUserHint').style.display = 'none';
-            
+
             // Show main start button
             document.getElementById('startFastBtn').style.display = 'block';
-            
+
             // Update button text for users with schedules
             document.getElementById('startFastBtn').textContent = 'Start 24h Fast';
-            
-            // TODO: Load actual scheduled fast data when scheduling feature is implemented
-            // For now, keep the placeholder scheduled fast info
+
+            // Load actual scheduled fast data
+            await loadNextScheduledFast();
+        }
+
+        // Helper function to format relative date display
+        function formatRelativeDate(targetDate) {
+            const currentTimestamp = new Date();
+            const todayDate = new Date(currentTimestamp.getFullYear(), currentTimestamp.getMonth(), currentTimestamp.getDate());
+            const targetDateOnly = new Date(targetDate.getFullYear(), targetDate.getMonth(), targetDate.getDate());
+
+            const diffTime = targetDateOnly.getTime() - todayDate.getTime();
+            const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+            const formattedTime = targetDate.toLocaleTimeString('en-US', {
+                hour: 'numeric',
+                minute: '2-digit',
+                hour12: true
+            });
+
+            if (diffDays === 0) {
+                return `Today at ${formattedTime}`;
+            } else if (diffDays === 1) {
+                return `Tomorrow at ${formattedTime}`;
+            } else if (diffDays > 1 && diffDays <= 7) {
+                const dayOfWeek = targetDate.toLocaleDateString('en-US', { weekday: 'long' });
+                return `${dayOfWeek} at ${formattedTime}`;
+            } else {
+                const dayOfWeek = targetDate.toLocaleDateString('en-US', { weekday: 'long' });
+                return `Next ${dayOfWeek} at ${formattedTime}`;
+            }
+        }
+
+        // Load and display the next scheduled fast
+        async function loadNextScheduledFast() {
+            try {
+                const upcomingScheduleResponse = await fetch(`/api/schedule/upcoming?sessionId=${globalSessionId}`);
+                if (upcomingScheduleResponse.ok) {
+                    const upcomingScheduleData = await upcomingScheduleResponse.json();
+                    if (upcomingScheduleData.upcoming) {
+                        const nextFast = upcomingScheduleData.upcoming;
+                        const fastStartDate = new Date(nextFast.start_at_utc);
+                        const fastEndDate = new Date(nextFast.end_at_utc);
+
+                        // Use duration from API or calculate as fallback
+                        const durationHours = nextFast.duration_hours || Math.round((fastEndDate.getTime() - fastStartDate.getTime()) / (1000 * 60 * 60));
+
+                        // Format the display text
+                        const relativeDate = formatRelativeDate(fastStartDate);
+                        const durationText = durationHours === 24 ? '24-hour fast' : `${durationHours}-hour fast`;
+
+                        document.getElementById('scheduledFastDetails').textContent = `${relativeDate} • ${durationText}`;
+                    } else {
+                        // No upcoming fasts found
+                        document.getElementById('scheduledFastDetails').textContent = 'No upcoming fasts scheduled';
+                    }
+                } else {
+                    console.error('Failed to fetch upcoming schedule');
+                    // Set fallback text if API fails
+                    document.getElementById('scheduledFastDetails').textContent = 'Schedule unavailable';
+                }
+            } catch (error) {
+                console.error('Error loading next scheduled fast:', error);
+                // Set fallback text if there's an error
+                document.getElementById('scheduledFastDetails').textContent = 'Schedule unavailable';
+            }
         }
         
         // Check user schedule status and show appropriate state
@@ -3133,7 +3204,7 @@
                     const userScheduleData = await userScheduleResponse.json();
                     if (userScheduleData.schedule && userScheduleData.blocks && userScheduleData.blocks.length > 0) {
                         // User has a schedule with fasting blocks
-                        showScheduledFastState();
+                        await showScheduledFastState();
                     } else {
                         // User has no schedule or no fasting blocks - encourage setup
                         showScheduleSetupState();
