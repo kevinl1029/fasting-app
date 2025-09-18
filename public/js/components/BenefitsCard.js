@@ -68,7 +68,24 @@ class BenefitsCard extends ContextualCard {
      * Fetch user preferences from API or localStorage
      */
     async fetchUserPreferences() {
-        // Try localStorage first
+        // Try to fetch from API using BenefitsDataService
+        if (window.BenefitsDataService) {
+            try {
+                const benefitsDataService = new window.BenefitsDataService();
+                const preferences = await benefitsDataService.getPreferences();
+                if (preferences) {
+                    return {
+                        avgMealCost: preferences.avgMealCost,
+                        avgMealDuration: preferences.avgMealDuration,
+                        benefitsEnabled: preferences.benefitsEnabled
+                    };
+                }
+            } catch (error) {
+                console.warn('Error fetching preferences from API:', error);
+            }
+        }
+
+        // Fallback: Try localStorage
         const stored = localStorage.getItem('fastingForecast_benefitsPreferences');
         if (stored) {
             try {
@@ -78,7 +95,6 @@ class BenefitsCard extends ContextualCard {
             }
         }
 
-        // TODO: Fetch from API when available
         return null;
     }
 

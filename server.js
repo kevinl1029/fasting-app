@@ -900,7 +900,7 @@ app.get('/api/user/:sessionId/benefits-settings', async (req, res) => {
       data: {
         avg_meal_cost: profile.avg_meal_cost || 10.00,
         avg_meal_duration: profile.avg_meal_duration || 30,
-        benefits_enabled: profile.benefits_enabled !== false,
+        benefits_enabled: Boolean(profile.benefits_enabled),
         benefits_onboarded: profile.benefits_onboarded || false,
         custom_mealtimes: customMealtimes
       }
@@ -992,7 +992,7 @@ app.get('/api/user/settings', async (req, res) => {
       data: {
         avg_meal_cost: profile.avg_meal_cost || 10.00,
         avg_meal_duration: profile.avg_meal_duration || 30,
-        benefits_enabled: profile.benefits_enabled !== false,
+        benefits_enabled: Boolean(profile.benefits_enabled),
         benefits_onboarded: profile.benefits_onboarded || false,
         custom_mealtimes: customMealtimes,
         hunger_coach_enabled: profile.hunger_coach_enabled !== false
@@ -1033,6 +1033,11 @@ app.put('/api/user/settings', async (req, res) => {
       if (typeof avg_meal_duration !== 'number' || avg_meal_duration < 5 || avg_meal_duration > 240) {
         return res.status(400).json({ error: 'Average meal duration must be between 5 and 240 minutes' });
       }
+    }
+
+    const profile = await db.getUserProfileBySessionId(sessionId);
+    if (!profile) {
+      return res.status(404).json({ error: 'User profile not found' });
     }
 
     const updateData = {};
@@ -1108,7 +1113,7 @@ app.get('/api/benefits/current-fast', async (req, res) => {
         preferences: {
           avgMealCost: profile.avg_meal_cost || 10.00,
           avgMealDuration: profile.avg_meal_duration || 30,
-          benefitsEnabled: profile.benefits_enabled !== false
+          benefitsEnabled: Boolean(profile.benefits_enabled)
         }
       }
     });

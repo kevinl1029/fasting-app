@@ -295,6 +295,61 @@
             border-color: #6366f1;
         }
 
+        /* Input group styles for benefits preferences */
+        .input-group {
+            display: flex;
+            align-items: center;
+            border: 2px solid #e5e7eb;
+            border-radius: 8px;
+            background: white;
+            transition: border-color 0.2s ease;
+        }
+
+        .input-group:focus-within {
+            border-color: #6366f1;
+        }
+
+        .input-prefix, .input-suffix {
+            padding: 12px;
+            background: #f9fafb;
+            color: #6b7280;
+            font-weight: 500;
+            font-size: 14px;
+        }
+
+        .input-prefix {
+            border-right: 1px solid #e5e7eb;
+            border-radius: 6px 0 0 6px;
+        }
+
+        .input-suffix {
+            border-left: 1px solid #e5e7eb;
+            border-radius: 0 6px 6px 0;
+        }
+
+        .input-group .form-input {
+            border: none;
+            border-radius: 0;
+            flex: 1;
+        }
+
+        .input-group .form-input:focus {
+            border: none;
+            box-shadow: none;
+        }
+
+        /* Benefits preferences section styles */
+        .benefits-prefs-section {
+            margin-top: 16px;
+            opacity: 1;
+            transition: opacity 0.3s ease;
+        }
+
+        .benefits-prefs-section.disabled {
+            opacity: 0.5;
+            pointer-events: none;
+        }
+
         .modal-actions {
             display: flex;
             gap: 12px;
@@ -581,6 +636,66 @@
                     Add Meal Time
                 </button>
             </div>
+
+            <!-- Benefits Tracking Preferences -->
+            <div class="settings-section">
+                <h2 class="section-title">
+                    <svg class="section-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                        <circle cx="12" cy="12" r="10"/>
+                        <path d="m9 12 2 2 4-4"/>
+                    </svg>
+                    Benefits Tracking
+                </h2>
+
+                <div class="setting-item">
+                    <div class="setting-label">
+                        <div class="setting-title">Enable Benefits Tracking</div>
+                        <div class="setting-description">Track money saved and time reclaimed from fasting</div>
+                    </div>
+                    <div class="setting-control">
+                        <div class="toggle-switch" id="benefitsToggle" onclick="toggleBenefitsEnabled()"></div>
+                    </div>
+                </div>
+
+                <div id="benefitsPreferences" class="benefits-prefs-section">
+                    <div class="setting-item">
+                        <div class="setting-label">
+                            <div class="setting-title">Average Meal Cost</div>
+                            <div class="setting-description">How much do you typically spend per meal?</div>
+                        </div>
+                        <div class="setting-control">
+                            <div class="input-group">
+                                <span class="input-prefix">$</span>
+                                <input type="number" id="avgMealCost" class="form-input"
+                                       min="0" max="1000" step="0.01" placeholder="10.00">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="setting-item">
+                        <div class="setting-label">
+                            <div class="setting-title">Average Meal Duration</div>
+                            <div class="setting-description">How long do you typically spend eating and preparing meals?</div>
+                        </div>
+                        <div class="setting-control">
+                            <div class="input-group">
+                                <input type="number" id="avgMealDuration" class="form-input"
+                                       min="5" max="240" placeholder="30">
+                                <span class="input-suffix">min</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="setting-item">
+                        <div class="setting-label">
+                            <div class="setting-title">Benefits Preview</div>
+                            <div class="setting-description" id="benefitsPreview">
+                                Based on your settings: Skipping 1 meal saves $10.00 and 30 minutes
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -668,7 +783,12 @@
                 { name: 'Breakfast', time: '08:00' },
                 { name: 'Lunch', time: '12:00' },
                 { name: 'Dinner', time: '18:00' }
-            ]
+            ],
+            // Benefits tracking preferences
+            benefits_enabled: true,
+            avg_meal_cost: 10.00,
+            avg_meal_duration: 30,
+            benefits_onboarded: false
         };
 
         let editingIndex = -1;
@@ -698,9 +818,21 @@
             if (!sessionId) return;
 
             try {
-                const response = await fetch(`/api/user/${sessionId}/hunger-settings`);
+                const response = await fetch(`/api/user/settings?sessionId=${sessionId}`);
                 if (response.ok) {
-                    userSettings = await response.json();
+                    const result = await response.json();
+                    if (result.success && result.data) {
+                        // Merge loaded settings with defaults to ensure all properties exist
+                        userSettings = {
+                            ...userSettings,
+                            hunger_coach_enabled: result.data.hunger_coach_enabled,
+                            custom_mealtimes: result.data.custom_mealtimes || userSettings.custom_mealtimes,
+                            avg_meal_cost: result.data.avg_meal_cost || userSettings.avg_meal_cost,
+                            avg_meal_duration: result.data.avg_meal_duration || userSettings.avg_meal_duration,
+                            benefits_enabled: result.data.benefits_enabled !== false, // Default to true
+                            benefits_onboarded: result.data.benefits_onboarded || false
+                        };
+                    }
                 } else {
                     console.error('Failed to load user settings:', response.status);
                     // Keep defaults if load fails
@@ -716,14 +848,20 @@
             if (!sessionId) return;
 
             try {
-                const response = await fetch(`/api/user/${sessionId}/hunger-settings`, {
+                // Use the unified settings endpoint that supports both hunger coach and benefits
+                const response = await fetch('/api/user/settings', {
                     method: 'PUT',
                     headers: {
-                        'Content-Type': 'application/json'
+                        'Content-Type': 'application/json',
+                        'x-session-id': sessionId
                     },
                     body: JSON.stringify({
                         hunger_coach_enabled: userSettings.hunger_coach_enabled,
-                        custom_mealtimes: userSettings.custom_mealtimes
+                        custom_mealtimes: userSettings.custom_mealtimes,
+                        avg_meal_cost: userSettings.avg_meal_cost,
+                        avg_meal_duration: userSettings.avg_meal_duration,
+                        benefits_enabled: userSettings.benefits_enabled,
+                        benefits_onboarded: userSettings.benefits_onboarded
                     })
                 });
 
@@ -756,6 +894,9 @@
 
             // Update notification status
             await updateNotificationStatus();
+
+            // Update benefits preferences UI
+            updateBenefitsUI();
 
             // Update mealtime list
             updateMealtimeList();
@@ -1087,6 +1228,110 @@
                 }
             });
         }
+
+        // Benefits Tracking Functions
+        function updateBenefitsUI() {
+            // Update benefits enabled toggle
+            const benefitsToggle = document.getElementById('benefitsToggle');
+            if (benefitsToggle) {
+                benefitsToggle.classList.toggle('active', userSettings.benefits_enabled);
+            }
+
+            // Update benefits preferences section visibility
+            const benefitsSection = document.getElementById('benefitsPreferences');
+            if (benefitsSection) {
+                benefitsSection.classList.toggle('disabled', !userSettings.benefits_enabled);
+            }
+
+            // Update meal cost input
+            const mealCostInput = document.getElementById('avgMealCost');
+            if (mealCostInput) {
+                mealCostInput.value = userSettings.avg_meal_cost;
+            }
+
+            // Update meal duration input
+            const mealDurationInput = document.getElementById('avgMealDuration');
+            if (mealDurationInput) {
+                mealDurationInput.value = userSettings.avg_meal_duration;
+            }
+
+            // Update benefits preview
+            updateBenefitsPreview();
+        }
+
+        function updateBenefitsPreview() {
+            const previewElement = document.getElementById('benefitsPreview');
+            if (!previewElement) return;
+
+            const cost = userSettings.avg_meal_cost;
+            const duration = userSettings.avg_meal_duration;
+
+            if (userSettings.benefits_enabled) {
+                previewElement.textContent = `Based on your settings: Skipping 1 meal saves $${cost.toFixed(2)} and ${duration} minutes`;
+            } else {
+                previewElement.textContent = 'Benefits tracking is disabled';
+            }
+        }
+
+        function toggleBenefitsEnabled() {
+            userSettings.benefits_enabled = !userSettings.benefits_enabled;
+            userSettings.benefits_onboarded = true; // Mark as onboarded when they interact
+            updateUI();
+            saveUserSettings();
+        }
+
+        function updateMealCost() {
+            const input = document.getElementById('avgMealCost');
+            if (!input) return;
+
+            const value = parseFloat(input.value);
+            if (!isNaN(value) && value >= 0 && value <= 1000) {
+                userSettings.avg_meal_cost = value;
+                userSettings.benefits_onboarded = true; // Mark as onboarded when they interact
+                updateBenefitsPreview();
+                saveUserSettings();
+            }
+        }
+
+        function updateMealDuration() {
+            const input = document.getElementById('avgMealDuration');
+            if (!input) return;
+
+            const value = parseInt(input.value);
+            if (!isNaN(value) && value >= 5 && value <= 240) {
+                userSettings.avg_meal_duration = value;
+                userSettings.benefits_onboarded = true; // Mark as onboarded when they interact
+                updateBenefitsPreview();
+                saveUserSettings();
+            }
+        }
+
+        // Add event listeners when page loads
+        document.addEventListener('DOMContentLoaded', function() {
+            // Benefits toggle is handled by onclick in HTML
+
+            // Meal cost input
+            const mealCostInput = document.getElementById('avgMealCost');
+            if (mealCostInput) {
+                mealCostInput.addEventListener('input', updateMealCost);
+                mealCostInput.addEventListener('blur', updateMealCost);
+            }
+
+            // Meal duration input
+            const mealDurationInput = document.getElementById('avgMealDuration');
+            if (mealDurationInput) {
+                mealDurationInput.addEventListener('input', updateMealDuration);
+                mealDurationInput.addEventListener('blur', updateMealDuration);
+            }
+
+            // Handle URL hash for direct navigation to benefits section
+            if (window.location.hash === '#benefits') {
+                const benefitsSection = document.querySelector('.benefits-prefs-section');
+                if (benefitsSection) {
+                    benefitsSection.scrollIntoView({ behavior: 'smooth' });
+                }
+            }
+        });
     </script>
 </body>
 </html>
