@@ -70,6 +70,10 @@ class Database {
           hunger_coach_enabled BOOLEAN DEFAULT TRUE,
           custom_mealtimes TEXT,
           last_hunger_notification DATETIME,
+          avg_meal_cost REAL DEFAULT 10.00,
+          avg_meal_duration INTEGER DEFAULT 30,
+          benefits_enabled BOOLEAN DEFAULT TRUE,
+          benefits_onboarded BOOLEAN DEFAULT FALSE,
           created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
           updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
         )
@@ -183,6 +187,35 @@ class Database {
             this.db.run("ALTER TABLE user_profiles ADD COLUMN last_hunger_notification DATETIME", (err) => {
               if (err) console.error('Error adding last_hunger_notification column:', err);
               else console.log('Added last_hunger_notification column to user_profiles');
+            });
+          }
+
+          // Add benefits tracking columns
+          if (!columnNames.includes('avg_meal_cost')) {
+            this.db.run("ALTER TABLE user_profiles ADD COLUMN avg_meal_cost REAL DEFAULT 10.00", (err) => {
+              if (err) console.error('Error adding avg_meal_cost column:', err);
+              else console.log('Added avg_meal_cost column to user_profiles');
+            });
+          }
+
+          if (!columnNames.includes('avg_meal_duration')) {
+            this.db.run("ALTER TABLE user_profiles ADD COLUMN avg_meal_duration INTEGER DEFAULT 30", (err) => {
+              if (err) console.error('Error adding avg_meal_duration column:', err);
+              else console.log('Added avg_meal_duration column to user_profiles');
+            });
+          }
+
+          if (!columnNames.includes('benefits_enabled')) {
+            this.db.run("ALTER TABLE user_profiles ADD COLUMN benefits_enabled BOOLEAN DEFAULT TRUE", (err) => {
+              if (err) console.error('Error adding benefits_enabled column:', err);
+              else console.log('Added benefits_enabled column to user_profiles');
+            });
+          }
+
+          if (!columnNames.includes('benefits_onboarded')) {
+            this.db.run("ALTER TABLE user_profiles ADD COLUMN benefits_onboarded BOOLEAN DEFAULT FALSE", (err) => {
+              if (err) console.error('Error adding benefits_onboarded column:', err);
+              else console.log('Added benefits_onboarded column to user_profiles');
             });
           }
         });
@@ -462,6 +495,20 @@ class Database {
       const query = 'SELECT * FROM fasts WHERE is_active = TRUE ORDER BY start_time DESC LIMIT 1';
       
       this.db.get(query, [], (err, row) => {
+        if (err) {
+          reject(err);
+        } else {
+          resolve(row || null);
+        }
+      });
+    });
+  }
+
+  async getActiveFastByUserId(userId) {
+    return new Promise((resolve, reject) => {
+      const query = 'SELECT * FROM fasts WHERE is_active = TRUE AND user_profile_id = ? ORDER BY start_time DESC LIMIT 1';
+
+      this.db.get(query, [userId], (err, row) => {
         if (err) {
           reject(err);
         } else {

@@ -52,7 +52,20 @@ app.get('/api/fasts', async (req, res) => {
 
 app.get('/api/fasts/active', async (req, res) => {
   try {
-    const activeFast = await db.getActiveFast();
+    const sessionId = req.query.sessionId || req.headers['x-session-id'];
+
+    if (!sessionId) {
+      return res.status(400).json({ error: 'Session ID required' });
+    }
+
+    // Get user profile first
+    const userProfile = await db.getUserProfileBySessionId(sessionId);
+    if (!userProfile) {
+      return res.status(404).json({ error: 'User profile not found' });
+    }
+
+    // Get active fast for this specific user
+    const activeFast = await db.getActiveFastByUserId(userProfile.id);
     res.json(activeFast);
   } catch (error) {
     console.error('Error fetching active fast:', error);
@@ -131,12 +144,6 @@ app.post('/api/fasts/start', async (req, res) => {
     const { start_time, notes, weight, sessionId } = req.body;
     console.log('Starting fast with sessionId:', sessionId);
 
-    // Check if there's already an active fast
-    const activeFast = await db.getActiveFast();
-    if (activeFast) {
-      return res.status(400).json({ error: 'There is already an active fast' });
-    }
-
     // Get user profile ID if session ID is provided
     let userProfileId = null;
     if (sessionId) {
@@ -146,8 +153,14 @@ app.post('/api/fasts/start', async (req, res) => {
         console.log('Creating new user profile for sessionId:', sessionId);
         profile = await db.createUserProfile({ session_id: sessionId });
       }
-      console.log('Found user profile:', profile ? profile.id : 'null');
+      console.log('Using user profile ID:', profile.id);
       userProfileId = profile.id;
+
+      // Check if there's already an active fast for this user
+      const activeFast = await db.getActiveFastByUserId(userProfileId);
+      if (activeFast) {
+        return res.status(400).json({ error: 'There is already an active fast' });
+      }
     }
 
     const fastData = {
@@ -858,6 +871,354 @@ app.post('/api/user/:sessionId/hunger-notification', async (req, res) => {
   } catch (error) {
     console.error('Error logging notification:', error);
     res.status(500).json({ error: 'Failed to log notification' });
+  }
+});
+
+// Benefits tracking endpoints
+app.get('/api/user/:sessionId/benefits-settings', async (req, res) => {
+  try {
+    const { sessionId } = req.params;
+
+    const profile = await db.getUserProfileBySessionId(sessionId);
+    if (!profile) {
+      return res.status(404).json({ error: 'User profile not found' });
+    }
+
+    // Parse custom mealtimes for benefits calculation
+    let customMealtimes;
+    if (profile.custom_mealtimes) {
+      try {
+        customMealtimes = JSON.parse(profile.custom_mealtimes);
+      } catch (e) {
+        console.error('Error parsing custom_mealtimes:', e);
+        customMealtimes = null;
+      }
+    }
+
+    res.json({
+      success: true,
+      data: {
+        avg_meal_cost: profile.avg_meal_cost || 10.00,
+        avg_meal_duration: profile.avg_meal_duration || 30,
+        benefits_enabled: profile.benefits_enabled !== false,
+        benefits_onboarded: profile.benefits_onboarded || false,
+        custom_mealtimes: customMealtimes
+      }
+    });
+
+  } catch (error) {
+    console.error('Error fetching benefits settings:', error);
+    res.status(500).json({ error: 'Failed to fetch benefits settings' });
+  }
+});
+
+app.put('/api/user/:sessionId/benefits-settings', async (req, res) => {
+  try {
+    const { sessionId } = req.params;
+    const { avg_meal_cost, avg_meal_duration, benefits_enabled, benefits_onboarded } = req.body;
+
+    // Validate inputs
+    if (avg_meal_cost !== undefined) {
+      if (typeof avg_meal_cost !== 'number' || avg_meal_cost < 0 || avg_meal_cost > 1000) {
+        return res.status(400).json({ error: 'Average meal cost must be between $0 and $1000' });
+      }
+    }
+
+    if (avg_meal_duration !== undefined) {
+      if (typeof avg_meal_duration !== 'number' || avg_meal_duration < 5 || avg_meal_duration > 240) {
+        return res.status(400).json({ error: 'Average meal duration must be between 5 and 240 minutes' });
+      }
+    }
+
+    const updateData = {};
+    if (avg_meal_cost !== undefined) {
+      updateData.avg_meal_cost = avg_meal_cost;
+    }
+    if (avg_meal_duration !== undefined) {
+      updateData.avg_meal_duration = avg_meal_duration;
+    }
+    if (benefits_enabled !== undefined) {
+      updateData.benefits_enabled = benefits_enabled;
+    }
+    if (benefits_onboarded !== undefined) {
+      updateData.benefits_onboarded = benefits_onboarded;
+    }
+
+    const result = await db.updateUserProfile(sessionId, updateData);
+
+    if (result.changes === 0) {
+      return res.status(404).json({ error: 'User profile not found' });
+    }
+
+    res.json({
+      success: true,
+      message: 'Benefits settings updated successfully',
+      data: updateData
+    });
+
+  } catch (error) {
+    console.error('Error updating benefits settings:', error);
+    res.status(500).json({ error: 'Failed to update benefits settings' });
+  }
+});
+
+// Legacy endpoint for backward compatibility with BenefitsDataService
+app.get('/api/user/settings', async (req, res) => {
+  try {
+    const sessionId = req.query.sessionId || req.headers['x-session-id'];
+
+    if (!sessionId) {
+      return res.status(400).json({ error: 'Session ID required' });
+    }
+
+    const profile = await db.getUserProfileBySessionId(sessionId);
+    if (!profile) {
+      return res.status(404).json({ error: 'User profile not found' });
+    }
+
+    // Parse custom mealtimes
+    let customMealtimes;
+    if (profile.custom_mealtimes) {
+      try {
+        customMealtimes = JSON.parse(profile.custom_mealtimes);
+      } catch (e) {
+        console.error('Error parsing custom_mealtimes:', e);
+        customMealtimes = null;
+      }
+    }
+
+    res.json({
+      success: true,
+      data: {
+        avg_meal_cost: profile.avg_meal_cost || 10.00,
+        avg_meal_duration: profile.avg_meal_duration || 30,
+        benefits_enabled: profile.benefits_enabled !== false,
+        benefits_onboarded: profile.benefits_onboarded || false,
+        custom_mealtimes: customMealtimes,
+        hunger_coach_enabled: profile.hunger_coach_enabled !== false
+      }
+    });
+
+  } catch (error) {
+    console.error('Error fetching user settings:', error);
+    res.status(500).json({ error: 'Failed to fetch user settings' });
+  }
+});
+
+app.put('/api/user/settings', async (req, res) => {
+  try {
+    const sessionId = req.query.sessionId || req.headers['x-session-id'] || req.body.sessionId;
+
+    if (!sessionId) {
+      return res.status(400).json({ error: 'Session ID required' });
+    }
+
+    const {
+      avg_meal_cost,
+      avg_meal_duration,
+      benefits_enabled,
+      benefits_onboarded,
+      hunger_coach_enabled,
+      custom_mealtimes
+    } = req.body;
+
+    // Validate inputs
+    if (avg_meal_cost !== undefined) {
+      if (typeof avg_meal_cost !== 'number' || avg_meal_cost < 0 || avg_meal_cost > 1000) {
+        return res.status(400).json({ error: 'Average meal cost must be between $0 and $1000' });
+      }
+    }
+
+    if (avg_meal_duration !== undefined) {
+      if (typeof avg_meal_duration !== 'number' || avg_meal_duration < 5 || avg_meal_duration > 240) {
+        return res.status(400).json({ error: 'Average meal duration must be between 5 and 240 minutes' });
+      }
+    }
+
+    const updateData = {};
+    if (avg_meal_cost !== undefined) updateData.avg_meal_cost = avg_meal_cost;
+    if (avg_meal_duration !== undefined) updateData.avg_meal_duration = avg_meal_duration;
+    if (benefits_enabled !== undefined) updateData.benefits_enabled = benefits_enabled;
+    if (benefits_onboarded !== undefined) updateData.benefits_onboarded = benefits_onboarded;
+    if (hunger_coach_enabled !== undefined) updateData.hunger_coach_enabled = hunger_coach_enabled;
+    if (custom_mealtimes !== undefined) updateData.custom_mealtimes = JSON.stringify(custom_mealtimes);
+
+    const result = await db.updateUserProfile(sessionId, updateData);
+
+    if (result.changes === 0) {
+      return res.status(404).json({ error: 'User profile not found' });
+    }
+
+    res.json({
+      success: true,
+      message: 'Settings updated successfully',
+      data: updateData
+    });
+
+  } catch (error) {
+    console.error('Error updating user settings:', error);
+    res.status(500).json({ error: 'Failed to update user settings' });
+  }
+});
+
+app.get('/api/benefits/current-fast', async (req, res) => {
+  try {
+    const sessionId = req.query.sessionId || req.headers['x-session-id'];
+
+    if (!sessionId) {
+      return res.status(400).json({ error: 'Session ID required' });
+    }
+
+    // Get active fast
+    const activeFast = await db.getActiveFast();
+    if (!activeFast) {
+      return res.json({
+        success: true,
+        data: null,
+        message: 'No active fast found'
+      });
+    }
+
+    // Get user profile for preferences
+    const profile = await db.getUserProfileBySessionId(sessionId);
+    if (!profile) {
+      return res.status(404).json({ error: 'User profile not found' });
+    }
+
+    // Calculate benefits (simplified server-side calculation)
+    const now = new Date();
+    const fastStart = new Date(activeFast.start_time);
+    const fastDurationHours = (now - fastStart) / (1000 * 60 * 60);
+
+    // Simple meal estimation (3 meals per day)
+    const mealsSkipped = Math.floor(fastDurationHours / 8); // Rough estimate
+    const moneySaved = mealsSkipped * (profile.avg_meal_cost || 10.00);
+    const timeReclaimed = mealsSkipped * (profile.avg_meal_duration || 30);
+
+    res.json({
+      success: true,
+      data: {
+        fastId: activeFast.id,
+        fastStartTime: activeFast.start_time,
+        currentTime: now.toISOString(),
+        fastDurationHours: Math.round(fastDurationHours * 100) / 100,
+        mealsSkipped,
+        moneySaved: Math.round(moneySaved * 100) / 100,
+        timeReclaimed,
+        preferences: {
+          avgMealCost: profile.avg_meal_cost || 10.00,
+          avgMealDuration: profile.avg_meal_duration || 30,
+          benefitsEnabled: profile.benefits_enabled !== false
+        }
+      }
+    });
+
+  } catch (error) {
+    console.error('Error getting current fast benefits:', error);
+    res.status(500).json({ error: 'Failed to get current fast benefits' });
+  }
+});
+
+app.get('/api/benefits/cumulative', async (req, res) => {
+  try {
+    const sessionId = req.query.sessionId || req.headers['x-session-id'];
+    const timeframe = req.query.timeframe || 'all';
+
+    if (!sessionId) {
+      return res.status(400).json({ error: 'Session ID required' });
+    }
+
+    // Get user profile
+    const profile = await db.getUserProfileBySessionId(sessionId);
+    if (!profile) {
+      return res.status(404).json({ error: 'User profile not found' });
+    }
+
+    // Get user fasts
+    const fasts = await db.getFastsByUserProfile(profile.id, 1000, 0); // Get many fasts
+
+    // Filter by timeframe
+    let filteredFasts = fasts;
+    if (timeframe !== 'all') {
+      const now = new Date();
+      let cutoffDate;
+
+      switch (timeframe) {
+        case 'week':
+          cutoffDate = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+          break;
+        case 'month':
+          cutoffDate = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+          break;
+        case 'year':
+          cutoffDate = new Date(now.getTime() - 365 * 24 * 60 * 60 * 1000);
+          break;
+        default:
+          cutoffDate = new Date(0);
+      }
+
+      filteredFasts = fasts.filter(fast => new Date(fast.start_time) >= cutoffDate);
+    }
+
+    // Calculate cumulative benefits
+    let totalMealsSkipped = 0;
+    let totalDurationHours = 0;
+
+    filteredFasts.forEach(fast => {
+      if (fast.duration_hours) {
+        totalDurationHours += fast.duration_hours;
+        // Estimate meals skipped (3 meals per day)
+        totalMealsSkipped += Math.floor(fast.duration_hours / 8);
+      }
+    });
+
+    const totalMoneySaved = totalMealsSkipped * (profile.avg_meal_cost || 10.00);
+    const totalTimeReclaimed = totalMealsSkipped * (profile.avg_meal_duration || 30);
+
+    res.json({
+      success: true,
+      data: {
+        timeframe,
+        totalFasts: filteredFasts.length,
+        totalDurationHours: Math.round(totalDurationHours * 100) / 100,
+        totalMealsSkipped,
+        totalMoneySaved: Math.round(totalMoneySaved * 100) / 100,
+        totalTimeReclaimed,
+        averageFastDuration: filteredFasts.length > 0 ?
+          Math.round((totalDurationHours / filteredFasts.length) * 100) / 100 : 0
+      }
+    });
+
+  } catch (error) {
+    console.error('Error getting cumulative benefits:', error);
+    res.status(500).json({ error: 'Failed to get cumulative benefits' });
+  }
+});
+
+app.post('/api/benefits/onboarding-complete', async (req, res) => {
+  try {
+    const sessionId = req.body.sessionId || req.query.sessionId || req.headers['x-session-id'];
+
+    if (!sessionId) {
+      return res.status(400).json({ error: 'Session ID required' });
+    }
+
+    const result = await db.updateUserProfile(sessionId, {
+      benefits_onboarded: true
+    });
+
+    if (result.changes === 0) {
+      return res.status(404).json({ error: 'User profile not found' });
+    }
+
+    res.json({
+      success: true,
+      message: 'Benefits onboarding completed'
+    });
+
+  } catch (error) {
+    console.error('Error completing benefits onboarding:', error);
+    res.status(500).json({ error: 'Failed to complete benefits onboarding' });
   }
 });
 

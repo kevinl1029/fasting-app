@@ -712,6 +712,43 @@
             box-shadow: 0 8px 24px rgba(6, 182, 212, 0.12);
         }
 
+        /* Benefits Card - Matching Design System */
+        .benefits-card {
+            margin: 25px 0;
+            padding: 24px;
+            background: linear-gradient(135deg, rgba(16, 185, 129, 0.08), rgba(5, 150, 105, 0.06));
+            border-radius: 16px;
+            border: 1px solid rgba(16, 185, 129, 0.15);
+            box-shadow: 0 4px 16px rgba(16, 185, 129, 0.08);
+            min-height: 140px;
+            transition: all 0.4s ease;
+            opacity: 1;
+            transform: translateY(0);
+            cursor: pointer;
+        }
+
+        .benefits-card.hidden {
+            display: none;
+        }
+
+        .benefits-card.slide-in {
+            animation: slideInUp 0.5s ease-out;
+        }
+
+        .benefits-card.fading {
+            opacity: 0.6;
+        }
+
+        .benefits-card.expanded {
+            min-height: 200px;
+            box-shadow: 0 8px 32px rgba(16, 185, 129, 0.15);
+        }
+
+        .benefits-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 24px rgba(16, 185, 129, 0.12);
+        }
+
         .time-display {
             margin: 20px 0;
             padding: 15px;
@@ -1604,6 +1641,7 @@
                     </div>
                 </div>
 
+                <!-- Contextual Cards (Hunger Coach + Benefits) -->
                 <!-- Hunger Coach Card -->
                 <div class="hunger-coach-card hidden" id="hungerCoachCard" onclick="handleCardTap(event)">
                     <!-- Inline Icon + Message Content -->
@@ -1620,6 +1658,25 @@
 
                         <!-- See More Link -->
                         <a href="#" class="see-more-link" id="hungerSeeMoreLink" onclick="handleSeeMoreClick(event)">See More</a>
+                    </div>
+                </div>
+
+                <!-- Benefits Card -->
+                <div class="benefits-card hidden" id="benefitsCard" onclick="handleBenefitsCardTap(event)">
+                    <!-- Inline Icon + Message Content -->
+                    <div class="card-content">
+                        <p class="card-message" id="benefitsCardMessage">
+                            <span class="inline-icon" id="benefitsCardIcon">💰</span>
+                            <span id="benefitsCardText">Loading benefits...</span>
+                        </p>
+
+                        <!-- Extended content shown on tap -->
+                        <div class="card-extended" id="benefitsCardExtended" style="display: none;">
+                            <p class="extended-text" id="benefitsExtendedText">Detailed benefits information will appear here when you tap the card.</p>
+                        </div>
+
+                        <!-- See More Link -->
+                        <a href="#" class="see-more-link" id="benefitsSeeMoreLink" onclick="handleBenefitsSeeMoreClick(event)">View Dashboard</a>
                     </div>
                 </div>
 
@@ -1718,6 +1775,15 @@
     <script src="/js/modules/notification-service.js"></script>
     <script src="/js/modules/global-notification-manager.js"></script>
 
+    <!-- Contextual Cards System -->
+    <script src="/js/components/ContextualCard.js"></script>
+    <script src="/js/components/HungerCoachCard.js"></script>
+    <script src="/js/components/BenefitsCard.js"></script>
+    <script src="/js/services/MealTimeDetector.js"></script>
+    <script src="/js/services/BenefitsCalculator.js"></script>
+    <script src="/js/services/BenefitsDataService.js"></script>
+    <script src="/js/managers/CardRotationManager.js"></script>
+
     <script>
         // Timer state
         let isRunning = false;
@@ -1732,11 +1798,13 @@
         const globalSessionId = localStorage.getItem('fastingForecast_sessionId');
         let currentFastId = null;
 
-        // Hunger Coach
-        let hungerCoach = null;
+        // Contextual Cards System
+        let cardRotationManager = null;
         let notificationService = null;
-        let tipRotationInterval = null;
-        const TIP_ROTATION_INTERVAL = 18000; // 18 seconds
+        const CARD_ROTATION_INTERVAL = 12000; // 12 seconds
+
+        // Legacy hunger coach for backwards compatibility
+        let hungerCoach = null;
 
         // Milestone definitions
         const milestones = [
@@ -1802,15 +1870,41 @@
             }
         };
 
-        // Hunger Coach Functions
-        async function initializeHungerCoach() {
+        // Card Rotation Manager Functions
+        async function initializeCardRotationManager() {
+            try {
+                if (window.CardRotationManager) {
+                    cardRotationManager = new CardRotationManager({
+                        rotationInterval: CARD_ROTATION_INTERVAL,
+                        mealTimeToleranceMinutes: 30,
+                        enableRotation: true
+                    });
+
+                    await cardRotationManager.init();
+                    console.log('Card Rotation Manager initialized successfully');
+                    return true;
+                } else {
+                    console.warn('CardRotationManager not available, falling back to legacy hunger coach');
+                    return await initializeLegacyHungerCoach();
+                }
+            } catch (error) {
+                console.error('Failed to initialize Card Rotation Manager:', error);
+                console.log('Falling back to legacy hunger coach');
+                return await initializeLegacyHungerCoach();
+            }
+        }
+
+        // Legacy Hunger Coach Functions (fallback)
+        async function initializeLegacyHungerCoach() {
             try {
                 hungerCoach = new HungerCoach();
                 await hungerCoach.init();
-                console.log('Hunger Coach initialized');
+                console.log('Legacy Hunger Coach initialized');
+                return true;
             } catch (error) {
-                console.error('Failed to initialize Hunger Coach:', error);
+                console.error('Failed to initialize Legacy Hunger Coach:', error);
                 hungerCoach = null;
+                return false;
             }
         }
 
@@ -1830,21 +1924,60 @@
             }
         }
 
-        async function showHungerCoachCard() {
-            const card = document.getElementById('hungerCoachCard');
-            if (card && hungerCoach && isRunning) {
-                card.classList.remove('hidden');
-                card.classList.add('slide-in');
+        async function showContextualCards() {
+            if (cardRotationManager && isRunning) {
+                try {
+                    // Get user meal times for context
+                    const mealtimes = await getUserMealtimes();
+
+                    // Update fast state in card rotation manager
+                    cardRotationManager.updateFastState(isRunning, fastStartTime, mealtimes);
+
+                    console.log('Contextual cards updated for active fast');
+                } catch (error) {
+                    console.error('Error showing contextual cards:', error);
+
+                    // Fallback to legacy hunger coach
+                    await showLegacyHungerCoachCard();
+                }
+            } else if (hungerCoach && isRunning) {
+                // Fallback to legacy implementation
+                await showLegacyHungerCoachCard();
+            }
+        }
+
+        function hideContextualCards() {
+            if (cardRotationManager) {
+                try {
+                    // Hide cards by updating fast state
+                    cardRotationManager.updateFastState(false, null, null);
+                    console.log('Contextual cards hidden');
+                } catch (error) {
+                    console.error('Error hiding contextual cards:', error);
+                    hideLegacyHungerCoachCard();
+                }
+            } else {
+                // Fallback to legacy implementation
+                hideLegacyHungerCoachCard();
+            }
+        }
+
+        // Legacy implementations for fallback
+        async function showLegacyHungerCoachCard() {
+            const hungerCard = document.getElementById('hungerCoachCard');
+            if (hungerCard && hungerCoach && isRunning) {
+                hungerCard.classList.remove('hidden');
+                hungerCard.classList.add('slide-in');
                 await updateHungerCard();
                 startTipRotation();
             }
         }
 
-        function hideHungerCoachCard() {
-            const card = document.getElementById('hungerCoachCard');
-            if (card) {
-                card.classList.add('hidden');
-                card.classList.remove('slide-in');
+        function hideLegacyHungerCoachCard() {
+            const hungerCard = document.getElementById('hungerCoachCard');
+            if (hungerCard) {
+                hungerCard.classList.add('hidden');
+                hungerCard.classList.remove('slide-in');
                 stopTipRotation();
             }
         }
@@ -1980,6 +2113,68 @@
             setTimeout(async () => {
                 await updateHungerCard();
             }, 3000);
+        }
+
+        // Benefits Card Event Handlers
+        function handleBenefitsCardTap(event) {
+            // Prevent card tap when See More link is clicked
+            if (event.target.id === 'benefitsSeeMoreLink') {
+                return;
+            }
+
+            const benefitsCard = document.getElementById('benefitsCard');
+            const benefitsExtendedContent = document.getElementById('benefitsCardExtended');
+            const benefitsExtendedText = document.getElementById('benefitsExtendedText');
+
+            if (!benefitsCard || !benefitsExtendedContent) return;
+
+            // Toggle expanded state
+            const benefitsIsExpanded = benefitsCard.classList.contains('expanded');
+
+            if (!benefitsIsExpanded) {
+                // Expand the card
+                benefitsCard.classList.add('expanded');
+                benefitsExtendedContent.style.display = 'block';
+
+                // Update extended content if needed
+                if (!benefitsExtendedText.textContent || benefitsExtendedText.textContent === 'Detailed benefits information will appear here when you tap the card.') {
+                    updateBenefitsExtendedContent();
+                }
+
+                // Notify card rotation manager about user interaction
+                if (cardRotationManager) {
+                    cardRotationManager.onCardTap('benefits', event);
+                }
+            } else {
+                // Collapse the card
+                benefitsCard.classList.remove('expanded');
+                benefitsExtendedContent.style.display = 'none';
+            }
+        }
+
+        function handleBenefitsSeeMoreClick(event) {
+            // Prevent event bubbling to card tap handler
+            event.preventDefault();
+            event.stopPropagation();
+
+            // Navigate to dashboard benefits tab
+            window.location.href = '/dashboard#benefits';
+        }
+
+        function updateBenefitsExtendedContent() {
+            const benefitsExtendedTextElement = document.getElementById('benefitsExtendedText');
+            if (!benefitsExtendedTextElement) return;
+
+            // Calculate some quick benefits for display
+            const elapsedHours = Math.floor(getElapsedTime() / (60 * 60 * 1000));
+            const estimatedMealsSkipped = Math.floor(elapsedHours / 8); // Rough estimate
+            const estimatedSavings = estimatedMealsSkipped * 10; // $10 per meal estimate
+
+            if (estimatedSavings > 0) {
+                benefitsExtendedTextElement.textContent = `So far you've skipped ${estimatedMealsSkipped} meal${estimatedMealsSkipped === 1 ? '' : 's'} and saved approximately $${estimatedSavings}. Visit the Benefits tab in your dashboard for detailed tracking and insights.`;
+            } else {
+                benefitsExtendedTextElement.textContent = 'Keep going! Your benefits will grow with each meal you skip. Visit the Benefits tab in your dashboard for detailed tracking.';
+            }
         }
 
         function startTipRotation() {
@@ -2460,8 +2655,18 @@
                 }
             }
 
-            // 4. Update hunger coach with new elapsed time
-            if (hungerCoach) {
+            // 4. Update contextual cards with new elapsed time
+            if (cardRotationManager) {
+                try {
+                    // Card rotation manager handles its own updates automatically
+                    // Just ensure fast state is current
+                    const mealtimes = await getUserMealtimes();
+                    cardRotationManager.updateFastState(isRunning, fastStartTime, mealtimes);
+                } catch (error) {
+                    console.error('Error updating contextual cards:', error);
+                }
+            } else if (hungerCoach) {
+                // Fallback to legacy hunger coach update
                 try {
                     await updateHungerCard();
                 } catch (error) {
@@ -2521,11 +2726,11 @@
             // Create milestone markers
             createMilestoneMarkers();
 
-            // Initialize and show hunger coach
-            if (!hungerCoach) {
-                await initializeHungerCoach();
+            // Initialize and show contextual cards
+            if (!cardRotationManager) {
+                await initializeCardRotationManager();
             }
-            await showHungerCoachCard();
+            await showContextualCards();
 
             // Start global notifications for the fast
             if (globalNotificationManager) {
@@ -2556,8 +2761,8 @@
                 clearInterval(timerInterval);
                 isRunning = false;
 
-                // Hide hunger coach and stop global notifications
-                hideHungerCoachCard();
+                // Hide contextual cards and stop global notifications
+                hideContextualCards();
                 if (globalNotificationManager) {
                     globalNotificationManager.stopNotificationsForFast();
                 }
@@ -3319,8 +3524,15 @@
             try {
                 // First check if we have timer state in localStorage
                 const savedTimerState = localStorage.getItem('fastingForecast_timerState');
-                
-                const activeResponse = await fetch('/api/fasts/active');
+
+                // Get session ID for user-specific active fast check
+                const sessionId = localStorage.getItem('fastingForecast_sessionId');
+                if (!sessionId) {
+                    console.log('No session ID found, cannot check for active fast');
+                    return;
+                }
+
+                const activeResponse = await fetch(`/api/fasts/active?sessionId=${sessionId}`);
                 if (activeResponse.ok) {
                     const activeFast = await activeResponse.json();
                     if (activeFast && savedTimerState) {
@@ -3331,9 +3543,36 @@
                         console.log('Clearing stale timer state from localStorage');
                         localStorage.removeItem('fastingForecast_timerState');
                     } else if (activeFast && !savedTimerState) {
-                        // Database has active fast but no localStorage state - just set currentFastId
+                        // Database has active fast but no localStorage state - restore the timer
+                        console.log('Found active fast but no localStorage state, restoring timer:', activeFast);
                         currentFastId = activeFast.id;
-                        console.log('Found active fast but no localStorage state:', activeFast);
+                        fastStartTime = new Date(activeFast.start_time);
+                        isRunning = true;
+                        elapsedTime = Date.now() - fastStartTime.getTime();
+
+                        // Show active fast UI
+                        document.getElementById('preFastState').style.display = 'none';
+                        document.getElementById('activeFastState').style.display = 'block';
+                        document.querySelector('.welcome-message').style.display = 'none';
+
+                        // Set up timer display
+                        updateTimerDisplay();
+
+                        // Start the timer interval
+                        timerInterval = setInterval(() => {
+                            elapsedTime = Date.now() - fastStartTime.getTime();
+                            updateTimerDisplay();
+                        }, 1000);
+
+                        // Initialize cards and notifications
+                        if (!cardRotationManager) {
+                            await initializeCardRotationManager();
+                        }
+                        await showContextualCards();
+
+                        if (globalNotificationManager) {
+                            await globalNotificationManager.startNotificationsForFast(fastStartTime, 24); // Default 24h duration
+                        }
                     }
                 }
             } catch (error) {
@@ -3376,11 +3615,11 @@
                 // Create milestone markers
                 createMilestoneMarkers();
 
-                // Initialize and show hunger coach
-                if (!hungerCoach) {
-                    await initializeHungerCoach();
+                // Initialize and show contextual cards
+                if (!cardRotationManager) {
+                    await initializeCardRotationManager();
                 }
-                await showHungerCoachCard();
+                await showContextualCards();
 
                 // Resume global notifications for the fast
                 if (globalNotificationManager) {

@@ -57,6 +57,76 @@
             font-size: 0.95rem;
         }
         
+        /* Active Fast Section */
+        .active-fast-section {
+            background: linear-gradient(135deg, rgba(34, 197, 94, 0.08), rgba(22, 163, 74, 0.06));
+            border: 1px solid rgba(34, 197, 94, 0.15);
+            border-radius: 16px;
+            margin: 20px 30px;
+            padding: 20px;
+            transition: all 0.3s ease;
+        }
+
+        .active-fast-section.hidden {
+            display: none;
+        }
+
+        /* General hidden class for cards */
+        .hidden {
+            display: none !important;
+        }
+
+        .active-fast-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
+            padding-bottom: 12px;
+            border-bottom: 1px solid rgba(34, 197, 94, 0.15);
+        }
+
+        .active-fast-header h3 {
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: #059669;
+            margin: 0;
+        }
+
+        .fast-duration {
+            font-size: 1rem;
+            font-weight: 700;
+            color: #047857;
+            background: rgba(34, 197, 94, 0.1);
+            padding: 4px 12px;
+            border-radius: 8px;
+        }
+
+        /* Dashboard-specific card styles (inherit from timer cards but adapt for dashboard) */
+        .active-fast-section .hunger-coach-card,
+        .active-fast-section .benefits-card {
+            margin: 16px 0 0 0;
+            padding: 20px;
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.9), rgba(248, 250, 252, 0.8));
+            border: 1px solid rgba(0, 0, 0, 0.08);
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+            min-height: 100px;
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+
+        .active-fast-section .hunger-coach-card:hover,
+        .active-fast-section .benefits-card:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+
+        .active-fast-section .hunger-coach-card.expanded,
+        .active-fast-section .benefits-card.expanded {
+            min-height: 140px;
+            box-shadow: 0 6px 16px rgba(0, 0, 0, 0.15);
+        }
+
         /* Sub-navigation tabs */
         .sub-nav {
             display: flex;
@@ -317,7 +387,219 @@
         .placeholder-content p {
             font-size: 0.9rem;
         }
-        
+
+        /* Benefits Tab Styles */
+        .benefits-hero {
+            display: flex;
+            gap: 16px;
+            padding: 20px 30px;
+            border-bottom: 1px solid #f0f0f0;
+        }
+
+        .benefits-stat {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 16px;
+            background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+            border-radius: 12px;
+        }
+
+        .benefits-stat-icon {
+            font-size: 1.8rem;
+            width: 48px;
+            height: 48px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: white;
+            border-radius: 50%;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+
+        .benefits-stat-content {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .benefits-stat-value {
+            font-size: 1.4rem;
+            font-weight: 700;
+            color: #1a202c;
+            line-height: 1.2;
+        }
+
+        .benefits-stat-label {
+            font-size: 0.8rem;
+            color: #64748b;
+            font-weight: 500;
+        }
+
+        .timeframe-toggle {
+            display: flex;
+            padding: 16px 30px;
+            gap: 8px;
+            border-bottom: 1px solid #f0f0f0;
+        }
+
+        .timeframe-btn {
+            flex: 1;
+            padding: 8px 12px;
+            border: 1px solid #e2e8f0;
+            background: white;
+            border-radius: 8px;
+            font-size: 0.8rem;
+            font-weight: 500;
+            color: #64748b;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .timeframe-btn.active {
+            background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+            color: white;
+            border-color: transparent;
+            box-shadow: 0 2px 4px rgba(59, 130, 246, 0.3);
+        }
+
+        .timeframe-btn:hover:not(.active) {
+            background: #f8fafc;
+            border-color: #cbd5e1;
+        }
+
+        .benefits-section {
+            padding: 20px 30px;
+            border-bottom: 1px solid #f8fafc;
+        }
+
+        .benefits-section:last-child {
+            border-bottom: none;
+        }
+
+        .benefits-section-title {
+            font-size: 1rem;
+            font-weight: 600;
+            color: #1a202c;
+            margin-bottom: 16px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .milestones-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+            gap: 12px;
+        }
+
+        .milestone-badge {
+            background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%);
+            color: white;
+            padding: 8px 12px;
+            border-radius: 8px;
+            text-align: center;
+            font-size: 0.8rem;
+            font-weight: 600;
+            box-shadow: 0 2px 4px rgba(245, 158, 11, 0.3);
+        }
+
+        .milestone-badge.achieved {
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+            box-shadow: 0 2px 4px rgba(16, 185, 129, 0.3);
+        }
+
+        .equivalences-list {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .equivalence-item {
+            background: #f8fafc;
+            padding: 12px 16px;
+            border-radius: 8px;
+            border-left: 4px solid #3b82f6;
+            font-size: 0.9rem;
+            color: #475569;
+        }
+
+        .quick-stats {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px;
+        }
+
+        .quick-stat {
+            text-align: center;
+            padding: 16px;
+            background: #f8fafc;
+            border-radius: 8px;
+        }
+
+        .quick-stat-value {
+            display: block;
+            font-size: 1.6rem;
+            font-weight: 700;
+            color: #1a202c;
+            margin-bottom: 4px;
+        }
+
+        .quick-stat-label {
+            font-size: 0.8rem;
+            color: #64748b;
+            font-weight: 500;
+        }
+
+        .benefits-actions {
+            padding: 20px 30px;
+            text-align: center;
+        }
+
+        .benefits-settings-btn {
+            background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 10px;
+            font-size: 0.9rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
+        }
+
+        .benefits-settings-btn:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 6px 16px rgba(99, 102, 241, 0.4);
+        }
+
+        .benefits-settings-btn:active {
+            transform: translateY(0);
+        }
+
+        .benefits-loading {
+            text-align: center;
+            padding: 40px 20px;
+            color: #64748b;
+        }
+
+        .benefits-empty {
+            text-align: center;
+            padding: 40px 20px;
+            color: #64748b;
+        }
+
+        .benefits-empty h3 {
+            font-size: 1.1rem;
+            margin-bottom: 8px;
+            color: #475569;
+        }
+
+        .benefits-empty p {
+            font-size: 0.9rem;
+        }
+
         /* Bottom Navigation - copied from timer.html */
         .bottom-nav {
             position: fixed;
@@ -630,11 +912,48 @@
                 <h1>Dashboard</h1>
                 <p>Track your fasting journey and progress</p>
             </div>
-            
+
+            <!-- Active Fast Card Display (only shown during active fasts) -->
+            <div class="active-fast-section hidden" id="activeFastSection">
+                <div class="active-fast-header">
+                    <h3>Active Fast in Progress</h3>
+                    <span class="fast-duration" id="activeFastDuration">8h 24m</span>
+                </div>
+
+                <!-- Contextual Cards (Hunger Coach + Benefits) -->
+                <!-- Hunger Coach Card -->
+                <div class="hunger-coach-card hidden" id="dashboardHungerCard" onclick="handleDashboardHungerCardTap(event)">
+                    <div class="card-content">
+                        <p class="card-message" id="dashboardHungerCardMessage">
+                            <span class="inline-icon" id="dashboardHungerCardIcon">🍵</span>
+                            <span id="dashboardHungerCardText">Loading helpful tips...</span>
+                        </p>
+                        <div class="card-extended" id="dashboardHungerCardExtended" style="display: none;">
+                            <p class="extended-text" id="dashboardHungerExtendedText">Additional context and tips will appear here when you tap the card.</p>
+                        </div>
+                        <a href="#" class="see-more-link" id="dashboardHungerSeeMoreLink" onclick="handleDashboardSeeMoreClick(event)">See More</a>
+                    </div>
+                </div>
+
+                <!-- Benefits Card -->
+                <div class="benefits-card hidden" id="dashboardBenefitsCard" onclick="handleDashboardBenefitsCardTap(event)">
+                    <div class="card-content">
+                        <p class="card-message" id="dashboardBenefitsCardMessage">
+                            <span class="inline-icon" id="dashboardBenefitsCardIcon">💰</span>
+                            <span id="dashboardBenefitsCardText">Loading benefits...</span>
+                        </p>
+                        <div class="card-extended" id="dashboardBenefitsCardExtended" style="display: none;">
+                            <p class="extended-text" id="dashboardBenefitsExtendedText">Detailed benefits information will appear here when you tap the card.</p>
+                        </div>
+                        <a href="#" class="see-more-link" id="dashboardBenefitsSeeMoreLink" onclick="handleDashboardBenefitsSeeMoreClick(event)">View Benefits Tab</a>
+                    </div>
+                </div>
+            </div>
+
             <!-- Sub Navigation -->
             <div class="sub-nav">
                 <button class="sub-nav-item active" data-tab="log">Log</button>
-                <button class="sub-nav-item disabled" data-tab="charts">Charts</button>
+                <button class="sub-nav-item" data-tab="benefits">Benefits</button>
                 <button class="sub-nav-item disabled" data-tab="photos">Photos</button>
             </div>
             
@@ -690,16 +1009,69 @@
                     </div>
                 </div>
                 
-                <!-- Charts Tab -->
-                <div id="charts-tab" class="tab-content">
-                    <div class="placeholder-content">
-                        <svg class="placeholder-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                            <line x1="18" y1="20" x2="18" y2="10"/>
-                            <line x1="12" y1="20" x2="12" y2="4"/>
-                            <line x1="6" y1="20" x2="6" y2="14"/>
-                        </svg>
-                        <h3>Charts Coming Soon</h3>
-                        <p>Visualize your fasting patterns, streaks, and progress over time.</p>
+                <!-- Benefits Tab -->
+                <div id="benefits-tab" class="tab-content">
+                    <!-- Hero Stats -->
+                    <div class="benefits-hero">
+                        <div class="benefits-stat">
+                            <div class="benefits-stat-icon">💰</div>
+                            <div class="benefits-stat-content">
+                                <span class="benefits-stat-value" id="total-money-saved">$0.00</span>
+                                <span class="benefits-stat-label">Money Saved</span>
+                            </div>
+                        </div>
+                        <div class="benefits-stat">
+                            <div class="benefits-stat-icon">⏰</div>
+                            <div class="benefits-stat-content">
+                                <span class="benefits-stat-value" id="total-time-reclaimed">0h</span>
+                                <span class="benefits-stat-label">Time Reclaimed</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Timeframe Toggle -->
+                    <div class="timeframe-toggle">
+                        <button class="timeframe-btn active" data-timeframe="week">Week</button>
+                        <button class="timeframe-btn" data-timeframe="month">Month</button>
+                        <button class="timeframe-btn" data-timeframe="all">All Time</button>
+                    </div>
+
+                    <!-- Milestones Section -->
+                    <div class="benefits-section">
+                        <h3 class="benefits-section-title">🎯 Milestones</h3>
+                        <div class="milestones-grid" id="milestones-grid">
+                            <!-- Milestones will be populated here -->
+                        </div>
+                    </div>
+
+                    <!-- Equivalences Section -->
+                    <div class="benefits-section">
+                        <h3 class="benefits-section-title">💡 What You've Earned</h3>
+                        <div class="equivalences-list" id="equivalences-list">
+                            <!-- Equivalences will be populated here -->
+                        </div>
+                    </div>
+
+                    <!-- Quick Stats -->
+                    <div class="benefits-section">
+                        <h3 class="benefits-section-title">📊 Quick Stats</h3>
+                        <div class="quick-stats">
+                            <div class="quick-stat">
+                                <span class="quick-stat-value" id="meals-skipped">0</span>
+                                <span class="quick-stat-label">Meals Skipped</span>
+                            </div>
+                            <div class="quick-stat">
+                                <span class="quick-stat-value" id="avg-savings-per-fast">$0</span>
+                                <span class="quick-stat-label">Avg per Fast</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Settings Button -->
+                    <div class="benefits-actions">
+                        <button class="benefits-settings-btn" id="benefits-settings-btn">
+                            ⚙️ Adjust Preferences
+                        </button>
                     </div>
                 </div>
                 
@@ -880,9 +1252,63 @@
         </div>
     </div>
 
+    <!-- Benefits Onboarding Modal -->
+    <div id="benefits-onboarding-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Welcome to Benefits Tracking! 🎉</h2>
+                <button type="button" class="modal-close" onclick="hideBenefitsOnboardingModal()">×</button>
+            </div>
+            <div class="modal-body">
+                <div style="text-align: center; margin-bottom: 20px;">
+                    <div style="font-size: 3rem; margin-bottom: 10px;">💰⏰🎯</div>
+                    <p style="font-size: 1.1rem; color: #555; margin-bottom: 20px;">
+                        Track the money you save and time you reclaim from fasting, plus see your progress with achievement milestones!
+                    </p>
+                </div>
+
+                <div style="background: #f8f9fa; padding: 15px; border-radius: 8px; margin-bottom: 20px;">
+                    <h3 style="margin-top: 0; color: #333;">What you'll see:</h3>
+                    <ul style="margin: 10px 0; padding-left: 20px;">
+                        <li><strong>Money Saved:</strong> Track dollars saved by skipping meals</li>
+                        <li><strong>Time Reclaimed:</strong> See hours gained from not meal prepping</li>
+                        <li><strong>Achievement Badges:</strong> Unlock milestones as you progress</li>
+                        <li><strong>Smart Equivalences:</strong> "Enough saved for running shoes!"</li>
+                    </ul>
+                </div>
+
+                <div style="background: #e3f2fd; padding: 15px; border-radius: 8px; margin-bottom: 20px;">
+                    <p style="margin: 0; color: #1976d2; font-weight: 500;">
+                        💡 <strong>Pro tip:</strong> Customize your average meal cost and prep time in Settings to get personalized calculations!
+                    </p>
+                </div>
+
+                <div style="display: flex; gap: 10px; justify-content: center;">
+                    <button type="button" class="btn btn-secondary" onclick="goToBenefitsSettings()">
+                        Customize Settings
+                    </button>
+                    <button type="button" class="btn btn-primary" onclick="completeBenefitsOnboarding()">
+                        Get Started
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Global Notification Manager -->
     <script src="/js/modules/hunger-coach.js"></script>
     <script src="/js/modules/global-notification-manager.js"></script>
+
+    <!-- Benefits Tracking -->
+    <script src="/js/services/BenefitsCalculator.js"></script>
+    <script src="/js/services/BenefitsDataService.js"></script>
+
+    <!-- Card System Components -->
+    <script src="/js/components/ContextualCard.js"></script>
+    <script src="/js/components/HungerCoachCard.js"></script>
+    <script src="/js/components/BenefitsCard.js"></script>
+    <script src="/js/services/MealTimeDetector.js"></script>
+    <script src="/js/managers/CardRotationManager.js"></script>
 
     <script>
         let fasts = [];
@@ -911,8 +1337,577 @@
             
             // Load fasting data
             loadFasts();
+
+            // Initialize Benefits tab functionality
+            initializeBenefitsTab();
+
+            // Initialize dashboard active fast display
+            initializeDashboardActiveFast();
         });
-        
+
+        // Benefits Tab Functionality
+        let benefitsDataService = null;
+        let currentTimeframe = 'week';
+
+        // Meal times functionality for card rotation
+        let userMealtimes = null;
+        let mealtimesLoaded = false;
+
+        async function getUserMealtimes() {
+            // Return cached mealtimes if already loaded
+            if (mealtimesLoaded && userMealtimes) {
+                return userMealtimes;
+            }
+
+            const sessionId = localStorage.getItem('fastingForecast_sessionId');
+            if (!sessionId) {
+                // Return defaults if no session
+                const defaults = {
+                    breakfast: '08:00',
+                    lunch: '12:00',
+                    dinner: '18:00'
+                };
+                userMealtimes = defaults;
+                mealtimesLoaded = true;
+                return defaults;
+            }
+
+            try {
+                const response = await fetch(`/api/user/${sessionId}/hunger-settings`);
+                if (response.ok) {
+                    const settings = await response.json();
+
+                    // Convert custom_mealtimes array to object format expected by CardRotationManager
+                    const mealtimes = {};
+                    if (settings.custom_mealtimes && Array.isArray(settings.custom_mealtimes)) {
+                        settings.custom_mealtimes.forEach(meal => {
+                            // Use meal name as key, but convert to lowercase for consistency
+                            const key = meal.name.toLowerCase().replace(/\s+/g, '_');
+                            mealtimes[key] = meal.time;
+                        });
+                    }
+
+                    // Fallback to defaults if no custom mealtimes
+                    if (Object.keys(mealtimes).length === 0) {
+                        userMealtimes = {
+                            breakfast: '08:00',
+                            lunch: '12:00',
+                            dinner: '18:00'
+                        };
+                    } else {
+                        userMealtimes = mealtimes;
+                    }
+
+                    mealtimesLoaded = true;
+                    return userMealtimes;
+                } else {
+                    console.error('Failed to load user mealtimes:', response.status);
+                    // Return defaults on failure
+                    const defaults = {
+                        breakfast: '08:00',
+                        lunch: '12:00',
+                        dinner: '18:00'
+                    };
+                    userMealtimes = defaults;
+                    mealtimesLoaded = true;
+                    return defaults;
+                }
+            } catch (error) {
+                console.error('Error loading user mealtimes:', error);
+                // Return defaults on error
+                const defaults = {
+                    breakfast: '08:00',
+                    lunch: '12:00',
+                    dinner: '18:00'
+                };
+                userMealtimes = defaults;
+                mealtimesLoaded = true;
+                return defaults;
+            }
+        }
+
+        async function initializeBenefitsTab() {
+            try {
+                // Initialize benefits data service
+                benefitsDataService = new BenefitsDataService();
+                await benefitsDataService.init();
+
+                // Set up event listeners
+                setupBenefitsEventListeners();
+
+                // Load initial benefits data
+                await loadBenefitsData();
+
+                console.log('Benefits tab initialized successfully');
+            } catch (error) {
+                console.error('Failed to initialize benefits tab:', error);
+                showBenefitsError('Failed to load benefits data');
+            }
+        }
+
+        function setupBenefitsEventListeners() {
+            // Timeframe toggle buttons
+            document.querySelectorAll('.timeframe-btn').forEach(btn => {
+                btn.addEventListener('click', async function() {
+                    // Update active state
+                    document.querySelectorAll('.timeframe-btn').forEach(b => b.classList.remove('active'));
+                    this.classList.add('active');
+
+                    // Update timeframe and reload data
+                    currentTimeframe = this.getAttribute('data-timeframe');
+                    await loadBenefitsData();
+                });
+            });
+
+            // Settings button
+            const settingsBtn = document.getElementById('benefits-settings-btn');
+            if (settingsBtn) {
+                settingsBtn.addEventListener('click', function() {
+                    showBenefitsSettingsModal();
+                });
+            }
+
+            // Listen for tab switches to Benefits
+            document.querySelector('[data-tab="benefits"]').addEventListener('click', async function() {
+                if (!this.classList.contains('disabled')) {
+                    // Check if user needs onboarding first
+                    const isOnboarded = await checkBenefitsOnboarding();
+
+                    if (!isOnboarded) {
+                        showBenefitsOnboardingModal();
+                    } else {
+                        loadBenefitsData();
+                    }
+                }
+            });
+        }
+
+        async function loadBenefitsData() {
+            try {
+                showBenefitsLoading();
+
+                if (!benefitsDataService) {
+                    throw new Error('Benefits service not initialized');
+                }
+
+                // Get cumulative benefits for selected timeframe
+                const benefits = await benefitsDataService.getCumulativeBenefits(currentTimeframe);
+
+                if (benefits) {
+                    displayBenefitsData(benefits);
+                } else {
+                    showBenefitsEmpty();
+                }
+
+            } catch (error) {
+                console.error('Error loading benefits data:', error);
+                showBenefitsError('Failed to load benefits data');
+            }
+        }
+
+        function displayBenefitsData(benefits) {
+            // Update hero stats
+            document.getElementById('total-money-saved').textContent = `$${benefits.totalMoneySaved.toFixed(2)}`;
+            document.getElementById('total-time-reclaimed').textContent = benefits.totalTimeReclaimedFormatted || '0h';
+
+            // Update quick stats
+            document.getElementById('meals-skipped').textContent = benefits.totalMealsSkipped || 0;
+            const avgSavings = benefits.totalFasts > 0 ?
+                (benefits.totalMoneySaved / benefits.totalFasts).toFixed(0) : 0;
+            document.getElementById('avg-savings-per-fast').textContent = `$${avgSavings}`;
+
+            // Update milestones
+            displayMilestones(benefits);
+
+            // Update equivalences
+            displayEquivalences(benefits.equivalences || []);
+
+            // Remove loading state
+            hideBenefitsLoading();
+        }
+
+        function displayMilestones(benefits) {
+            const milestonesGrid = document.getElementById('milestones-grid');
+
+            // Generate milestone badges
+            const milestones = [];
+
+            // Money milestones
+            const moneyThresholds = [25, 50, 100, 200, 500];
+            moneyThresholds.forEach(threshold => {
+                const achieved = benefits.totalMoneySaved >= threshold;
+                milestones.push({
+                    text: `$${threshold}`,
+                    achieved,
+                    type: 'money'
+                });
+            });
+
+            // Time milestones (in hours)
+            const timeThresholds = [2, 6, 12, 24, 48];
+            timeThresholds.forEach(threshold => {
+                const totalHours = Math.floor(benefits.totalTimeReclaimed / 60);
+                const achieved = totalHours >= threshold;
+                milestones.push({
+                    text: `${threshold}h`,
+                    achieved,
+                    type: 'time'
+                });
+            });
+
+            // Render milestones
+            milestonesGrid.innerHTML = milestones.map(milestone => `
+                <div class="milestone-badge ${milestone.achieved ? 'achieved' : ''}">
+                    ${milestone.text}
+                </div>
+            `).join('');
+        }
+
+        function displayEquivalences(equivalences) {
+            const equivalencesList = document.getElementById('equivalences-list');
+
+            if (equivalences.length === 0) {
+                equivalencesList.innerHTML = `
+                    <div class="equivalence-item">
+                        Keep fasting to see what your savings can buy! 🎯
+                    </div>
+                `;
+                return;
+            }
+
+            equivalencesList.innerHTML = equivalences.map(equiv => `
+                <div class="equivalence-item">
+                    ${equiv}
+                </div>
+            `).join('');
+        }
+
+        function showBenefitsLoading() {
+            const benefitsTab = document.getElementById('benefits-tab');
+            const existingLoading = benefitsTab.querySelector('.benefits-loading');
+
+            if (!existingLoading) {
+                const loadingDiv = document.createElement('div');
+                loadingDiv.className = 'benefits-loading';
+                loadingDiv.innerHTML = '⏳ Loading benefits data...';
+                benefitsTab.appendChild(loadingDiv);
+            }
+        }
+
+        function hideBenefitsLoading() {
+            const loadingDiv = document.querySelector('.benefits-loading');
+            if (loadingDiv) {
+                loadingDiv.remove();
+            }
+        }
+
+        function showBenefitsEmpty() {
+            hideBenefitsLoading();
+            const benefitsTab = document.getElementById('benefits-tab');
+
+            // Add empty state to hero section
+            document.getElementById('total-money-saved').textContent = '$0.00';
+            document.getElementById('total-time-reclaimed').textContent = '0h';
+            document.getElementById('meals-skipped').textContent = '0';
+            document.getElementById('avg-savings-per-fast').textContent = '$0';
+
+            // Show empty state message in milestones
+            const milestonesGrid = document.getElementById('milestones-grid');
+            milestonesGrid.innerHTML = `
+                <div class="benefits-empty" style="grid-column: 1 / -1;">
+                    <h3>Start your first fast!</h3>
+                    <p>Your benefits will appear here as you complete fasts.</p>
+                </div>
+            `;
+
+            // Clear equivalences
+            displayEquivalences([]);
+        }
+
+        function showBenefitsError(message) {
+            hideBenefitsLoading();
+            const milestonesGrid = document.getElementById('milestones-grid');
+            milestonesGrid.innerHTML = `
+                <div class="benefits-empty" style="grid-column: 1 / -1; color: #ef4444;">
+                    <h3>Unable to load benefits</h3>
+                    <p>${message}</p>
+                </div>
+            `;
+        }
+
+        function showBenefitsSettingsModal() {
+            // For now, redirect to settings page
+            // Later we can implement a modal here
+            window.location.href = '/settings#benefits';
+        }
+
+        // Benefits Onboarding Functions
+        function showBenefitsOnboardingModal() {
+            document.getElementById('benefits-onboarding-modal').style.display = 'flex';
+        }
+
+        function hideBenefitsOnboardingModal() {
+            document.getElementById('benefits-onboarding-modal').style.display = 'none';
+        }
+
+        function goToBenefitsSettings() {
+            hideBenefitsOnboardingModal();
+            window.location.href = '/settings#benefits';
+        }
+
+        async function completeBenefitsOnboarding() {
+            try {
+                hideBenefitsOnboardingModal();
+
+                // Mark user as onboarded
+                const sessionId = localStorage.getItem('fastingForecast_sessionId');
+                if (sessionId) {
+                    const response = await fetch('/api/benefits/onboarding-complete', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({ sessionId })
+                    });
+
+                    if (!response.ok) {
+                        console.error('Failed to mark onboarding as complete');
+                    }
+                }
+
+                // Load benefits data
+                await loadBenefitsData();
+
+                console.log('Benefits onboarding completed successfully');
+            } catch (error) {
+                console.error('Error completing benefits onboarding:', error);
+                // Still proceed to load benefits data even if marking onboarding fails
+                await loadBenefitsData();
+            }
+        }
+
+        async function checkBenefitsOnboarding() {
+            try {
+                if (!benefitsDataService) {
+                    return false;
+                }
+
+                const preferences = await benefitsDataService.getUserPreferences();
+                return preferences && preferences.benefits_onboarded === true;
+            } catch (error) {
+                console.error('Error checking benefits onboarding status:', error);
+                return false;
+            }
+        }
+
+        // Dashboard Active Fast Management
+        let dashboardCardRotationManager = null;
+        let activeFastUpdateInterval = null;
+
+        async function initializeDashboardActiveFast() {
+            try {
+                // Check if there's an active fast
+                const activeFast = await getActiveFast();
+
+                if (activeFast) {
+                    await showActiveFastSection(activeFast);
+                } else {
+                    hideActiveFastSection();
+                }
+
+            } catch (error) {
+                console.error('Error initializing dashboard active fast:', error);
+                hideActiveFastSection();
+            }
+        }
+
+        async function showActiveFastSection(activeFast) {
+            const activeFastSection = document.getElementById('activeFastSection');
+            const fastDuration = document.getElementById('activeFastDuration');
+
+            if (!activeFastSection) return;
+
+            try {
+                // Calculate duration
+                const startTime = new Date(activeFast.start_time);
+                const now = new Date();
+                const elapsedMs = now - startTime;
+                const duration = formatDuration(elapsedMs);
+
+                // Update UI
+                fastDuration.textContent = duration;
+                activeFastSection.classList.remove('hidden');
+
+                // Initialize card rotation manager if not already done
+                if (!dashboardCardRotationManager && window.CardRotationManager) {
+                    dashboardCardRotationManager = new CardRotationManager({
+                        rotationInterval: 15000, // 15 seconds on dashboard
+                        mealTimeToleranceMinutes: 30,
+                        enableRotation: true
+                    });
+
+                    // Override the card initialization to use dashboard-specific IDs
+                    dashboardCardRotationManager.initializeCards = async function() {
+                        try {
+                            // Initialize Hunger Coach Card with dashboard ID
+                            if (window.HungerCoachCard) {
+                                this.hungerCoachCard = new HungerCoachCard('dashboardHungerCard');
+                                await this.hungerCoachCard.init();
+                            } else {
+                                console.warn('HungerCoachCard class not available');
+                            }
+
+                            // Initialize Benefits Card with dashboard ID
+                            if (window.BenefitsCard) {
+                                this.benefitsCard = new BenefitsCard('dashboardBenefitsCard');
+                                await this.benefitsCard.init();
+                            } else {
+                                console.warn('BenefitsCard class not available');
+                            }
+
+                            // Ensure we have at least one card
+                            if (!this.hungerCoachCard && !this.benefitsCard) {
+                                throw new Error('No cards available for rotation');
+                            }
+
+                        } catch (error) {
+                            console.error('Error initializing dashboard cards:', error);
+                            throw error;
+                        }
+                    }.bind(dashboardCardRotationManager);
+
+                    await dashboardCardRotationManager.init();
+                }
+
+                // Update fast state
+                if (dashboardCardRotationManager) {
+                    const mealtimes = await getUserMealtimes();
+                    dashboardCardRotationManager.updateFastState(true, activeFast.start_time, mealtimes);
+                }
+
+                // Start updating duration
+                startActiveFastUpdates();
+
+
+            } catch (error) {
+                console.error('Error showing active fast section:', error);
+            }
+        }
+
+        function hideActiveFastSection() {
+            const activeFastSection = document.getElementById('activeFastSection');
+            if (activeFastSection) {
+                activeFastSection.classList.add('hidden');
+            }
+
+            // Stop card rotation
+            if (dashboardCardRotationManager) {
+                dashboardCardRotationManager.updateFastState(false, null, null);
+            }
+
+            // Stop duration updates
+            stopActiveFastUpdates();
+
+        }
+
+        function startActiveFastUpdates() {
+            stopActiveFastUpdates(); // Clear any existing interval
+
+            activeFastUpdateInterval = setInterval(async () => {
+                try {
+                    const activeFast = await getActiveFast();
+                    if (activeFast) {
+                        const fastDuration = document.getElementById('activeFastDuration');
+                        if (fastDuration) {
+                            const startTime = new Date(activeFast.start_time);
+                            const now = new Date();
+                            const elapsedMs = now - startTime;
+                            fastDuration.textContent = formatDuration(elapsedMs);
+                        }
+                    } else {
+                        // Fast ended, hide section
+                        hideActiveFastSection();
+                    }
+                } catch (error) {
+                    console.error('Error updating active fast:', error);
+                }
+            }, 60000); // Update every minute
+        }
+
+        function stopActiveFastUpdates() {
+            if (activeFastUpdateInterval) {
+                clearInterval(activeFastUpdateInterval);
+                activeFastUpdateInterval = null;
+            }
+        }
+
+        async function getActiveFast() {
+            try {
+                const sessionId = localStorage.getItem('fastingForecast_sessionId');
+                if (!sessionId) {
+                    return null;
+                }
+
+                const response = await fetch(`/api/fasts/active?sessionId=${sessionId}`);
+                if (response.ok) {
+                    const activeFast = await response.json();
+                    return activeFast && activeFast.id ? activeFast : null;
+                } else if (response.status === 404) {
+                    // User profile not found or no active fast
+                    return null;
+                }
+                return null;
+            } catch (error) {
+                console.error('Error fetching active fast:', error);
+                return null;
+            }
+        }
+
+        function formatDuration(milliseconds) {
+            const hours = Math.floor(milliseconds / (1000 * 60 * 60));
+            const minutes = Math.floor((milliseconds % (1000 * 60 * 60)) / (1000 * 60));
+            return `${hours}h ${minutes}m`;
+        }
+
+        // Dashboard card event handlers
+        function handleDashboardSeeMoreClick(event) {
+            event.preventDefault();
+            event.stopPropagation();
+
+            // Navigate to timer page
+            window.location.href = '/timer';
+        }
+
+        function handleDashboardBenefitsSeeMoreClick(event) {
+            event.preventDefault();
+            event.stopPropagation();
+
+            // Switch to benefits tab
+            const benefitsTab = document.querySelector('[data-tab="benefits"]');
+            if (benefitsTab) {
+                benefitsTab.click();
+            }
+        }
+
+        function handleDashboardHungerCardTap(event) {
+            event.preventDefault();
+            event.stopPropagation();
+
+            // Navigate to timer page when hunger coach card is tapped
+            window.location.href = '/timer';
+        }
+
+        function handleDashboardBenefitsCardTap(event) {
+            event.preventDefault();
+            event.stopPropagation();
+
+            // Switch to benefits tab when benefits card is tapped
+            const benefitsTab = document.querySelector('[data-tab="benefits"]');
+            if (benefitsTab) {
+                benefitsTab.click();
+            }
+        }
+
         // Load fasting data from API
         async function loadFasts() {
             try {
@@ -1360,6 +2355,12 @@
         document.getElementById('edit-fast-modal').addEventListener('click', function(e) {
             if (e.target === this) {
                 hideEditFastModal();
+            }
+        });
+
+        document.getElementById('benefits-onboarding-modal').addEventListener('click', function(e) {
+            if (e.target === this) {
+                hideBenefitsOnboardingModal();
             }
         });
         
