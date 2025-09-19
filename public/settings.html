@@ -792,26 +792,41 @@
         };
 
         let editingIndex = -1;
-        const sessionId = localStorage.getItem('fastingForecast_sessionId');
+        // Session management - moved to initializeSettingsPage()
+        // const sessionId = window.getSessionId();
+        let sessionId = null; // Will be set when session is ready
 
-        // Initialize page
-        document.addEventListener('DOMContentLoaded', async () => {
-            // Show test button only in development
-            const isDevelopment = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
-            if (isDevelopment) {
-                document.getElementById('testNotificationSection').style.display = 'flex';
-            }
+        // Initialize page - moved to session ready callback
+        // document.addEventListener('DOMContentLoaded', async () => {
+
+        // New initialization function that waits for session
+        async function initializeSettingsPage() {
+            console.log('Initializing settings page with session ready');
+
+            // Get session ID now that it's ready
+            sessionId = window.getSessionId();
+            console.log('Settings page using session ID:', sessionId);
 
             if (!sessionId) {
+                console.error('No session ID available');
                 alert('No session found. Please go through onboarding first.');
                 window.location.href = '/';
                 return;
             }
 
+            // Show test button only in development
+            const isDevelopment = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+            if (isDevelopment) {
+                const testSection = document.getElementById('testNotificationSection');
+                if (testSection) {
+                    testSection.style.display = 'flex';
+                }
+            }
+
             await loadUserSettings();
             updateUI();
             updateActiveNavItem();
-        });
+        }
 
         // Load user settings from backend API
         async function loadUserSettings() {
@@ -1306,7 +1321,7 @@
             }
         }
 
-        // Add event listeners when page loads
+        // Add event listeners when page loads (but don't initialize session-dependent functionality)
         document.addEventListener('DOMContentLoaded', function() {
             // Benefits toggle is handled by onclick in HTML
 
@@ -1331,6 +1346,24 @@
                     benefitsSection.scrollIntoView({ behavior: 'smooth' });
                 }
             }
+        });
+    </script>
+
+    <!-- Session Management -->
+    <script src="/js/modules/session-manager.js"></script>
+    <script src="/js/modules/page-session-guard.js"></script>
+    <script>
+        // Initialize session management first
+        const pageGuard = new window.FastingForecastPageSessionGuard();
+        window.pageGuard = pageGuard; // Make it available globally for getSessionId()
+
+        // Wait for session to be ready before continuing with page logic
+        pageGuard.waitForReady().then(() => {
+            console.log('Session manager ready for settings.html');
+
+            // Now that session is ready, initialize the settings page
+            console.log('Starting settings page initialization with session ready');
+            initializeSettingsPage();
         });
     </script>
 </body>

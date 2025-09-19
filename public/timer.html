@@ -1617,11 +1617,11 @@
                 
                 <div class="stats-grid">
                     <div class="stat-item">
-                        <div class="stat-value" id="totalFasts">3</div>
+                        <div class="stat-value" id="totalFasts">0</div>
                         <div class="stat-label">Completed Fasts</div>
                     </div>
                     <div class="stat-item">
-                        <div class="stat-value" id="longestFast">36h</div>
+                        <div class="stat-value" id="longestFast">0h</div>
                         <div class="stat-label">Longest Fast</div>
                     </div>
                 </div>
@@ -1802,8 +1802,8 @@
         let selectedDuration = 24; // Selected duration for next fast
         let selectedStartTime = null; // Selected start time (null = start now)
         
-        // Session management
-        const globalSessionId = localStorage.getItem('fastingForecast_sessionId');
+        // Session management - use global function from PageGuard
+        const globalSessionId = window.getSessionId();
         let currentFastId = null;
 
         // Contextual Cards System
@@ -1936,10 +1936,10 @@
             if (cardRotationManager && isRunning) {
                 try {
                     // Get user meal times for context
-                    const mealtimes = await getUserMealtimes();
+                    const mealtimes1 = await getUserMealtimes();
 
                     // Update fast state in card rotation manager
-                    cardRotationManager.updateFastState(isRunning, fastStartTime, mealtimes);
+                    cardRotationManager.updateFastState(isRunning, fastStartTime, mealtimes1);
 
                     console.log('Contextual cards updated for active fast');
                 } catch (error) {
@@ -1982,10 +1982,10 @@
         }
 
         function hideLegacyHungerCoachCard() {
-            const hungerCard = document.getElementById('hungerCoachCard');
-            if (hungerCard) {
-                hungerCard.classList.add('hidden');
-                hungerCard.classList.remove('slide-in');
+            const hideHungerCard = document.getElementById('hungerCoachCard');
+            if (hideHungerCard) {
+                hideHungerCard.classList.add('hidden');
+                hideHungerCard.classList.remove('slide-in');
                 stopTipRotation();
             }
         }
@@ -2000,8 +2000,8 @@
 
             try {
                 // Get contextual tip based on current fast state
-                const mealtimes = await getUserMealtimes();
-                const contextualTip = hungerCoach.getContextualTip(fastStartTime, mealtimes);
+                const updateMealtimes = await getUserMealtimes();
+                const contextualTip = hungerCoach.getContextualTip(fastStartTime, updateMealtimes);
 
                 // Add fade effect to content that will change
                 const messageElement = document.getElementById('hungerCardMessage');
@@ -2081,11 +2081,11 @@
         function getExtendedTipContent() {
             if (!fastStartTime) return 'Keep up the great work with your fast!';
 
-            const elapsedHours = (Date.now() - new Date(fastStartTime).getTime()) / (1000 * 60 * 60);
+            const fastElapsedHours = (Date.now() - new Date(fastStartTime).getTime()) / (1000 * 60 * 60);
 
-            if (elapsedHours < 6) {
+            if (fastElapsedHours < 6) {
                 return 'You\'re in the early stages. Your body is still adjusting to the fasting state. Stay hydrated and keep busy.';
-            } else if (elapsedHours < 12) {
+            } else if (fastElapsedHours < 12) {
                 return 'Your glycogen stores are being depleted. This is when hunger can feel strongest, but it will pass.';
             } else if (elapsedHours < 18) {
                 return 'You\'re entering deeper metabolic changes. Many people find hunger actually decreases around this time.';
@@ -2174,8 +2174,8 @@
             if (!benefitsExtendedTextElement) return;
 
             // Calculate some quick benefits for display
-            const elapsedHours = Math.floor(getElapsedTime() / (60 * 60 * 1000));
-            const estimatedMealsSkipped = Math.floor(elapsedHours / 8); // Rough estimate
+            const benefitsElapsedHours = Math.floor(getElapsedTime() / (60 * 60 * 1000));
+            const estimatedMealsSkipped = Math.floor(benefitsElapsedHours / 8); // Rough estimate
             const estimatedSavings = estimatedMealsSkipped * 10; // $10 per meal estimate
 
             if (estimatedSavings > 0) {
@@ -2212,17 +2212,17 @@
                 return userMealtimes;
             }
 
-            const sessionId = localStorage.getItem('fastingForecast_sessionId');
+            const sessionId = window.getSessionId();
             if (!sessionId) {
                 // Return defaults if no session
-                const defaults = {
+                const sessionDefaults = {
                     breakfast: '08:00',
                     lunch: '12:00',
                     dinner: '18:00'
                 };
-                userMealtimes = defaults;
+                userMealtimes = sessionDefaults;
                 mealtimesLoaded = true;
-                return defaults;
+                return sessionDefaults;
             }
 
             try {
@@ -2231,51 +2231,49 @@
                     const settings = await response.json();
 
                     // Convert custom_mealtimes array to object format expected by HungerCoach
-                    const mealtimes = {};
+                    let settingsMealtimes = {};
                     if (settings.custom_mealtimes && Array.isArray(settings.custom_mealtimes)) {
                         settings.custom_mealtimes.forEach(meal => {
                             // Use meal name as key, but convert to lowercase for consistency
                             const key = meal.name.toLowerCase().replace(/\s+/g, '_');
-                            mealtimes[key] = meal.time;
+                            settingsMealtimes[key] = meal.time;
                         });
                     }
 
                     // Fallback to defaults if no custom mealtimes
-                    if (Object.keys(mealtimes).length === 0) {
-                        userMealtimes = {
+                    if (Object.keys(settingsMealtimes).length === 0) {
+                        settingsMealtimes = {
                             breakfast: '08:00',
                             lunch: '12:00',
                             dinner: '18:00'
                         };
-                    } else {
-                        userMealtimes = mealtimes;
                     }
 
                     mealtimesLoaded = true;
-                    return userMealtimes;
+                    return settingsMealtimes;
                 } else {
                     console.error('Failed to load user mealtimes:', response.status);
                     // Return defaults on failure
-                    const defaults = {
+                    const fallbackDefaults = {
                         breakfast: '08:00',
                         lunch: '12:00',
                         dinner: '18:00'
                     };
-                    userMealtimes = defaults;
+                    userMealtimes = fallbackDefaults;
                     mealtimesLoaded = true;
-                    return defaults;
+                    return fallbackDefaults;
                 }
             } catch (error) {
                 console.error('Error loading user mealtimes:', error);
                 // Return defaults on error
-                const defaults = {
+                const errorDefaults = {
                     breakfast: '08:00',
                     lunch: '12:00',
                     dinner: '18:00'
                 };
-                userMealtimes = defaults;
+                userMealtimes = errorDefaults;
                 mealtimesLoaded = true;
-                return defaults;
+                return errorDefaults;
             }
         }
 
@@ -2374,12 +2372,12 @@
             } else if (!currentMilestone && lastReachedMilestone) {
                 // No current milestone, return to regular phase info
                 lastReachedMilestone = null;
-                const elapsedHours = Math.floor(elapsedTime / (1000 * 60 * 60));
-                updatePhaseInfo(elapsedHours);
-            } else if (!currentMilestone && !lastReachedMilestone) {
-                // No milestone active, show regular phase info
                 const phaseElapsedHours = Math.floor(elapsedTime / (1000 * 60 * 60));
                 updatePhaseInfo(phaseElapsedHours);
+            } else if (!currentMilestone && !lastReachedMilestone) {
+                // No milestone active, show regular phase info
+                const regularPhaseHours = Math.floor(elapsedTime / (1000 * 60 * 60));
+                updatePhaseInfo(regularPhaseHours);
             }
         }
         // Toggle duration selector visibility
@@ -2628,7 +2626,7 @@
             // 1. Update database record
             if (currentFastId) {
                 try {
-                    const response = await fetch(`/api/fasts/${currentFastId}`, {
+                    const updateResponse = await fetch(`/api/fasts/${currentFastId}`, {
                         method: 'PUT',
                         headers: {
                             'Content-Type': 'application/json'
@@ -2636,7 +2634,7 @@
                         body: JSON.stringify({ start_time: fastStartTime.toISOString() })
                     });
 
-                    if (!response.ok) {
+                    if (!updateResponse.ok) {
                         console.error('Failed to update fast start time in database');
                     }
                 } catch (error) {
@@ -2645,13 +2643,13 @@
             }
 
             // 2. Save updated timer state to localStorage
-            const timerState = {
+            const adjustedTimerState = {
                 fastStartTime: fastStartTime.toISOString(),
                 fastDuration: fastDuration,
                 isActive: true,
                 currentFastId: currentFastId
             };
-            localStorage.setItem('fastingForecast_timerState', JSON.stringify(timerState));
+            localStorage.setItem('fastingForecast_timerState', JSON.stringify(adjustedTimerState));
 
             // 3. Restart notifications with new start time
             if (globalNotificationManager) {
@@ -2668,8 +2666,8 @@
                 try {
                     // Card rotation manager handles its own updates automatically
                     // Just ensure fast state is current
-                    const mealtimes = await getUserMealtimes();
-                    cardRotationManager.updateFastState(isRunning, fastStartTime, mealtimes);
+                    const cardMealtimes = await getUserMealtimes();
+                    cardRotationManager.updateFastState(isRunning, fastStartTime, cardMealtimes);
                 } catch (error) {
                     console.error('Error updating contextual cards:', error);
                 }
@@ -2715,21 +2713,28 @@
             document.querySelector('.welcome-message').style.display = 'none';
             
             isRunning = true;
-            // Use selected start time or current time
-            fastStartTime = selectedStartTime || new Date();
-            elapsedTime = selectedStartTime ? Date.now() - selectedStartTime.getTime() : 0;
+            // Always use current time for "Start now", enforce selected time for custom start
+            if (selectedStartTime) {
+                fastStartTime = selectedStartTime;
+                elapsedTime = Date.now() - selectedStartTime.getTime();
+                console.log('Starting fast with custom start time:', fastStartTime);
+            } else {
+                fastStartTime = new Date();
+                elapsedTime = 0;
+                console.log('Starting fast now at:', fastStartTime);
+            }
             
             // Create fast entry in database
             await createFastEntry();
             
             // Save timer state to localStorage for persistence across navigation
-            const timerState = {
+            const newTimerState = {
                 isRunning: true,
                 fastStartTime: fastStartTime.toISOString(),
                 fastDuration: fastDuration,
                 currentFastId: currentFastId
             };
-            localStorage.setItem('fastingForecast_timerState', JSON.stringify(timerState));
+            localStorage.setItem('fastingForecast_timerState', JSON.stringify(newTimerState));
             
             // Create milestone markers
             createMilestoneMarkers();
@@ -2757,8 +2762,11 @@
             }
             
             // Start the timer interval
+            console.log('Starting timer interval - fastStartTime:', fastStartTime);
             timerInterval = setInterval(() => {
-                elapsedTime = Date.now() - fastStartTime.getTime();
+                const newElapsedTime = Date.now() - fastStartTime.getTime();
+                console.log('Timer tick - elapsed:', Math.round(newElapsedTime/1000), 'seconds');
+                elapsedTime = newElapsedTime;
                 updateTimerDisplay();
             }, 1000);
         }
@@ -2788,9 +2796,11 @@
         
         // Update timer display with elapsed/remaining logic
         function updateTimerDisplay() {
+            console.log('updateTimerDisplay called - elapsedTime:', elapsedTime, 'fastDuration:', fastDuration);
             const totalFastDuration = fastDuration * 60 * 60 * 1000; // Convert hours to milliseconds
             const remainingTime = Math.max(0, totalFastDuration - elapsedTime);
             const isShowingElapsed = elapsedTime <= totalFastDuration / 2;
+            console.log('totalFastDuration:', totalFastDuration, 'remainingTime:', remainingTime, 'isShowingElapsed:', isShowingElapsed);
             const isPastOriginalGoal = elapsedTime > totalFastDuration;
             
             let displayTime, label;
@@ -2814,13 +2824,13 @@
             // Show seconds for first hour, then switch to HH:MM
             const showSeconds = elapsedTime < (60 * 60 * 1000); // First 60 minutes
             
-            if (showSeconds) {
-                document.getElementById('timerDisplay').textContent = 
-                    `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
-            } else {
-                document.getElementById('timerDisplay').textContent = 
-                    `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
-            }
+            const formattedTime = showSeconds
+                ? `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`
+                : `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
+
+            console.log('Setting timerDisplay to:', formattedTime);
+            document.getElementById('timerDisplay').textContent = formattedTime;
+            console.log('timerDisplay DOM element now shows:', document.getElementById('timerDisplay').textContent);
             
             document.getElementById('timerLabel').textContent = label;
             
@@ -2894,7 +2904,11 @@
         // Update start and end time display
         function updateTimeDisplay() {
             if (!fastStartTime) return;
-            
+
+            console.log('updateTimeDisplay called with fastStartTime:', fastStartTime);
+            console.log('fastStartTime UTC string:', fastStartTime.toISOString());
+            console.log('fastStartTime local string:', fastStartTime.toString());
+
             const displayStartTime = fastStartTime;
             const displayEndTime = new Date(fastStartTime.getTime() + (fastDuration * 60 * 60 * 1000));
             
@@ -2924,8 +2938,16 @@
                 }
             };
             
-            document.getElementById('startTime').textContent = formatDateTime(displayStartTime);
-            document.getElementById('endTime').textContent = formatDateTime(displayEndTime);
+            const formattedStartTime = formatDateTime(displayStartTime);
+            const formattedEndTime = formatDateTime(displayEndTime);
+
+            console.log('Setting start time display to:', formattedStartTime);
+            console.log('Setting end time display to:', formattedEndTime);
+
+            document.getElementById('startTime').textContent = formattedStartTime;
+            document.getElementById('endTime').textContent = formattedEndTime;
+
+            console.log('DOM startTime element now shows:', document.getElementById('startTime').textContent);
         }
         
         // Update phase information based on elapsed hours
@@ -2991,7 +3013,7 @@
         // Load saved stats from API
         async function loadStats() {
             try {
-                const loadStatsSessionId = localStorage.getItem('fastingForecast_sessionId');
+                const loadStatsSessionId = window.getSessionId();
                 if (!loadStatsSessionId) {
                     document.getElementById('totalFasts').textContent = '0';
                     document.getElementById('longestFast').textContent = '0h';
@@ -3063,7 +3085,7 @@
         // Initialize user state and determine what to show
         async function initializeUserState() {
             try {
-                const initSessionId = localStorage.getItem('fastingForecast_sessionId');
+                const initSessionId = window.getSessionId();
                 
                 if (initSessionId) {
                     // Check if user has any fasts in database
@@ -3156,8 +3178,8 @@
                 const dayOfWeek = targetDate.toLocaleDateString('en-US', { weekday: 'long' });
                 return `${dayOfWeek} at ${formattedTime}`;
             } else {
-                const dayOfWeek = targetDate.toLocaleDateString('en-US', { weekday: 'long' });
-                return `Next ${dayOfWeek} at ${formattedTime}`;
+                const nextDayOfWeek = targetDate.toLocaleDateString('en-US', { weekday: 'long' });
+                return `Next ${nextDayOfWeek} at ${formattedTime}`;
             }
         }
 
@@ -3528,7 +3550,7 @@
         async function createFastEntry() {
             try {
                 // Get session ID to link fast to user profile
-                const createSessionId = localStorage.getItem('fastingForecast_sessionId');
+                const createSessionId = window.getSessionId();
                 console.log('Creating fast entry with sessionId:', createSessionId);
                 
                 const fastData = {
@@ -3589,51 +3611,162 @@
                 console.error('Error ending fast entry:', error);
             }
         }
-        
+
+        // Reset to initial state - clean slate
+        function resetToInitialState() {
+            // Stop any running timer
+            if (timerInterval) {
+                clearInterval(timerInterval);
+                timerInterval = null;
+            }
+
+            // Reset all timer variables
+            isRunning = false;
+            fastStartTime = null;
+            elapsedTime = 0;
+            currentFastId = null;
+
+            // Reset start time selection
+            selectedStartTime = null;
+            if (document.querySelector('input[name="startTime"][value="now"]')) {
+                document.querySelector('input[name="startTime"][value="now"]').checked = true;
+            }
+
+            // Show pre-fast state, hide active fast state
+            document.getElementById('preFastState').style.display = 'block';
+            document.getElementById('activeFastState').style.display = 'none';
+            document.querySelector('.welcome-message').style.display = 'block';
+
+            // Clear any adjustment controls
+            const adjustmentRow = document.getElementById('startTimeAdjustment');
+            if (adjustmentRow) {
+                adjustmentRow.style.display = 'none';
+            }
+
+            console.log('Reset to initial state - ready for fresh fast start');
+        }
+
         // Check for active fast on page load
         async function checkForActiveFast() {
             try {
+                console.log('🔍 checkForActiveFast started');
+
                 // First check if we have timer state in localStorage
                 const savedTimerState = localStorage.getItem('fastingForecast_timerState');
+                console.log('🔍 localStorage timer state:', savedTimerState ? 'exists' : 'empty');
 
                 // Get session ID for user-specific active fast check
-                const sessionId = localStorage.getItem('fastingForecast_sessionId');
-                if (!sessionId) {
+                const checkSessionId = window.getSessionId();
+                console.log('🔍 Session ID for fast check:', checkSessionId);
+                if (!checkSessionId) {
                     console.log('No session ID found, cannot check for active fast');
+                    // Clear any stale localStorage if no session
+                    if (savedTimerState) {
+                        console.log('Clearing stale timer state - no session ID');
+                        localStorage.removeItem('fastingForecast_timerState');
+                    }
                     return;
                 }
 
-                const activeResponse = await fetch(`/api/fasts/active?sessionId=${sessionId}`);
+                console.log('🔍 Making API call to /api/fasts/active');
+                const activeResponse = await fetch(`/api/fasts/active?sessionId=${checkSessionId}`);
+                console.log('🔍 API response status:', activeResponse.status);
+
                 if (activeResponse.ok) {
                     const activeFast = await activeResponse.json();
+                    console.log('🔍 Active fast from API:', activeFast);
+
                     if (activeFast && savedTimerState) {
                         // Restore timer state if both database and localStorage indicate active fast
                         await restoreTimerState(savedTimerState, activeFast);
                     } else if (!activeFast && savedTimerState) {
                         // Clear stale localStorage if database shows no active fast
-                        console.log('Clearing stale timer state from localStorage');
+                        console.log('Clearing stale timer state from localStorage - no active fast in database');
                         localStorage.removeItem('fastingForecast_timerState');
+                        // Ensure we're in the correct initial state
+                        resetToInitialState();
                     } else if (activeFast && !savedTimerState) {
-                        // Database has active fast but no localStorage state - restore the timer
-                        console.log('Found active fast but no localStorage state, restoring timer:', activeFast);
-                        currentFastId = activeFast.id;
-                        fastStartTime = new Date(activeFast.start_time);
+                        try {
+                            // Database has active fast but no localStorage state - restore the timer
+                            console.log('🚀 Found active fast but no localStorage state, restoring timer');
+                            console.log('🚀 activeFast.id:', activeFast.id);
+                            console.log('🚀 activeFast.start_time:', activeFast.start_time);
+
+                        if (!activeFast.id || !activeFast.start_time) {
+                            console.error('🚀 Invalid active fast object - missing id or start_time');
+                            return;
+                        }
+
+                        console.log('🚀 Setting currentFastId to:', activeFast.id);
+                        // Avoid scoping issues by using a local variable
+                        const activeFastId = activeFast.id;
+
+                        // Ensure proper date parsing from database UTC timestamp
+                        const dbStartTime = activeFast.start_time;
+                        console.log('🚀 Raw database start_time:', dbStartTime);
+                        fastStartTime = new Date(dbStartTime);
+                        console.log('🚀 Parsed fastStartTime:', fastStartTime, 'isValid:', !isNaN(fastStartTime.getTime()));
+
+                        if (isNaN(fastStartTime.getTime())) {
+                            console.error('🚀 Invalid start time could not be parsed');
+                            return;
+                        }
+
                         isRunning = true;
                         elapsedTime = Date.now() - fastStartTime.getTime();
+                        console.log('🚀 Calculated elapsed time:', Math.round(elapsedTime / 1000), 'seconds');
 
-                        // Show active fast UI
-                        document.getElementById('preFastState').style.display = 'none';
-                        document.getElementById('activeFastState').style.display = 'block';
-                        document.querySelector('.welcome-message').style.display = 'none';
+                        console.log('🚀 About to show active fast UI and start timer...');
 
-                        // Set up timer display
-                        updateTimerDisplay();
+                        try {
+                            // Show active fast UI
+                            console.log('🚀 Setting UI display states...');
+                            document.getElementById('preFastState').style.display = 'none';
+                            document.getElementById('activeFastState').style.display = 'block';
+                            document.querySelector('.welcome-message').style.display = 'none';
+                            console.log('🚀 UI display states set successfully');
+                        } catch (uiError) {
+                            console.error('🚀 Error setting UI states:', uiError);
+                        }
 
-                        // Start the timer interval
-                        timerInterval = setInterval(() => {
-                            elapsedTime = Date.now() - fastStartTime.getTime();
+                        try {
+                            // Set up timer display
+                            console.log('🚀 Calling updateTimerDisplay...');
                             updateTimerDisplay();
-                        }, 1000);
+                            console.log('🚀 updateTimerDisplay completed');
+                        } catch (timerDisplayError) {
+                            console.error('🚀 Error in updateTimerDisplay:', timerDisplayError);
+                        }
+
+                        try {
+                            // Update start and end time display immediately
+                            console.log('🚀 Calling updateTimeDisplay from timer setup...');
+                            updateTimeDisplay();
+                            console.log('🚀 updateTimeDisplay completed from timer setup');
+                        } catch (timeDisplayError) {
+                            console.error('🚀 Error in updateTimeDisplay:', timeDisplayError);
+                        }
+
+                        try {
+
+                            // Start the timer interval
+                            console.log('🚀 Starting timer interval from session restoration - fastStartTime:', fastStartTime);
+                            timerInterval = setInterval(() => {
+                                const newElapsedTime = Date.now() - fastStartTime.getTime();
+                                console.log('Session restore timer tick - elapsed:', Math.round(newElapsedTime/1000), 'seconds');
+                                elapsedTime = newElapsedTime;
+                                updateTimerDisplay();
+                            }, 1000);
+                            console.log('🚀 Timer interval started successfully');
+
+                            // Update start and end time display
+                            console.log('🚀 Calling updateTimeDisplay...');
+                            updateTimeDisplay();
+                            console.log('🚀 updateTimeDisplay completed');
+
+                        } catch (timerError) {
+                            console.error('🚀 Error setting up timer:', timerError);
+                        }
 
                         // Initialize cards and notifications
                         if (!cardRotationManager) {
@@ -3641,8 +3774,16 @@
                         }
                         await showContextualCards();
 
-                        if (globalNotificationManager) {
-                            await globalNotificationManager.startNotificationsForFast(fastStartTime, 24); // Default 24h duration
+                            if (globalNotificationManager) {
+                                await globalNotificationManager.startNotificationsForFast(fastStartTime, 24); // Default 24h duration
+                            }
+
+                            // Set the global currentFastId only after everything else is successful
+                            console.log('🚀 Setting global currentFastId at the end');
+                            currentFastId = activeFastId;
+                        } catch (restoreError) {
+                            console.error('🚀 Error during timer restoration:', restoreError);
+                            console.error('🚀 Error stack:', restoreError.stack);
                         }
                     }
                 }
@@ -3665,12 +3806,19 @@
                 
                 // Restore timer variables
                 currentFastId = savedState.currentFastId;
-                fastStartTime = new Date(savedState.fastStartTime);
+
+                // Ensure proper date parsing from localStorage
+                const localStorageStartTime = savedState.fastStartTime;
+                console.log('Raw localStorage fastStartTime:', localStorageStartTime);
+                fastStartTime = new Date(localStorageStartTime);
+                console.log('Parsed fastStartTime:', fastStartTime, 'isValid:', !isNaN(fastStartTime.getTime()));
+
                 fastDuration = savedState.fastDuration;
                 isRunning = true;
-                
+
                 // Calculate current elapsed time
                 elapsedTime = Date.now() - fastStartTime.getTime();
+                console.log('Calculated elapsed time:', Math.round(elapsedTime / 1000), 'seconds');
                 
                 console.log('Restoring timer state:', {
                     fastStartTime: fastStartTime,
@@ -3707,8 +3855,11 @@
                 updateMilestoneStates();
                 
                 // Start the timer interval
+                console.log('Starting timer interval from localStorage restoration - fastStartTime:', fastStartTime);
                 timerInterval = setInterval(() => {
-                    elapsedTime = Date.now() - fastStartTime.getTime();
+                    const newElapsedTime = Date.now() - fastStartTime.getTime();
+                    console.log('localStorage restore timer tick - elapsed:', Math.round(newElapsedTime/1000), 'seconds');
+                    elapsedTime = newElapsedTime;
                     updateTimerDisplay();
                 }, 1000);
                 
@@ -3929,9 +4080,9 @@
             }
         }
         
-        // Check for active fast and upcoming fast when page loads
-        checkForActiveFast();
-        checkForUpcomingFast();
+        // Check for active fast and upcoming fast when page loads - moved to session ready callback
+        // checkForActiveFast();
+        // checkForUpcomingFast();
     </script>
     
     <!-- Bottom Navigation -->
@@ -3981,5 +4132,40 @@
             <span class="nav-label">Settings</span>
         </a>
     </nav>
+
+    <!-- Session Management -->
+    <script src="/js/modules/session-manager.js"></script>
+    <script src="/js/modules/page-session-guard.js"></script>
+    <script>
+        // Initialize session management first
+        const pageGuard = new window.FastingForecastPageSessionGuard();
+        window.pageGuard = pageGuard; // Make it available globally for getSessionId()
+
+        // Wait for session to be ready before continuing with page logic
+        pageGuard.waitForReady().then(() => {
+            console.log('✓ Session manager ready for timer.html');
+
+            // Test session ID
+            const sessionId = window.getSessionId();
+            console.log('✓ Current session ID:', sessionId);
+
+            // Now that session is ready, check for active fast and upcoming fast
+            console.log('✓ Starting timer initialization with session ready');
+
+            checkForActiveFast().then(() => {
+                console.log('✓ checkForActiveFast completed');
+            }).catch(error => {
+                console.error('✗ checkForActiveFast failed:', error);
+            });
+
+            checkForUpcomingFast().then(() => {
+                console.log('✓ checkForUpcomingFast completed');
+            }).catch(error => {
+                console.error('✗ checkForUpcomingFast failed:', error);
+            });
+        }).catch(error => {
+            console.error('✗ Session manager failed to initialize:', error);
+        });
+    </script>
 </body>
 </html>

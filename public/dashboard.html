@@ -1313,36 +1313,89 @@
     <script>
         let fasts = [];
         
-        // Tab switching functionality
-        document.addEventListener('DOMContentLoaded', function() {
+        // Initialize dashboard page function that waits for session
+        async function initializeDashboardPage() {
+            console.log('Initializing dashboard page with session ready');
+
+            // Set up tab switching functionality
             const subNavItems = document.querySelectorAll('.sub-nav-item');
             const tabContents = document.querySelectorAll('.tab-content');
-            
+
             subNavItems.forEach(item => {
                 item.addEventListener('click', function() {
                     if (this.classList.contains('disabled')) return;
-                    
+
                     // Remove active class from all items and contents
                     subNavItems.forEach(navItem => navItem.classList.remove('active'));
                     tabContents.forEach(content => content.classList.remove('active'));
-                    
+
                     // Add active class to clicked item
                     this.classList.add('active');
-                    
+
                     // Show corresponding tab content
                     const tabId = this.getAttribute('data-tab') + '-tab';
                     document.getElementById(tabId).classList.add('active');
                 });
             });
-            
+
             // Load fasting data
-            loadFasts();
+            await loadFasts();
 
             // Initialize Benefits tab functionality
-            initializeBenefitsTab();
+            await initializeBenefitsTab();
 
             // Initialize dashboard active fast display
-            initializeDashboardActiveFast();
+            await initializeDashboardActiveFast();
+
+            // Update navigation
+            updateActiveNavItem();
+        }
+
+        // DOM Content Loaded - only set up non-session dependent functionality
+        document.addEventListener('DOMContentLoaded', function() {
+            // Set default start date/time to now
+            const now = new Date();
+            const localISOTime = new Date(now.getTime() - now.getTimezoneOffset() * 60000).toISOString();
+            const [date, time] = localISOTime.split('T');
+            const startDateInput = document.getElementById('start-date');
+            const startTimeInput = document.getElementById('start-time');
+            if (startDateInput) startDateInput.value = date;
+            if (startTimeInput) startTimeInput.value = time.slice(0, 5); // Remove seconds
+
+            // Close modal handlers
+            document.getElementById('add-fast-modal').addEventListener('click', function(e) {
+                if (e.target === this) {
+                    hideAddFastModal();
+                }
+            });
+
+            document.getElementById('edit-fast-modal').addEventListener('click', function(e) {
+                if (e.target === this) {
+                    hideEditFastModal();
+                }
+            });
+
+            document.getElementById('benefits-onboarding-modal').addEventListener('click', function(e) {
+                if (e.target === this) {
+                    hideBenefitsOnboardingModal();
+                }
+            });
+
+            // Add click handlers for navigation items
+            const navItems = document.querySelectorAll('.nav-item');
+            navItems.forEach(item => {
+                item.addEventListener('click', (e) => {
+                    const href = item.getAttribute('href');
+
+                    // For now, prevent default navigation for pages that don't exist
+                    if (href !== '/dashboard' && href !== '/timer' && href !== '/schedule' && href !== '/settings') {
+                        e.preventDefault();
+
+                        const pageName = item.querySelector('.nav-label').textContent;
+                        alert(`${pageName} page coming soon!`);
+                    }
+                });
+            });
         });
 
         // Benefits Tab Functionality
@@ -1359,7 +1412,7 @@
                 return userMealtimes;
             }
 
-            const sessionId = localStorage.getItem('fastingForecast_sessionId');
+            const sessionId = window.getSessionId();
             if (!sessionId) {
                 // Return defaults if no session
                 const defaults = {
@@ -1660,7 +1713,7 @@
                 hideBenefitsOnboardingModal();
 
                 // Mark user as onboarded
-                const sessionId = localStorage.getItem('fastingForecast_sessionId');
+                const sessionId = window.getSessionId();
                 if (sessionId) {
                     const response = await fetch('/api/benefits/onboarding-complete', {
                         method: 'POST',
@@ -1843,7 +1896,7 @@
 
         async function getActiveFast() {
             try {
-                const sessionId = localStorage.getItem('fastingForecast_sessionId');
+                const sessionId = window.getSessionId();
                 if (!sessionId) {
                     return null;
                 }
@@ -1912,7 +1965,7 @@
         async function loadFasts() {
             try {
                 // Get session ID for user-specific data
-                const sessionId = localStorage.getItem('fastingForecast_sessionId');
+                const sessionId = window.getSessionId();
                 const url = sessionId ? `/api/fasts?sessionId=${sessionId}` : '/api/fasts';
                 
                 const response = await fetch(url);
@@ -1923,7 +1976,8 @@
                 } else if (response.status === 404 && sessionId) {
                     // If user profile not found (database was reset), clear localStorage and redirect to onboarding
                     console.log('User profile missing after server restart - redirecting to onboarding');
-                    localStorage.removeItem('fastingForecast_sessionId');
+                    // Session removal handled by refreshSession which creates a new one
+                    if (window.pageGuard) window.pageGuard.refreshSession();
                     localStorage.removeItem('fastingForecast_profileSaved');
                     window.location.href = '/forecaster';
                     return;
@@ -2124,7 +2178,7 @@
             }
             
             // Get session ID for linking to user profile
-            const sessionId = localStorage.getItem('fastingForecast_sessionId');
+            const sessionId = window.getSessionId();
             
             const fastData = {
                 start_time: startDateTime,
@@ -2326,50 +2380,23 @@
             });
         }
         
-        // Update navigation on page load
-        updateActiveNavItem();
-        
-        // Add click handlers for navigation items
-        const navItems = document.querySelectorAll('.nav-item');
-        navItems.forEach(item => {
-            item.addEventListener('click', (e) => {
-                const href = item.getAttribute('href');
-                
-                // For now, prevent default navigation for pages that don't exist
-                if (href !== '/dashboard' && href !== '/timer' && href !== '/schedule' && href !== '/settings') {
-                    e.preventDefault();
-                    
-                    const pageName = item.querySelector('.nav-label').textContent;
-                    alert(`${pageName} page coming soon!`);
-                }
-            });
-        });
-        
-        // Close modals when clicking outside
-        document.getElementById('add-fast-modal').addEventListener('click', function(e) {
-            if (e.target === this) {
-                hideAddFastModal();
-            }
-        });
-        
-        document.getElementById('edit-fast-modal').addEventListener('click', function(e) {
-            if (e.target === this) {
-                hideEditFastModal();
-            }
-        });
+    </script>
 
-        document.getElementById('benefits-onboarding-modal').addEventListener('click', function(e) {
-            if (e.target === this) {
-                hideBenefitsOnboardingModal();
-            }
+    <!-- Session Management -->
+    <script src="/js/modules/session-manager.js"></script>
+    <script src="/js/modules/page-session-guard.js"></script>
+    <script>
+        // Initialize session management first
+        const pageGuard = new window.FastingForecastPageSessionGuard();
+        window.pageGuard = pageGuard; // Make it available globally for getSessionId()
+
+        // Wait for session to be ready before continuing with page logic
+        pageGuard.waitForReady().then(() => {
+            console.log('Session manager ready for dashboard.html');
+
+            // Now that session is ready, initialize the dashboard page
+            initializeDashboardPage();
         });
-        
-        // Set default start date/time to now
-        const now = new Date();
-        const localISOTime = new Date(now.getTime() - now.getTimezoneOffset() * 60000).toISOString();
-        const [date, time] = localISOTime.split('T');
-        document.getElementById('start-date').value = date;
-        document.getElementById('start-time').value = time.slice(0, 5); // Remove seconds
     </script>
 </body>
 </html>

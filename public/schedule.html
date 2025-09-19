@@ -917,9 +917,10 @@
     <script src="/js/modules/global-notification-manager.js"></script>
 
     <script>
-        // Session management
-        const sessionId = localStorage.getItem('fastingForecast_sessionId');
-        
+        // Session management - moved to initializeSchedulePage()
+        // const sessionId = window.getSessionId();
+        let sessionId = null; // Will be set when session is ready
+
         // Global state
         let scheduleData = {
             schedule: null,
@@ -936,16 +937,34 @@
         const scheduleList = document.getElementById('schedule-list');
         const scheduleGrid = document.getElementById('schedule-grid');
         
-        // Initialize the page
-        document.addEventListener('DOMContentLoaded', function() {
+        // Initialize the page - moved to session ready callback
+        // document.addEventListener('DOMContentLoaded', function() {
+        //     if (!sessionId) {
+        //         window.location.href = '/forecaster';
+        //         return;
+        //     }
+        //
+        //     loadSchedule();
+        //     setupEventListeners();
+        // });
+
+        // New initialization function that waits for session
+        function initializeSchedulePage() {
+            console.log('Initializing schedule page with session ready');
+
+            // Get session ID now that it's ready
+            sessionId = window.getSessionId();
+            console.log('Schedule page using session ID:', sessionId);
+
             if (!sessionId) {
+                console.error('No session ID available, redirecting to forecaster');
                 window.location.href = '/forecaster';
                 return;
             }
-            
+
             loadSchedule();
             setupEventListeners();
-        });
+        }
         
         function setupEventListeners() {
             // View toggle
@@ -1010,9 +1029,11 @@
                 
                 if (!response.ok) {
                     // If user profile not found (database was reset), clear localStorage and redirect to onboarding
-                    if (response.status === 404 && data.error && data.error.includes('User profile not found')) {
+                    if ((response.status === 404 && data.error && data.error.includes('User profile not found')) ||
+                        (data.code === 'SESSION_NOT_FOUND')) {
                         console.log('User profile missing after server restart - redirecting to onboarding');
-                        localStorage.removeItem('fastingForecast_sessionId');
+                        // Session removal handled by refreshSession which creates a new one
+                        if (window.pageGuard) window.pageGuard.refreshSession();
                         localStorage.removeItem('fastingForecast_profileSaved');
                         window.location.href = '/forecaster';
                         return;
@@ -1021,8 +1042,10 @@
                 }
                 
                 scheduleData = data;
+                console.log('📅 Schedule data loaded successfully:', data);
                 renderSchedule();
-                
+                console.log('📅 renderSchedule completed');
+
             } catch (error) {
                 console.error('Error loading schedule:', error);
                 showError('Failed to load schedule. Please try again.');
@@ -1030,7 +1053,9 @@
         }
         
         function renderSchedule() {
+            console.log('🔄 renderSchedule called - hiding loading spinner');
             loading.style.display = 'none';
+            console.log('🔄 Loading spinner hidden');
             
             if (!scheduleData.schedule || scheduleData.blocks.length === 0) {
                 showEmptyState();
@@ -1563,6 +1588,24 @@
             // TODO: Implement override quick actions modal
             alert(`Override actions for block ${blockId} will be implemented in the next phase`);
         }
+    </script>
+
+    <!-- Session Management -->
+    <script src="/js/modules/session-manager.js"></script>
+    <script src="/js/modules/page-session-guard.js"></script>
+    <script>
+        // Initialize session management first
+        const pageGuard = new window.FastingForecastPageSessionGuard();
+        window.pageGuard = pageGuard; // Make it available globally for getSessionId()
+
+        // Wait for session to be ready before continuing with page logic
+        pageGuard.waitForReady().then(() => {
+            console.log('Session manager ready for schedule.html');
+
+            // Now that session is ready, initialize the schedule page
+            console.log('Starting schedule page initialization with session ready');
+            initializeSchedulePage();
+        });
     </script>
 </body>
 </html>
