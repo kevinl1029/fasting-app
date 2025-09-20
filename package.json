@@ -7,7 +7,16 @@
     "start": "node server.js",
     "dev": "nodemon server.js",
     "check-duplicates": "node scripts/check-duplicates.js",
-    "check-duplicates:timer": "node scripts/check-duplicates.js public/timer.html"
+    "check-duplicates:timer": "node scripts/check-duplicates.js public/timer.html",
+    "test": "node tests/run-all-tests.js",
+    "test:timer": "node tests/timer.test.js",
+    "test:dashboard": "node tests/dashboard.test.js",
+    "test:settings": "node tests/settings.test.js",
+    "test:schedule": "node tests/schedule.test.js",
+    "test:quick": "node tests/quick-test.js",
+    "test:ci": "npm run test && echo 'All tests passed - ready for deployment'",
+    "precommit": "npm run test:quick",
+    "validate": "npm run check-duplicates && npm run test"
   },
   "dependencies": {
     "cors": "^2.8.5",
@@ -15,7 +24,8 @@
     "sqlite3": "^5.1.7"
   },
   "devDependencies": {
-    "nodemon": "^3.0.1"
+    "nodemon": "^3.0.1",
+    "puppeteer": "^21.0.0"
   },
   "keywords": [
     "webapp",

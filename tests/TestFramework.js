@@ -1,0 +1,342 @@
+/**
+ * Fasting Forecast Test Framework
+ *
+ * A comprehensive testing framework for end-to-end testing of the Fasting Forecast application.
+ * Based on successful patterns developed during session management fixes.
+ */
+
+const puppeteer = require('puppeteer');
+
+class FastingForecastTestFramework {
+    constructor(options = {}) {
+        this.options = {
+            headless: options.headless ?? true,
+            timeout: options.timeout ?? 10000,
+            sessionId: options.sessionId ?? 'fs_1758256447228_me25dyacv',
+            baseUrl: options.baseUrl ?? 'http://localhost:3000',
+            waitTime: options.waitTime ?? 3000,
+            ...options
+        };
+
+        this.browser = null;
+        this.page = null;
+        this.testResults = [];
+    }
+
+    async setup() {
+        console.log('🚀 Setting up Fasting Forecast Test Framework...');
+
+        this.browser = await puppeteer.launch({
+            headless: this.options.headless,
+            args: ['--no-sandbox', '--disable-setuid-sandbox']
+        });
+
+        this.page = await this.browser.newPage();
+
+        // Grant notification permissions
+        const context = this.browser.defaultBrowserContext();
+        await context.overridePermissions(this.options.baseUrl, ['notifications']);
+
+        // Set up console and error logging
+        this.page.on('console', msg => {
+            if (this.options.verbose) {
+                console.log(`[${msg.type().toUpperCase()}]`, msg.text());
+            }
+        });
+
+        this.page.on('pageerror', error => {
+            console.log('PAGE ERROR:', error.message);
+        });
+
+        console.log('✅ Test framework setup complete');
+    }
+
+    async teardown() {
+        if (this.browser) {
+            await this.browser.close();
+            console.log('🧹 Test framework teardown complete');
+        }
+    }
+
+    async navigateToPage(pagePath) {
+        console.log(`📍 Navigating to ${pagePath}...`);
+
+        await this.page.goto(`${this.options.baseUrl}${pagePath}`, {
+            waitUntil: 'networkidle0',
+            timeout: this.options.timeout
+        });
+
+        // Set session ID for authenticated testing
+        await this.page.evaluate((sessionId) => {
+            localStorage.setItem('fastingForecast_sessionId', sessionId);
+        }, this.options.sessionId);
+
+        // Reload with session
+        await this.page.reload({ waitUntil: 'networkidle0' });
+        await new Promise(resolve => setTimeout(resolve, this.options.waitTime));
+
+        console.log(`✅ Successfully loaded ${pagePath}`);
+    }
+
+    async runTest(testName, testFunction) {
+        console.log(`\n🧪 Running test: ${testName}`);
+        const startTime = Date.now();
+
+        try {
+            const result = await testFunction(this.page);
+            const duration = Date.now() - startTime;
+
+            this.testResults.push({
+                name: testName,
+                status: 'PASS',
+                duration,
+                result
+            });
+
+            console.log(`✅ ${testName} - PASSED (${duration}ms)`);
+            return result;
+        } catch (error) {
+            const duration = Date.now() - startTime;
+
+            this.testResults.push({
+                name: testName,
+                status: 'FAIL',
+                duration,
+                error: error.message
+            });
+
+            console.log(`❌ ${testName} - FAILED (${duration}ms)`);
+            console.log(`   Error: ${error.message}`);
+            throw error;
+        }
+    }
+
+    // Core test utilities
+    async testSessionManagement() {
+        return await this.runTest('Session Management', async (page) => {
+            const result = await page.evaluate(() => {
+                return {
+                    sessionIdFunction: typeof window.getSessionId === 'function',
+                    sessionIdValue: window.getSessionId ? window.getSessionId() : null,
+                    pageGuardAvailable: !!window.pageGuard,
+                    pageGuardReady: window.pageGuard ? window.pageGuard.isReady : false
+                };
+            });
+
+            if (!result.sessionIdFunction) throw new Error('Session ID function not available');
+            if (!result.pageGuardAvailable) throw new Error('Page guard not available');
+            if (!result.sessionIdValue) throw new Error('Session ID not set');
+
+            return result;
+        });
+    }
+
+    async testPageLoad() {
+        return await this.runTest('Page Load', async (page) => {
+            const result = await page.evaluate(() => {
+                return {
+                    title: document.title,
+                    hasMainContent: !!document.querySelector('.dashboard-card, .timer-card, .container'),
+                    hasNavigation: !!document.querySelector('.bottom-nav'),
+                    bodyLoaded: document.readyState === 'complete'
+                };
+            });
+
+            if (!result.hasMainContent) throw new Error('Main content not loaded');
+            if (!result.bodyLoaded) throw new Error('Page not fully loaded');
+
+            return result;
+        });
+    }
+
+    async testNoInfiniteSpinners() {
+        return await this.runTest('No Infinite Spinners', async (page) => {
+            const result = await page.evaluate(() => {
+                const spinners = document.querySelectorAll('.loading-spinner, .spinner, [class*="spin"]');
+                const visibleSpinners = [];
+
+                spinners.forEach(spinner => {
+                    if (spinner.offsetParent !== null) {
+                        visibleSpinners.push({
+                            className: spinner.className,
+                            id: spinner.id || 'no-id',
+                            parent: spinner.parentElement?.className || 'no-parent'
+                        });
+                    }
+                });
+
+                return {
+                    totalSpinners: spinners.length,
+                    visibleSpinners: visibleSpinners.length,
+                    spinnerDetails: visibleSpinners
+                };
+            });
+
+            if (result.visibleSpinners > 0) {
+                throw new Error(`Found ${result.visibleSpinners} visible spinners: ${JSON.stringify(result.spinnerDetails)}`);
+            }
+
+            return result;
+        });
+    }
+
+    async testNavigationFunctionality() {
+        return await this.runTest('Navigation Functionality', async (page) => {
+            const result = await page.evaluate(() => {
+                const navItems = document.querySelectorAll('.nav-item');
+                const activeItem = document.querySelector('.nav-item.active');
+
+                return {
+                    navItemCount: navItems.length,
+                    hasActiveItem: !!activeItem,
+                    activeItemHref: activeItem?.getAttribute('href'),
+                    activeItemText: activeItem?.querySelector('.nav-label')?.textContent
+                };
+            });
+
+            if (result.navItemCount === 0) throw new Error('No navigation items found');
+
+            return result;
+        });
+    }
+
+    async testTabSwitching(tabs) {
+        return await this.runTest('Tab Switching', async (page) => {
+            const results = {};
+
+            for (const tab of tabs) {
+                await page.click(`[data-tab="${tab}"]`);
+                await new Promise(resolve => setTimeout(resolve, 1000));
+
+                const tabState = await page.evaluate((tabName) => {
+                    const tabButton = document.querySelector(`[data-tab="${tabName}"]`);
+                    const tabContent = document.getElementById(`${tabName}-tab`);
+
+                    return {
+                        buttonActive: tabButton?.classList.contains('active'),
+                        contentVisible: tabContent?.classList.contains('active')
+                    };
+                }, tab);
+
+                if (!tabState.buttonActive || !tabState.contentVisible) {
+                    throw new Error(`Tab ${tab} not properly activated`);
+                }
+
+                results[tab] = tabState;
+            }
+
+            return results;
+        });
+    }
+
+    async testFormFunctionality(formSelector, testData) {
+        return await this.runTest('Form Functionality', async (page) => {
+            // Fill form fields
+            for (const [field, value] of Object.entries(testData)) {
+                await page.type(`${formSelector} [name="${field}"]`, value);
+            }
+
+            // Test form validation and submission readiness
+            const formState = await page.evaluate((selector) => {
+                const form = document.querySelector(selector);
+                const inputs = form.querySelectorAll('input[required]');
+                let allValid = true;
+
+                inputs.forEach(input => {
+                    if (!input.value.trim()) allValid = false;
+                });
+
+                return {
+                    formExists: !!form,
+                    requiredFieldsFilled: allValid,
+                    submitButtonEnabled: !form.querySelector('button[type="submit"]')?.disabled
+                };
+            }, formSelector);
+
+            if (!formState.formExists) throw new Error('Form not found');
+            if (!formState.requiredFieldsFilled) throw new Error('Required fields not filled');
+
+            return formState;
+        });
+    }
+
+    async testToggleFunctionality(toggleSelector) {
+        return await this.runTest('Toggle Functionality', async (page) => {
+            const initialState = await page.evaluate((selector) => {
+                const toggle = document.querySelector(selector);
+                return {
+                    exists: !!toggle,
+                    active: toggle?.classList.contains('active') || toggle?.checked
+                };
+            }, toggleSelector);
+
+            if (!initialState.exists) throw new Error('Toggle not found');
+
+            // Click toggle
+            await page.click(toggleSelector);
+            await new Promise(resolve => setTimeout(resolve, 1000));
+
+            const newState = await page.evaluate((selector) => {
+                const toggle = document.querySelector(selector);
+                return toggle?.classList.contains('active') || toggle?.checked;
+            }, toggleSelector);
+
+            if (initialState.active === newState) {
+                throw new Error('Toggle state did not change');
+            }
+
+            return {
+                initialState: initialState.active,
+                newState,
+                changed: true
+            };
+        });
+    }
+
+    // Convenience method to run all core tests
+    async runCoreTests() {
+        console.log('\n🎯 Running Core Test Suite...');
+
+        const results = {
+            sessionManagement: await this.testSessionManagement(),
+            pageLoad: await this.testPageLoad(),
+            noInfiniteSpinners: await this.testNoInfiniteSpinners(),
+            navigation: await this.testNavigationFunctionality()
+        };
+
+        return results;
+    }
+
+    // Generate test report
+    generateReport() {
+        const passed = this.testResults.filter(t => t.status === 'PASS');
+        const failed = this.testResults.filter(t => t.status === 'FAIL');
+        const totalDuration = this.testResults.reduce((sum, t) => sum + t.duration, 0);
+
+        console.log('\n📊 TEST REPORT');
+        console.log('='.repeat(50));
+        console.log(`Total Tests: ${this.testResults.length}`);
+        console.log(`Passed: ${passed.length} ✅`);
+        console.log(`Failed: ${failed.length} ❌`);
+        console.log(`Total Duration: ${totalDuration}ms`);
+        console.log(`Success Rate: ${((passed.length / this.testResults.length) * 100).toFixed(1)}%`);
+
+        if (failed.length > 0) {
+            console.log('\n❌ Failed Tests:');
+            failed.forEach(test => {
+                console.log(`  - ${test.name}: ${test.error}`);
+            });
+        }
+
+        return {
+            total: this.testResults.length,
+            passed: passed.length,
+            failed: failed.length,
+            duration: totalDuration,
+            successRate: (passed.length / this.testResults.length) * 100,
+            details: this.testResults
+        };
+    }
+}
+
+module.exports = FastingForecastTestFramework;
