@@ -1783,10 +1783,20 @@
 
             try {
                 // Calculate duration
+                console.log('🔍 DEBUG: showActiveFastSection called with activeFast:', activeFast);
+                console.log('🔍 DEBUG: Raw start_time from database:', activeFast.start_time);
+
                 const startTime = new Date(activeFast.start_time);
+                console.log('🔍 DEBUG: Parsed startTime:', startTime, 'isValid:', !isNaN(startTime.getTime()));
+
                 const now = new Date();
+                console.log('🔍 DEBUG: Current time (now):', now);
+
                 const elapsedMs = now - startTime;
+                console.log('🔍 DEBUG: Calculated elapsedMs:', elapsedMs, '(', Math.round(elapsedMs/1000), 'seconds )');
+
                 const duration = formatDuration(elapsedMs);
+                console.log('🔍 DEBUG: Formatted duration:', duration);
 
                 // Update UI
                 fastDuration.textContent = duration;
@@ -1869,16 +1879,22 @@
 
             activeFastUpdateInterval = setInterval(async () => {
                 try {
+                    console.log('🔄 DEBUG: Interval update - fetching active fast...');
                     const activeFast = await getActiveFast();
                     if (activeFast) {
+                        console.log('🔄 DEBUG: Interval update - got activeFast:', activeFast);
                         const fastDuration = document.getElementById('activeFastDuration');
                         if (fastDuration) {
+                            console.log('🔄 DEBUG: Interval update - raw start_time:', activeFast.start_time);
                             const startTime = new Date(activeFast.start_time);
                             const now = new Date();
                             const elapsedMs = now - startTime;
-                            fastDuration.textContent = formatDuration(elapsedMs);
+                            const duration = formatDuration(elapsedMs);
+                            console.log('🔄 DEBUG: Interval update - calculated duration:', duration);
+                            fastDuration.textContent = duration;
                         }
                     } else {
+                        console.log('🔄 DEBUG: Interval update - no active fast, hiding section');
                         // Fast ended, hide section
                         hideActiveFastSection();
                     }
@@ -1899,17 +1915,24 @@
             try {
                 const sessionId = window.getSessionId();
                 if (!sessionId) {
+                    console.log('🔍 DEBUG: getActiveFast - no session ID');
                     return null;
                 }
 
+                console.log('🔍 DEBUG: getActiveFast - making API call with sessionId:', sessionId);
                 const response = await fetch(`/api/fasts/active?sessionId=${sessionId}`);
+                console.log('🔍 DEBUG: getActiveFast - API response status:', response.status);
+
                 if (response.ok) {
                     const activeFast = await response.json();
+                    console.log('🔍 DEBUG: getActiveFast - API returned:', activeFast);
                     return activeFast && activeFast.id ? activeFast : null;
                 } else if (response.status === 404) {
+                    console.log('🔍 DEBUG: getActiveFast - 404 response (no active fast)');
                     // User profile not found or no active fast
                     return null;
                 }
+                console.log('🔍 DEBUG: getActiveFast - unexpected response status:', response.status);
                 return null;
             } catch (error) {
                 console.error('Error fetching active fast:', error);
@@ -1918,10 +1941,23 @@
         }
 
         function formatDuration(milliseconds) {
+            // Handle invalid inputs (NaN, null, undefined)
+            if (isNaN(milliseconds) || milliseconds == null) {
+                console.warn('🔧 DEBUG: formatDuration received invalid input:', milliseconds);
+                return '0h 0m';
+            }
+
+            // Handle negative durations (shouldn't happen but just in case)
+            if (milliseconds < 0) {
+                console.warn('🔧 DEBUG: formatDuration received negative duration:', milliseconds);
+                return '0h 0m';
+            }
+
             const hours = Math.floor(milliseconds / (1000 * 60 * 60));
             const minutes = Math.floor((milliseconds % (1000 * 60 * 60)) / (1000 * 60));
             return `${hours}h ${minutes}m`;
         }
+
 
         // Dashboard card event handlers
         function handleDashboardSeeMoreClick(event) {
@@ -2013,8 +2049,15 @@
                 
                 // Calculate duration if not stored in database
                 let duration = fast.duration_hours;
-                if (!duration && fast.start_time && fast.end_time) {
-                    duration = (endDate - startDate) / (1000 * 60 * 60); // Convert to hours
+                if (!duration && fast.start_time) {
+                    if (fast.end_time) {
+                        // Completed fast: use end_time - start_time
+                        duration = (endDate - startDate) / (1000 * 60 * 60); // Convert to hours
+                    } else {
+                        // Active fast: use current time - start_time
+                        const now = new Date();
+                        duration = (now - startDate) / (1000 * 60 * 60); // Convert to hours
+                    }
                 }
                 duration = duration || 0;
                 
@@ -2334,6 +2377,34 @@
 
                     hideEditFastModal();
                     loadFasts(); // Reload the fasts list
+
+                    // If this was an active fast, refresh the active fast display immediately
+                    // (but only if there was an active fast shown before)
+                    const activeFastSection = document.getElementById('activeFastSection');
+                    if (activeFastSection && !activeFastSection.classList.contains('hidden')) {
+                        console.log('🔧 DEBUG: Fast was edited and active fast section is visible, refreshing...');
+
+                        // Just update the specific duration display without full reinitialization
+                        setTimeout(async () => {
+                            try {
+                                const activeFast = await getActiveFast();
+                                if (activeFast) {
+                                    const fastDuration = document.getElementById('activeFastDuration');
+                                    if (fastDuration) {
+                                        console.log('🔧 DEBUG: Updating duration immediately after edit');
+                                        const startTime = new Date(activeFast.start_time);
+                                        const now = new Date();
+                                        const elapsedMs = now - startTime;
+                                        const duration = formatDuration(elapsedMs);
+                                        fastDuration.textContent = duration;
+                                        console.log('🔧 DEBUG: Updated duration to:', duration);
+                                    }
+                                }
+                            } catch (error) {
+                                console.error('Error refreshing active fast after edit:', error);
+                            }
+                        }, 1000); // Wait 1 second for the database update to complete
+                    }
                 } else {
                     const error = await response.json();
                     alert(`Error: ${error.error}`);
