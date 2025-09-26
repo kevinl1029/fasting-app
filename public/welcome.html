@@ -364,6 +364,10 @@
             }
         }
     </style>
+
+    <!-- Session Management Scripts - Load Early -->
+    <script src="/js/modules/session-manager.js"></script>
+    <script src="/js/modules/page-session-guard.js"></script>
 </head>
 <body>
     <div class="container">
@@ -488,7 +492,7 @@
         // Load user profile data and populate the page
         async function loadUserProfile() {
             try {
-                const sessionId = localStorage.getItem('fastingForecast_sessionId');
+                const sessionId = window.getSessionId();
                 if (!sessionId) {
                     console.warn('No session ID found, redirecting to home');
                     window.location.href = '/';
@@ -508,7 +512,8 @@
                 } else if (response.status === 404) {
                     // If user profile not found (database was reset), clear localStorage and redirect to onboarding
                     console.log('User profile missing after server restart - redirecting to onboarding');
-                    localStorage.removeItem('fastingForecast_sessionId');
+                    // Session removal handled by refreshSession which creates a new one
+                    if (window.pageGuard) window.pageGuard.refreshSession();
                     localStorage.removeItem('fastingForecast_profileSaved');
                     window.location.href = '/forecaster';
                     return;
@@ -585,6 +590,17 @@
             
             // Load user profile when page loads
             loadUserProfile();
+        });
+    </script>
+
+    <!-- Session Management - Scripts moved to HEAD -->
+    <script>
+        // Initialize session management first
+        const pageGuard = new window.FastingForecastPageSessionGuard();
+
+        // Wait for session to be ready before continuing with page logic
+        pageGuard.waitForReady().then(() => {
+            console.log('Session manager ready for welcome.html');
         });
     </script>
 </body>

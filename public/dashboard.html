@@ -903,6 +903,7 @@
             }
         }
     </style>
+
 </head>
 <body>
     <div class="container">
@@ -1967,7 +1968,7 @@
                 // Get session ID for user-specific data
                 const sessionId = window.getSessionId();
                 const url = sessionId ? `/api/fasts?sessionId=${sessionId}` : '/api/fasts';
-                
+
                 const response = await fetch(url);
                 if (response.ok) {
                     fasts = await response.json();
@@ -2382,21 +2383,27 @@
         
     </script>
 
-    <!-- Session Management -->
+    <!-- Session Management Scripts -->
     <script src="/js/modules/session-manager.js"></script>
     <script src="/js/modules/page-session-guard.js"></script>
     <script>
         // Initialize session management first
-        const pageGuard = new window.FastingForecastPageSessionGuard();
-        window.pageGuard = pageGuard; // Make it available globally for getSessionId()
+        try {
+            const pageGuard = new window.FastingForecastPageSessionGuard();
+            window.pageGuard = pageGuard; // Make it available globally for getSessionId()
 
-        // Wait for session to be ready before continuing with page logic
-        pageGuard.waitForReady().then(() => {
-            console.log('Session manager ready for dashboard.html');
+            // Wait for session to be ready before continuing with page logic
+            pageGuard.waitForReady().then(() => {
+                console.log('✅ Session manager ready for dashboard.html');
 
-            // Now that session is ready, initialize the dashboard page
-            initializeDashboardPage();
-        });
+                // Now that session is ready, initialize the dashboard page
+                initializeDashboardPage();
+            }).catch(error => {
+                console.error('❌ Session waitForReady failed:', error);
+            });
+        } catch (error) {
+            console.error('❌ PageSessionGuard creation failed:', error);
+        }
     </script>
 </body>
 </html>

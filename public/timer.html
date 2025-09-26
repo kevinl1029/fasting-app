@@ -1503,6 +1503,10 @@
             }
         }
     </style>
+
+    <!-- Session Management Scripts - Load Early -->
+    <script src="/js/modules/session-manager.js"></script>
+    <script src="/js/modules/page-session-guard.js"></script>
 </head>
 <body>
     <div class="container">
@@ -1804,15 +1808,12 @@
         
         // Session management - use global function from PageGuard
         const globalSessionId = window.getSessionId();
-        let currentFastId = null;
 
         // Contextual Cards System
-        let cardRotationManager = null;
         let notificationService = null;
         const CARD_ROTATION_INTERVAL = 12000; // 12 seconds
 
         // Legacy hunger coach for backwards compatibility
-        let hungerCoach = null;
 
         // Milestone definitions
         const milestones = [
@@ -1841,42 +1842,6 @@
                 icon: "✨"
             }
         ];
-        
-        // Fasting phases with descriptions
-        const phases = {
-            0: {
-                title: "Getting Started",
-                description: "Your body is beginning to use stored glucose and transitioning away from constant feeding."
-            },
-            4: {
-                title: "Early Adaptation", 
-                description: "Blood sugar stabilizing. Initial hunger pangs are normal as your body adjusts."
-            },
-            8: {
-                title: "Metabolic Shift",
-                description: "Your body is starting to switch from glucose to fat burning. Energy may fluctuate."
-            },
-            12: {
-                title: "Fat Burning Mode",
-                description: "Ketone production increasing. You may start feeling more focused and energized."
-            },
-            16: {
-                title: "Deep Ketosis",
-                description: "Significant ketone production. Mental clarity improving, hunger often subsides."
-            },
-            24: {
-                title: "Optimal Fat Burning",
-                description: "Peak fat oxidation and ketone production. Maximum metabolic benefits activated."
-            },
-            36: {
-                title: "Advanced Ketosis", 
-                description: "Deep therapeutic ketosis. Enhanced autophagy and cellular repair processes."
-            },
-            48: {
-                title: "Extended Benefits",
-                description: "Maximum autophagy, growth hormone elevation, and metabolic optimization."
-            }
-        };
 
         // Card Rotation Manager Functions
         async function initializeCardRotationManager() {
@@ -2334,10 +2299,8 @@
                 }
             });
         }
-        
-        // Track the last reached milestone to avoid repeated updates
-        let lastReachedMilestone = null;
-        
+
+
         // Update milestone states based on current progress
         function updateMilestoneStates() {
             const currentElapsedHours = elapsedTime / (1000 * 60 * 60);
@@ -2591,6 +2554,7 @@
         
         // Apply start time adjustment
         async function applyStartTimeAdjustment() {
+
             const adjustTimeInput = document.getElementById('adjustTimeInput');
             const adjustDateOffset = document.getElementById('adjustDateOffset');
 
@@ -2623,10 +2587,31 @@
             fastStartTime = newStartTime;
             elapsedTime = Date.now() - fastStartTime.getTime();
 
-            // 1. Update database record
+            // Update database if we have an active fast
+            let databaseUpdateSuccessful = false;
+
+            // Ensure we have currentFastId - try to get it if missing
+            if (!currentFastId) {
+                const timerState = localStorage.getItem('fastingForecast_timerState');
+                if (timerState) {
+                    try {
+                        const parsedState = JSON.parse(timerState);
+                        currentFastId = parsedState.currentFastId;
+                        console.log('Retrieved currentFastId from localStorage:', currentFastId);
+                    } catch (e) {
+                        console.error('Error parsing timer state:', e);
+                    }
+                }
+            }
+
             if (currentFastId) {
                 try {
-                    const updateResponse = await fetch(`/api/fasts/${currentFastId}`, {
+                    const updateSessionId = window.getSessionId();
+                    if (!updateSessionId) {
+                        throw new Error('Session not available');
+                    }
+
+                    const updateResponse = await fetch(`/api/fasts/${currentFastId}?sessionId=${updateSessionId}`, {
                         method: 'PUT',
                         headers: {
                             'Content-Type': 'application/json'
@@ -2635,14 +2620,21 @@
                     });
 
                     if (!updateResponse.ok) {
-                        console.error('Failed to update fast start time in database');
+                        const errorData = await updateResponse.json();
+                        throw new Error(`Server error: ${errorData.error || 'Unknown error'}`);
                     }
+
+                    databaseUpdateSuccessful = true;
                 } catch (error) {
-                    console.error('Error updating fast start time:', error);
+                    console.error('Failed to update start time in database:', error);
+                    alert('Warning: Start time updated locally but may not persist. Please try again or refresh the page.');
                 }
+            } else {
+                console.warn('No active fast ID available - changes will not persist');
+                alert('Warning: No active fast found. Changes may not persist.');
             }
 
-            // 2. Save updated timer state to localStorage
+            // Update localStorage with new state
             const adjustedTimerState = {
                 fastStartTime: fastStartTime.toISOString(),
                 fastDuration: fastDuration,
@@ -2651,45 +2643,34 @@
             };
             localStorage.setItem('fastingForecast_timerState', JSON.stringify(adjustedTimerState));
 
-            // 3. Restart notifications with new start time
-            if (globalNotificationManager) {
-                try {
+            // Update other components (notifications, cards, etc.)
+            try {
+                if (globalNotificationManager) {
                     globalNotificationManager.stopNotificationsForFast();
                     await globalNotificationManager.startNotificationsForFast(fastStartTime, fastDuration);
-                } catch (error) {
-                    console.error('Error updating notifications:', error);
                 }
-            }
 
-            // 4. Update contextual cards with new elapsed time
-            if (cardRotationManager) {
-                try {
-                    // Card rotation manager handles its own updates automatically
-                    // Just ensure fast state is current
+                if (cardRotationManager) {
                     const cardMealtimes = await getUserMealtimes();
                     cardRotationManager.updateFastState(isRunning, fastStartTime, cardMealtimes);
-                } catch (error) {
-                    console.error('Error updating contextual cards:', error);
-                }
-            } else if (hungerCoach) {
-                // Fallback to legacy hunger coach update
-                try {
+                } else if (hungerCoach) {
                     await updateHungerCard();
-                } catch (error) {
-                    console.error('Error updating hunger coach:', error);
                 }
+            } catch (error) {
+                console.error('Error updating components:', error);
             }
 
-            // 5. Update UI displays
+            // Update UI - this should always happen
             updateTimeDisplay();
             updateTimerDisplay();
-
-            // 6. Update milestone states based on new elapsed time
             updateMilestoneStates();
-
-            // Hide adjustment controls
             cancelStartTimeAdjustment();
+
+            console.log('Start time adjustment completed:', databaseUpdateSuccessful ? 'saved to database' : 'local only');
         }
+
+        // Ensure function is globally available
+        window.applyStartTimeAdjustment = applyStartTimeAdjustment;
         
         // Cancel start time adjustment
         function cancelStartTimeAdjustment() {
@@ -2975,6 +2956,14 @@
         
         // Reset timer
         function resetTimer() {
+            console.log('🚨 resetTimer() called - currentFastId:', currentFastId, 'isRunning:', isRunning);
+
+            // Don't reset if we have an active fast that was just restored
+            if (currentFastId && isRunning) {
+                console.log('🚨 BLOCKED resetTimer() - active fast detected, ignoring reset request');
+                return;
+            }
+
             if (isRunning) {
                 clearInterval(timerInterval);
                 isRunning = false;
@@ -3502,7 +3491,6 @@
         // Update navigation on page load
         document.addEventListener('DOMContentLoaded', () => {
             updateActiveNavItem();
-            initializeUserState();
             
             // Add click handlers for navigation items
             const clickNavItems = document.querySelectorAll('.nav-item');
@@ -3614,6 +3602,14 @@
 
         // Reset to initial state - clean slate
         function resetToInitialState() {
+            console.log('🚨 resetToInitialState() called - currentFastId:', currentFastId, 'isRunning:', isRunning);
+
+            // Don't reset if we have an active fast that was just restored
+            if (currentFastId && isRunning) {
+                console.log('🚨 BLOCKED resetToInitialState() - active fast detected, ignoring reset request');
+                return;
+            }
+
             // Stop any running timer
             if (timerInterval) {
                 clearInterval(timerInterval);
@@ -3678,6 +3674,7 @@
 
                     if (activeFast && savedTimerState) {
                         // Restore timer state if both database and localStorage indicate active fast
+                        console.log('🔄 Taking restoreTimerState path - activeFast.id:', activeFast.id);
                         await restoreTimerState(savedTimerState, activeFast);
                     } else if (!activeFast && savedTimerState) {
                         // Clear stale localStorage if database shows no active fast
@@ -3689,6 +3686,9 @@
                         try {
                             // Database has active fast but no localStorage state - restore the timer
                             console.log('🚀 Found active fast but no localStorage state, restoring timer');
+
+                            // Immediately hide pre-fast state to prevent placeholder display
+                            document.getElementById('preFastState').style.display = 'none';
                             console.log('🚀 activeFast.id:', activeFast.id);
                             console.log('🚀 activeFast.start_time:', activeFast.start_time);
 
@@ -3700,6 +3700,9 @@
                         console.log('🚀 Setting currentFastId to:', activeFast.id);
                         // Avoid scoping issues by using a local variable
                         const activeFastId = activeFast.id;
+
+                        // Set global currentFastId immediately to avoid race conditions
+                        currentFastId = activeFastId;
 
                         // Ensure proper date parsing from database UTC timestamp
                         const dbStartTime = activeFast.start_time;
@@ -3713,6 +3716,7 @@
                         }
 
                         isRunning = true;
+                        window.isRunning = true; // Expose to window for testing
                         elapsedTime = Date.now() - fastStartTime.getTime();
                         console.log('🚀 Calculated elapsed time:', Math.round(elapsedTime / 1000), 'seconds');
 
@@ -3764,6 +3768,16 @@
                             updateTimeDisplay();
                             console.log('🚀 updateTimeDisplay completed');
 
+                            // Save timer state to localStorage to prevent future inconsistencies
+                            const restoredTimerState = {
+                                fastStartTime: fastStartTime.toISOString(),
+                                fastDuration: 24, // Default duration
+                                isRunning: true,
+                                currentFastId: currentFastId
+                            };
+                            localStorage.setItem('fastingForecast_timerState', JSON.stringify(restoredTimerState));
+                            console.log('🚀 Timer state saved to localStorage during restoration');
+
                         } catch (timerError) {
                             console.error('🚀 Error setting up timer:', timerError);
                         }
@@ -3781,6 +3795,7 @@
                             // Set the global currentFastId only after everything else is successful
                             console.log('🚀 Setting global currentFastId at the end');
                             currentFastId = activeFastId;
+                            window.currentFastId = activeFastId; // Expose to window for testing
                         } catch (restoreError) {
                             console.error('🚀 Error during timer restoration:', restoreError);
                             console.error('🚀 Error stack:', restoreError.stack);
@@ -3795,17 +3810,23 @@
         // Restore timer state from localStorage
         async function restoreTimerState(savedStateString, activeFast) {
             try {
+                console.log('🔄 restoreTimerState called - activeFast.id:', activeFast.id);
                 const savedState = JSON.parse(savedStateString);
-                
+                console.log('🔄 savedState.currentFastId:', savedState.currentFastId);
+
                 // Validate saved state matches database
                 if (savedState.currentFastId !== activeFast.id) {
-                    console.log('Saved timer state does not match active fast, clearing localStorage');
+                    console.log('🚨 Saved timer state does not match active fast, clearing localStorage');
+                    console.log('   savedState.currentFastId:', savedState.currentFastId);
+                    console.log('   activeFast.id:', activeFast.id);
                     localStorage.removeItem('fastingForecast_timerState');
                     return;
                 }
-                
+
                 // Restore timer variables
+                console.log('🔄 Setting currentFastId to:', savedState.currentFastId);
                 currentFastId = savedState.currentFastId;
+                console.log('🔄 Global currentFastId is now:', currentFastId);
 
                 // Ensure proper date parsing from localStorage
                 const localStorageStartTime = savedState.fastStartTime;
@@ -3864,8 +3885,25 @@
                 }, 1000);
                 
             } catch (error) {
-                console.error('Error restoring timer state:', error);
-                localStorage.removeItem('fastingForecast_timerState');
+                console.error('🚨 Error restoring timer state:', error);
+                console.error('🚨 Error stack:', error.stack);
+
+                // Only clear localStorage for serious errors, not minor display issues
+                if (error.message && (error.message.includes('Invalid') || error.message.includes('parse'))) {
+                    console.error('🚨 Clearing localStorage due to data corruption');
+                    localStorage.removeItem('fastingForecast_timerState');
+                } else {
+                    console.warn('🚨 Keeping localStorage despite error - attempting recovery');
+                    // Try to fall back to direct restoration
+                    try {
+                        console.log('🔄 Attempting fallback restoration...');
+                        document.getElementById('preFastState').style.display = 'none';
+                        document.getElementById('activeFastState').style.display = 'block';
+                        document.querySelector('.welcome-message').style.display = 'none';
+                    } catch (fallbackError) {
+                        console.error('🚨 Fallback also failed:', fallbackError);
+                    }
+                }
             }
         }
         
@@ -4133,10 +4171,52 @@
         </a>
     </nav>
 
-    <!-- Session Management -->
-    <script src="/js/modules/session-manager.js"></script>
-    <script src="/js/modules/page-session-guard.js"></script>
+    <!-- Session Management - Scripts moved to HEAD -->
     <script>
+        // Global variables
+        let lastReachedMilestone = null; // Track milestone states globally
+        let cardRotationManager = null; // Card rotation manager instance
+        let hungerCoach = null; // Legacy hunger coach instance
+        let currentFastId = null; // Current active fast ID
+        let tipRotationInterval = null; // Tip rotation interval
+        const TIP_ROTATION_INTERVAL = 12000; // 12 seconds for tip rotation
+
+        // Fasting phases with descriptions
+        const phases = {
+            0: {
+                title: "Getting Started",
+                description: "Your body is beginning to use stored glucose and transitioning away from constant feeding."
+            },
+            4: {
+                title: "Early Adaptation",
+                description: "Blood sugar stabilizing. Initial hunger pangs are normal as your body adjusts."
+            },
+            8: {
+                title: "Metabolic Shift",
+                description: "Your body is starting to switch from glucose to fat burning. Energy may fluctuate."
+            },
+            12: {
+                title: "Fat Burning Mode",
+                description: "Ketone production increasing. You may start feeling more focused and energized."
+            },
+            16: {
+                title: "Deep Ketosis",
+                description: "Significant ketone production. Mental clarity improving, hunger often subsides."
+            },
+            24: {
+                title: "Optimal Fat Burning",
+                description: "Peak fat oxidation and ketone production. Maximum metabolic benefits activated."
+            },
+            36: {
+                title: "Advanced Ketosis",
+                description: "Deep therapeutic ketosis. Enhanced autophagy and cellular repair processes."
+            },
+            48: {
+                title: "Extended Benefits",
+                description: "Maximum autophagy, growth hormone elevation, and metabolic optimization."
+            }
+        };
+
         // Initialize session management first
         const pageGuard = new window.FastingForecastPageSessionGuard();
         window.pageGuard = pageGuard; // Make it available globally for getSessionId()
@@ -4162,6 +4242,13 @@
                 console.log('✓ checkForUpcomingFast completed');
             }).catch(error => {
                 console.error('✗ checkForUpcomingFast failed:', error);
+            });
+
+            // Initialize user state after session is ready
+            initializeUserState().then(() => {
+                console.log('✓ initializeUserState completed');
+            }).catch(error => {
+                console.error('✗ initializeUserState failed:', error);
             });
         }).catch(error => {
             console.error('✗ Session manager failed to initialize:', error);

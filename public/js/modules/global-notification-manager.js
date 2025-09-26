@@ -390,7 +390,7 @@ class GlobalNotificationManager {
     }
 
     async getUserSettings() {
-        const sessionId = localStorage.getItem('fastingForecast_sessionId');
+        const sessionId = window.getSessionId ? window.getSessionId() : localStorage.getItem('fastingForecast_sessionId');
         if (!sessionId) return null;
 
         try {

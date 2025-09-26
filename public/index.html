@@ -528,6 +528,10 @@
             }
         }
     </style>
+
+    <!-- Session Management Scripts - Load Early -->
+    <script src="/js/modules/session-manager.js"></script>
+    <script src="/js/modules/page-session-guard.js"></script>
 </head>
 <body>
     <div class="container">
@@ -1292,12 +1296,8 @@
 
         // Update navigation on page load
         document.addEventListener('DOMContentLoaded', () => {
-            // Generate session ID if not exists on page load
-            let sessionId = localStorage.getItem('fastingForecast_sessionId');
-            if (!sessionId) {
-                sessionId = 'fs_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
-                localStorage.setItem('fastingForecast_sessionId', sessionId);
-            }
+            // Session ID management is now handled by SessionManager
+            // (removed duplicate generation logic)
             
             // Check and update navigation visibility based on onboarding status
             updateNavigationVisibility();
@@ -1368,12 +1368,8 @@
 
         async function saveJourneyAndContinue() {
             try {
-                // Generate session ID if not exists
-                let sessionId = localStorage.getItem('fastingForecast_sessionId');
-                if (!sessionId) {
-                    sessionId = 'fs_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
-                    localStorage.setItem('fastingForecast_sessionId', sessionId);
-                }
+                // Get session ID from SessionManager
+                const sessionId = window.getSessionId();
 
                 // IMPORTANT: Sync userData with current protocol adjustments before saving
                 if (currentProtocol) {
@@ -1454,6 +1450,17 @@
             if (event.target === modal) {
                 closeSaveJourneyModal();
             }
+        });
+    </script>
+
+    <!-- Session Management - Scripts moved to HEAD -->
+    <script>
+        // Initialize session management first
+        const pageGuard = new window.FastingForecastPageSessionGuard();
+
+        // Wait for session to be ready before continuing with page logic
+        pageGuard.waitForReady().then(() => {
+            console.log('Session manager ready for index.html');
         });
     </script>
 </body>

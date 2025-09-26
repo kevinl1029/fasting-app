@@ -10,62 +10,121 @@ const PORT = process.env.PORT || 3000;
 app.use(cors());
 app.use(express.json());
 
+// Session validation middleware
+function validateSessionFormat(sessionId) {
+    return sessionId &&
+           typeof sessionId === 'string' &&
+           sessionId.startsWith('fs_') &&
+           sessionId.length > 10 &&
+           sessionId.length < 50 &&
+           /^fs_\d+_[a-z0-9]+$/.test(sessionId);
+}
+
+async function validateSessionMiddleware(req, res, next) {
+    const sessionId = req.query.sessionId || req.headers['x-session-id'] || req.body.sessionId;
+
+    if (!sessionId) {
+        return res.status(400).json({
+            error: 'Session required',
+            code: 'MISSING_SESSION',
+            message: 'Valid session ID required for this operation'
+        });
+    }
+
+    if (!validateSessionFormat(sessionId)) {
+        return res.status(400).json({
+            error: 'Invalid session format',
+            code: 'INVALID_SESSION_FORMAT',
+            message: 'Session ID format is invalid'
+        });
+    }
+
+    try {
+        const profile = await db.getUserProfileBySessionId(sessionId);
+        if (!profile) {
+            // Valid session format but no user profile - redirect to onboarding
+            return res.status(403).json({
+                error: 'User not onboarded',
+                code: 'USER_NOT_ONBOARDED',
+                message: 'Valid session but user profile not found. Please complete onboarding.',
+                redirectTo: '/welcome.html'
+            });
+        }
+
+        req.userProfile = profile;
+        req.sessionId = sessionId;
+        next();
+    } catch (error) {
+        console.error('Session validation error:', error);
+        return res.status(500).json({
+            error: 'Session validation failed',
+            code: 'VALIDATION_ERROR',
+            message: 'Unable to validate session'
+        });
+    }
+}
+
 // API Routes
 app.get('/api/hello', (req, res) => {
   res.json({ message: 'Hello from the backend!' });
 });
 
 app.get('/api/time', (req, res) => {
-  res.json({ 
+  res.json({
     currentTime: new Date().toISOString(),
     message: 'Current server time'
   });
 });
 
+// Session validation endpoint
+app.get('/api/session/validate', async (req, res) => {
+    const sessionId = req.query.sessionId;
+
+    if (!validateSessionFormat(sessionId)) {
+        return res.status(400).json({
+            valid: false,
+            reason: 'INVALID_FORMAT',
+            message: 'Session ID format is invalid'
+        });
+    }
+
+    try {
+        const profile = await db.getUserProfileBySessionId(sessionId);
+        return res.json({
+            valid: !!profile,
+            hasProfile: !!profile,
+            profileId: profile?.id,
+            message: profile ? 'Session is valid' : 'No profile found for session'
+        });
+    } catch (error) {
+        console.error('Session validation error:', error);
+        return res.status(500).json({
+            valid: false,
+            reason: 'VALIDATION_ERROR',
+            message: 'Unable to validate session'
+        });
+    }
+});
+
 // Fasting Log API Endpoints
-app.get('/api/fasts', async (req, res) => {
+app.get('/api/fasts', validateSessionMiddleware, async (req, res) => {
   try {
     const limit = parseInt(req.query.limit) || 50;
     const offset = parseInt(req.query.offset) || 0;
-    const sessionId = req.query.sessionId;
-    
-    if (sessionId) {
-      // Get user profile first to find user_profile_id
-      const profile = await db.getUserProfileBySessionId(sessionId);
-      if (profile) {
-        // Get only user-specific fasts
-        const userFasts = await db.getFastsByUserProfile(profile.id, limit, offset);
-        res.json(userFasts);
-      } else {
-        // Return empty array if no profile found
-        res.json([]);
-      }
-    } else {
-      // No sessionId provided - return empty array to maintain data isolation
-      res.json([]);
-    }
+
+    // Session is guaranteed valid here - use req.userProfile
+    const userFasts = await db.getFastsByUserProfile(req.userProfile.id, limit, offset);
+    res.json(userFasts);
   } catch (error) {
     console.error('Error fetching fasts:', error);
     res.status(500).json({ error: 'Failed to fetch fasts' });
   }
 });
 
-app.get('/api/fasts/active', async (req, res) => {
+app.get('/api/fasts/active', validateSessionMiddleware, async (req, res) => {
   try {
-    const sessionId = req.query.sessionId || req.headers['x-session-id'];
-
-    if (!sessionId) {
-      return res.status(400).json({ error: 'Session ID required' });
-    }
-
-    // Get user profile first
-    const userProfile = await db.getUserProfileBySessionId(sessionId);
-    if (!userProfile) {
-      return res.status(404).json({ error: 'User profile not found' });
-    }
-
-    // Get active fast for this specific user
-    const activeFast = await db.getActiveFastByUserId(userProfile.id);
+    // Session is guaranteed valid here - use req.userProfile
+    const activeFast = await db.getActiveFastByUserId(req.userProfile.id);
     res.json(activeFast);
   } catch (error) {
     console.error('Error fetching active fast:', error);
@@ -73,13 +132,18 @@ app.get('/api/fasts/active', async (req, res) => {
   }
 });
 
-app.get('/api/fasts/:id', async (req, res) => {
+app.get('/api/fasts/:id', validateSessionMiddleware, async (req, res) => {
   try {
     const fastId = parseInt(req.params.id);
     const fast = await db.getFastById(fastId);
-    
+
     if (!fast) {
       return res.status(404).json({ error: 'Fast not found' });
+    }
+
+    // Ensure user can only access their own fasts
+    if (fast.user_profile_id !== req.userProfile.id) {
+      return res.status(403).json({ error: 'Access denied: You can only access your own fasts' });
     }
     
     const milestones = await db.getFastMilestones(fastId);
@@ -90,14 +154,14 @@ app.get('/api/fasts/:id', async (req, res) => {
   }
 });
 
-app.post('/api/fasts', async (req, res) => {
+app.post('/api/fasts', validateSessionMiddleware, async (req, res) => {
   try {
-    const { start_time, end_time, notes, weight, photos, is_manual = true, sessionId } = req.body;
-    
+    const { start_time, end_time, notes, weight, photos, is_manual = true } = req.body;
+
     if (!start_time) {
       return res.status(400).json({ error: 'start_time is required' });
     }
-    
+
     // Calculate duration if end_time is provided
     let duration_hours = null;
     if (end_time) {
@@ -105,19 +169,9 @@ app.post('/api/fasts', async (req, res) => {
       const end = new Date(end_time);
       duration_hours = (end - start) / (1000 * 60 * 60);
     }
-    
-    // Get user profile ID if session ID is provided
-    let userProfileId = null;
-    if (sessionId) {
-      let profile = await db.getUserProfileBySessionId(sessionId);
-      if (!profile) {
-        // Auto-create user profile if it doesn't exist
-        console.log('Creating new user profile for sessionId:', sessionId);
-        profile = await db.createUserProfile({ session_id: sessionId });
-      }
-      userProfileId = profile.id;
-      console.log('Using user profile ID:', userProfileId);
-    }
+
+    // Session is guaranteed valid here - use req.userProfile.id
+    const userProfileId = req.userProfile.id;
     
     const fastData = {
       start_time,
@@ -139,28 +193,17 @@ app.post('/api/fasts', async (req, res) => {
   }
 });
 
-app.post('/api/fasts/start', async (req, res) => {
+app.post('/api/fasts/start', validateSessionMiddleware, async (req, res) => {
   try {
-    const { start_time, notes, weight, sessionId } = req.body;
-    console.log('Starting fast with sessionId:', sessionId);
+    const { start_time, notes, weight } = req.body;
 
-    // Get user profile ID if session ID is provided
-    let userProfileId = null;
-    if (sessionId) {
-      let profile = await db.getUserProfileBySessionId(sessionId);
-      if (!profile) {
-        // Auto-create user profile if it doesn't exist
-        console.log('Creating new user profile for sessionId:', sessionId);
-        profile = await db.createUserProfile({ session_id: sessionId });
-      }
-      console.log('Using user profile ID:', profile.id);
-      userProfileId = profile.id;
+    // Session is guaranteed valid here - use req.userProfile.id
+    const userProfileId = req.userProfile.id;
 
-      // Check if there's already an active fast for this user
-      const activeFast = await db.getActiveFastByUserId(userProfileId);
-      if (activeFast) {
-        return res.status(400).json({ error: 'There is already an active fast' });
-      }
+    // Check if there's already an active fast for this user
+    const activeFast = await db.getActiveFastByUserId(userProfileId);
+    if (activeFast) {
+      return res.status(400).json({ error: 'There is already an active fast' });
     }
 
     const fastData = {
@@ -182,11 +225,20 @@ app.post('/api/fasts/start', async (req, res) => {
   }
 });
 
-app.post('/api/fasts/:id/end', async (req, res) => {
+app.post('/api/fasts/:id/end', validateSessionMiddleware, async (req, res) => {
   try {
     const fastId = parseInt(req.params.id);
     const endTime = req.body.end_time || new Date().toISOString();
-    
+
+    // Verify ownership before ending fast
+    const fast = await db.getFastById(fastId);
+    if (!fast) {
+      return res.status(404).json({ error: 'Fast not found' });
+    }
+    if (fast.user_profile_id !== req.userProfile.id) {
+      return res.status(403).json({ error: 'Access denied: You can only end your own fasts' });
+    }
+
     const updatedFast = await db.endFast(fastId, endTime);
     res.json(updatedFast);
   } catch (error) {
@@ -195,7 +247,7 @@ app.post('/api/fasts/:id/end', async (req, res) => {
   }
 });
 
-app.put('/api/fasts/:id', async (req, res) => {
+app.put('/api/fasts/:id', validateSessionMiddleware, async (req, res) => {
   try {
     const fastId = parseInt(req.params.id);
     const { start_time, end_time, notes, weight, photos } = req.body;
@@ -207,17 +259,22 @@ app.put('/api/fasts/:id', async (req, res) => {
       updateData[key] === undefined && delete updateData[key]
     );
     
-    // Recalculate duration if times are being updated
+    // Verify ownership and recalculate duration if times are being updated
+    const fast = await db.getFastById(fastId);
+    if (!fast) {
+      return res.status(404).json({ error: 'Fast not found' });
+    }
+    if (fast.user_profile_id !== req.userProfile.id) {
+      return res.status(403).json({ error: 'Access denied: You can only update your own fasts' });
+    }
+
     if (updateData.start_time || updateData.end_time) {
-      const fast = await db.getFastById(fastId);
-      if (!fast) {
-        return res.status(404).json({ error: 'Fast not found' });
-      }
-      
+
       const startTime = updateData.start_time || fast.start_time;
       const endTime = updateData.end_time || fast.end_time;
-      
-      if (startTime && endTime) {
+
+      // Only mark as inactive and calculate duration if we're actually setting an end_time
+      if (startTime && endTime && updateData.end_time) {
         const start = new Date(startTime);
         const end = new Date(endTime);
         updateData.duration_hours = (end - start) / (1000 * 60 * 60);
@@ -239,11 +296,21 @@ app.put('/api/fasts/:id', async (req, res) => {
   }
 });
 
-app.delete('/api/fasts/:id', async (req, res) => {
+app.delete('/api/fasts/:id', validateSessionMiddleware, async (req, res) => {
   try {
     const fastId = parseInt(req.params.id);
+
+    // Verify ownership before deletion
+    const fast = await db.getFastById(fastId);
+    if (!fast) {
+      return res.status(404).json({ error: 'Fast not found' });
+    }
+    if (fast.user_profile_id !== req.userProfile.id) {
+      return res.status(403).json({ error: 'Access denied: You can only delete your own fasts' });
+    }
+
     const result = await db.deleteFast(fastId);
-    
+
     if (!result.deleted) {
       return res.status(404).json({ error: 'Fast not found' });
     }
@@ -335,7 +402,7 @@ app.post('/api/user/onboard/:sessionId', async (req, res) => {
 });
 
 // Schedule API Endpoints
-app.get('/api/schedule', async (req, res) => {
+app.get('/api/schedule', validateSessionMiddleware, async (req, res) => {
   try {
     const sessionId = req.query.sessionId;
     if (!sessionId) {
@@ -371,7 +438,7 @@ app.get('/api/schedule', async (req, res) => {
   }
 });
 
-app.post('/api/schedule', async (req, res) => {
+app.post('/api/schedule', validateSessionMiddleware, async (req, res) => {
   try {
     const { sessionId, week_anchor = 1 } = req.body;
     if (!sessionId) {
@@ -405,26 +472,22 @@ app.post('/api/schedule', async (req, res) => {
   }
 });
 
-app.post('/api/schedule/blocks', async (req, res) => {
+app.post('/api/schedule/blocks', validateSessionMiddleware, async (req, res) => {
   try {
-    const { sessionId, name, start_dow, start_time, end_dow, end_time, tz_mode = 'local', anchor_tz, notifications } = req.body;
-    
-    if (!sessionId || start_dow === undefined || !start_time || end_dow === undefined || !end_time) {
+    const { name, start_dow, start_time, end_dow, end_time, tz_mode = 'local', anchor_tz, notifications } = req.body;
+
+    if (start_dow === undefined || !start_time || end_dow === undefined || !end_time) {
       return res.status(400).json({ error: 'Missing required fields' });
     }
-    
-    // Get user profile
-    const profile = await db.getUserProfileBySessionId(sessionId);
-    if (!profile) {
-      return res.status(404).json({ error: 'User profile not found' });
-    }
+
+    // Session is guaranteed valid here - use req.userProfile
     
     // Get or create user's schedule
-    let schedule = await db.getScheduleByUserProfile(profile.id);
+    let schedule = await db.getScheduleByUserProfile(req.userProfile.id);
     if (!schedule) {
       // Create schedule if it doesn't exist
       const scheduleData = {
-        user_profile_id: profile.id,
+        user_profile_id: req.userProfile.id,
         week_anchor: 1,
         is_paused: false
       };
@@ -452,7 +515,7 @@ app.post('/api/schedule/blocks', async (req, res) => {
   }
 });
 
-app.patch('/api/schedule/blocks/:id', async (req, res) => {
+app.patch('/api/schedule/blocks/:id', validateSessionMiddleware, async (req, res) => {
   try {
     const blockId = parseInt(req.params.id);
     const { sessionId, name, start_dow, start_time, end_dow, end_time, tz_mode, anchor_tz, notifications } = req.body;
@@ -498,7 +561,7 @@ app.patch('/api/schedule/blocks/:id', async (req, res) => {
   }
 });
 
-app.delete('/api/schedule/blocks/:id', async (req, res) => {
+app.delete('/api/schedule/blocks/:id', validateSessionMiddleware, async (req, res) => {
   try {
     const blockId = parseInt(req.params.id);
     const { sessionId } = req.query;
@@ -532,7 +595,7 @@ app.delete('/api/schedule/blocks/:id', async (req, res) => {
   }
 });
 
-app.post('/api/schedule/blocks/:id/overrides', async (req, res) => {
+app.post('/api/schedule/blocks/:id/overrides', validateSessionMiddleware, async (req, res) => {
   try {
     const blockId = parseInt(req.params.id);
     const { sessionId, occurrence_date, type, payload, reason } = req.body;
@@ -575,7 +638,7 @@ app.post('/api/schedule/blocks/:id/overrides', async (req, res) => {
   }
 });
 
-app.post('/api/schedule/preview', async (req, res) => {
+app.post('/api/schedule/preview', validateSessionMiddleware, async (req, res) => {
   try {
     const { sessionId, blocks } = req.body;
     
@@ -629,22 +692,12 @@ app.post('/api/schedule/preview', async (req, res) => {
 });
 
 // Get upcoming scheduled instances for Timer integration
-app.get('/api/schedule/upcoming', async (req, res) => {
+app.get('/api/schedule/upcoming', validateSessionMiddleware, async (req, res) => {
   try {
-    const { sessionId } = req.query;
-    
-    if (!sessionId) {
-      return res.status(400).json({ error: 'sessionId is required' });
-    }
-    
-    // Get user profile
-    const profile = await db.getUserProfileBySessionId(sessionId);
-    if (!profile) {
-      return res.status(404).json({ error: 'User profile not found' });
-    }
-    
+    // Session is guaranteed valid here - use req.userProfile
+
     // Get user's schedule
-    const schedule = await db.getScheduleByUserProfile(profile.id);
+    const schedule = await db.getScheduleByUserProfile(req.userProfile.id);
     if (!schedule) {
       return res.json({ upcoming: null }); // No schedule set
     }
@@ -696,7 +749,7 @@ app.get('/api/schedule/upcoming', async (req, res) => {
 });
 
 // Start early endpoint for scheduled fasts
-app.post('/api/schedule/start-early', async (req, res) => {
+app.post('/api/schedule/start-early', validateSessionMiddleware, async (req, res) => {
   try {
     const { sessionId, upcomingId } = req.body;
     

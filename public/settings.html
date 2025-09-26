@@ -537,6 +537,10 @@
             }
         }
     </style>
+
+    <!-- Session Management Scripts - Load Early -->
+    <script src="/js/modules/session-manager.js"></script>
+    <script src="/js/modules/page-session-guard.js"></script>
 </head>
 <body>
     <div class="container">
@@ -1349,9 +1353,7 @@
         });
     </script>
 
-    <!-- Session Management -->
-    <script src="/js/modules/session-manager.js"></script>
-    <script src="/js/modules/page-session-guard.js"></script>
+    <!-- Session Management - Scripts moved to HEAD -->
     <script>
         // Initialize session management first
         const pageGuard = new window.FastingForecastPageSessionGuard();

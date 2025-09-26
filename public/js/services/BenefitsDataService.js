@@ -394,8 +394,8 @@ class BenefitsDataService {
      * Make HTTP request with retry logic
      */
     async makeRequest(endpoint, options = {}) {
-        // Get session ID from localStorage
-        const sessionId = localStorage.getItem('fastingForecast_sessionId');
+        // Get session ID from global function (uses PageGuard if available)
+        const sessionId = window.getSessionId ? window.getSessionId() : localStorage.getItem('fastingForecast_sessionId');
         let url = `${this.options.apiBaseUrl}${endpoint}`;
 
         // Add session ID as query parameter if available
