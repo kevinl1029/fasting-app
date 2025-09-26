@@ -30,18 +30,22 @@ class SessionManager {
         try {
             let sessionId = localStorage.getItem(this.SESSION_KEY);
 
-            if (!sessionId || !this.validateSessionFormat(sessionId)) {
-                console.warn('Invalid or missing sessionId detected, creating new session');
+            if (!sessionId) {
+                console.log('No sessionId found - creating first session for new user');
                 sessionId = this.createNewSession();
+            } else if (!this.validateSessionFormat(sessionId)) {
+                console.warn('Session format appears invalid but preserving to prevent data loss:', sessionId);
+                // Continue with existing session even if format seems wrong
             } else {
                 console.log('Valid sessionId found:', sessionId);
             }
 
             return sessionId;
         } catch (error) {
-            console.error('Error accessing localStorage, creating temporary session:', error);
-            // Fallback for localStorage access issues
-            return this.generateSessionId();
+            console.error('Error accessing localStorage - this will cause data loss:', error);
+            // Cannot access localStorage - data cannot be persisted
+            // Return null to signal the error rather than creating ephemeral session
+            return null;
         } finally {
             this.isInitializing = false;
         }
@@ -129,11 +133,16 @@ class SessionManager {
     async validateAndRepair() {
         const sessionId = this.getSessionId();
 
-        // Only validate format - don't regenerate sessions based on backend issues
-        if (!sessionId || !this.validateSessionFormat(sessionId)) {
-            console.warn('Session format validation failed, session appears corrupted');
-            this.createNewSession();
+        // Only validate format - NEVER regenerate sessions to prevent data loss
+        if (!sessionId) {
+            console.warn('No session found - this should only happen on first visit');
             return false;
+        }
+
+        if (!this.validateSessionFormat(sessionId)) {
+            console.warn('Session format validation failed but preserving session to prevent data loss:', sessionId);
+            // Return true to continue using the session even if format seems invalid
+            return true;
         }
 
         // Session format is valid - consider it good regardless of backend state
@@ -151,12 +160,15 @@ class SessionManager {
                     console.log('Session synchronized across tabs:', e.newValue);
                     this.dispatchSessionChangeEvent(e.newValue, false);
                 } else if (!e.newValue) {
-                    console.warn('Session removed in another tab - keeping current session if valid');
-                    // Don't create new session - preserve current session if it exists and is valid
+                    console.warn('Session removed in another tab - preserving any existing session');
+                    // NEVER create new session - preserve current session at all costs
                     const currentSession = this.getSessionId();
-                    if (!currentSession || !this.validateSessionFormat(currentSession)) {
-                        console.log('No valid current session, creating new one');
-                        this.createNewSession();
+                    if (currentSession) {
+                        console.log('Preserving existing session despite cross-tab removal:', currentSession);
+                        // Restore the session that was removed
+                        localStorage.setItem(this.SESSION_KEY, currentSession);
+                    } else {
+                        console.warn('No session to preserve - user will need to start fresh');
                     }
                 }
             }
@@ -181,11 +193,12 @@ class SessionManager {
     }
 
     /**
-     * Manual session refresh (useful for testing or error recovery)
+     * Manual session refresh - DISABLED to prevent data loss
+     * Creating new sessions destroys all user data since sessions are the only persistence mechanism
      */
     refreshSession() {
-        console.log('Manually refreshing session...');
-        this.createNewSession();
+        console.warn('refreshSession() called but DISABLED to prevent data loss');
+        console.warn('Sessions are the only persistence mechanism - creating new sessions = data loss');
         return this.getSessionId();
     }
 

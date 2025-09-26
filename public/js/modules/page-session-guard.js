@@ -61,8 +61,9 @@ class PageSessionGuard {
         } catch (error) {
             console.error('Page access validation failed:', error);
 
-            // Create emergency session if validation completely fails
-            this.sessionManager.createNewSession();
+            // NEVER create new sessions - preserve existing data at all costs
+            // Log the error but continue with existing session
+            console.warn('Session validation failed but preserving existing session to prevent data loss');
             return false;
         }
     }
