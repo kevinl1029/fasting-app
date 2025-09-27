@@ -14,12 +14,90 @@ class Database {
         : path.join(__dirname, 'fasting.db');
 
       console.log('Database path:', dbPath);
-      this.db = new sqlite3.Database(dbPath, (err) => {
+      console.log('NODE_ENV:', process.env.NODE_ENV);
+      console.log('Current working directory:', process.cwd());
+
+      // Check if database file already exists
+      const fs = require('fs');
+      const dbExists = fs.existsSync(dbPath);
+      console.log('Database file exists before connection:', dbExists);
+
+      if (dbExists) {
+        const stats = fs.statSync(dbPath);
+        console.log('Database file size:', stats.size, 'bytes');
+        console.log('Database file modified:', stats.mtime);
+      }
+
+      // Check if directory exists
+      const dbDir = path.dirname(dbPath);
+      const dirExists = fs.existsSync(dbDir);
+      console.log('Database directory exists:', dirExists);
+
+      if (!dirExists) {
+        console.log('Creating database directory:', dbDir);
+        fs.mkdirSync(dbDir, { recursive: true });
+      }
+
+      // Test file persistence
+      const testFilePath = path.join(dbDir, 'persistence-test.txt');
+      const timestamp = new Date().toISOString();
+      try {
+        // Write test file
+        fs.writeFileSync(testFilePath, `Deployment test: ${timestamp}\n`, { flag: 'a' });
+        console.log('Successfully wrote persistence test file');
+
+        // Read back test file
+        const testContent = fs.readFileSync(testFilePath, 'utf8');
+        console.log('Persistence test file contents:', testContent.trim());
+
+        // Count lines to see how many deployments have happened
+        const lines = testContent.split('\n').filter(line => line.trim());
+        console.log('Number of deployment entries in test file:', lines.length);
+      } catch (err) {
+        console.error('Error with persistence test file:', err.message);
+      }
+
+      // List directory contents
+      try {
+        const dirContents = fs.readdirSync(dbDir);
+        console.log('Database directory contents:', dirContents);
+      } catch (err) {
+        console.log('Could not read database directory:', err.message);
+      }
+
+      this.db = new sqlite3.Database(dbPath, sqlite3.OPEN_READWRITE | sqlite3.OPEN_CREATE, (err) => {
         if (err) {
           console.error('Error opening database:', err);
           reject(err);
         } else {
           console.log('Connected to SQLite database');
+
+          // Check if database file exists after connection
+          const dbExistsAfter = fs.existsSync(dbPath);
+          console.log('Database file exists after connection:', dbExistsAfter);
+
+          if (dbExistsAfter) {
+            const statsAfter = fs.statSync(dbPath);
+            console.log('Database file size after connection:', statsAfter.size, 'bytes');
+          }
+
+          // Check if this is an existing database by looking for tables
+          this.db.get("SELECT name FROM sqlite_master WHERE type='table' AND name='user_profiles'", (err, row) => {
+            if (err) {
+              console.error('Error checking for existing tables:', err);
+            } else {
+              console.log('user_profiles table exists:', !!row);
+              if (row) {
+                // Count existing user profiles
+                this.db.get("SELECT COUNT(*) as count FROM user_profiles", (err, countRow) => {
+                  if (!err && countRow) {
+                    console.log('Existing user profiles count:', countRow.count);
+                  }
+                });
+              }
+            }
+          });
+
           this.createTables().then(resolve).catch(reject);
         }
       });
