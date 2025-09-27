@@ -71,6 +71,158 @@ class Database {
         console.log('Could not read database directory:', err.message);
       }
 
+      // Ensure persistent volume is fully mounted before proceeding
+      if (process.env.NODE_ENV === 'production') {
+        const mountPath = '/opt/render/project/src/database';
+        let retries = 0;
+        const maxRetries = 10;
+
+        while (retries < maxRetries) {
+          try {
+            // Test if we can write to the mount point
+            const testPath = path.join(mountPath, 'mount-test');
+            fs.writeFileSync(testPath, 'test');
+            fs.unlinkSync(testPath);
+            console.log('Persistent volume mount verified');
+            break;
+          } catch (err) {
+            retries++;
+            console.log(`Mount test failed (attempt ${retries}/${maxRetries}):`, err.message);
+            if (retries < maxRetries) {
+              await new Promise(resolve => setTimeout(resolve, 1000)); // Wait 1 second
+            } else {
+              console.error('Persistent volume mount failed after', maxRetries, 'attempts');
+              throw new Error('Persistent volume not accessible');
+            }
+          }
+        }
+      }
+
+      // === TIMING AND RETRY DIAGNOSTICS ===
+      console.log('=== TIMING AND RETRY DIAGNOSTICS ===');
+
+      // Test file detection at multiple time intervals
+      const timingTests = [0, 100, 500, 1000, 2000]; // milliseconds
+      for (let i = 0; i < timingTests.length; i++) {
+        const delay = timingTests[i];
+        if (delay > 0) {
+          console.log(`Waiting ${delay}ms before next check...`);
+          await new Promise(resolve => setTimeout(resolve, delay));
+        }
+
+        const testExists = fs.existsSync(dbPath);
+        console.log(`T+${delay}ms: Database file exists = ${testExists}`);
+
+        if (testExists) {
+          try {
+            const stats = fs.statSync(dbPath);
+            console.log(`T+${delay}ms: File size = ${stats.size} bytes`);
+            break; // Found it, no need to continue timing tests
+          } catch (err) {
+            console.log(`T+${delay}ms: File stat error = ${err.message}`);
+          }
+        }
+      }
+
+      console.log('=== END TIMING DIAGNOSTICS ===');
+
+      // === DATABASE FILE DETECTION DIAGNOSTICS ===
+      console.log('=== DATABASE FILE DETECTION DIAGNOSTICS ===');
+      console.log('1. Raw database path:', dbPath);
+      console.log('2. Resolved database path:', path.resolve(dbPath));
+      console.log('3. Database directory:', path.dirname(dbPath));
+      console.log('4. Database filename:', path.basename(dbPath));
+
+      // Check directory exists
+      const dbDir = path.dirname(dbPath);
+      const dirExists = fs.existsSync(dbDir);
+      console.log('5. Database directory exists:', dirExists);
+
+      if (dirExists) {
+        try {
+          // List ALL files in database directory
+          const dirContents = fs.readdirSync(dbDir);
+          console.log('6. Database directory contents:', dirContents);
+          console.log('7. Number of files in directory:', dirContents.length);
+
+          // Check each file in detail
+          dirContents.forEach((file, index) => {
+            const fullPath = path.join(dbDir, file);
+            try {
+              const stats = fs.statSync(fullPath);
+              console.log(`8.${index + 1}. File: ${file}, Size: ${stats.size} bytes, Modified: ${stats.mtime}`);
+            } catch (err) {
+              console.log(`8.${index + 1}. File: ${file}, Error reading stats: ${err.message}`);
+            }
+          });
+        } catch (err) {
+          console.log('6. Error reading directory contents:', err.message);
+        }
+      }
+
+      // Test multiple file detection methods
+      console.log('9. Database file detection methods:');
+
+      // Method 1: fs.existsSync
+      const existsSync = fs.existsSync(dbPath);
+      console.log('   - fs.existsSync(dbPath):', existsSync);
+
+      // Method 2: fs.existsSync with resolved path
+      const resolvedPath = path.resolve(dbPath);
+      const existsSyncResolved = fs.existsSync(resolvedPath);
+      console.log('   - fs.existsSync(resolved):', existsSyncResolved);
+
+      // Method 3: fs.statSync
+      try {
+        const stats = fs.statSync(dbPath);
+        console.log('   - fs.statSync success:', { size: stats.size, isFile: stats.isFile(), mtime: stats.mtime });
+      } catch (err) {
+        console.log('   - fs.statSync error:', err.code, err.message);
+      }
+
+      // Method 4: fs.access
+      try {
+        fs.accessSync(dbPath, fs.constants.F_OK);
+        console.log('   - fs.accessSync (F_OK): success');
+      } catch (err) {
+        console.log('   - fs.accessSync (F_OK) error:', err.code, err.message);
+      }
+
+      try {
+        fs.accessSync(dbPath, fs.constants.R_OK | fs.constants.W_OK);
+        console.log('   - fs.accessSync (R_OK|W_OK): success');
+      } catch (err) {
+        console.log('   - fs.accessSync (R_OK|W_OK) error:', err.code, err.message);
+      }
+
+      // Check if any variation of the filename exists
+      const fileName = path.basename(dbPath);
+      const variations = [fileName, fileName.toLowerCase(), fileName.toUpperCase()];
+      console.log('10. Checking filename variations:');
+      variations.forEach(variation => {
+        const varPath = path.join(dbDir, variation);
+        const varExists = fs.existsSync(varPath);
+        console.log(`    - ${variation}: ${varExists}`);
+      });
+
+      console.log('=== END DIAGNOSTICS ===');
+
+      // Use the original existence check result for flow control
+      const dbExists = existsSync;
+      console.log('11. Final decision - Database file exists:', dbExists);
+
+      if (dbExists) {
+        const stats = fs.statSync(dbPath);
+        console.log('12. Existing database file size:', stats.size, 'bytes');
+
+        // If file exists but is 0 bytes, something went wrong - log but don't delete
+        if (stats.size === 0) {
+          console.warn('13. WARNING: Found 0-byte database file - this indicates a persistence issue');
+        }
+      } else {
+        console.log('12. Database file not detected - SQLite will create new database');
+      }
+
       this.db = new sqlite3.Database(dbPath, sqlite3.OPEN_READWRITE | sqlite3.OPEN_CREATE, (err) => {
         if (err) {
           console.error('Error opening database:', err);
