@@ -1,5 +1,6 @@
 const sqlite3 = require('sqlite3').verbose();
 const path = require('path');
+const fs = require('fs');
 
 class Database {
   constructor() {
@@ -89,7 +90,8 @@ class Database {
             retries++;
             console.log(`Mount test failed (attempt ${retries}/${maxRetries}):`, err.message);
             if (retries < maxRetries) {
-              await new Promise(resolve => setTimeout(resolve, 1000)); // Wait 1 second
+              // Wait 1 second - using callback instead of await
+              setTimeout(() => {}, 1000);
             } else {
               console.error('Persistent volume mount failed after', maxRetries, 'attempts');
               throw new Error('Persistent volume not accessible');
@@ -98,33 +100,14 @@ class Database {
         }
       }
 
-      // === TIMING AND RETRY DIAGNOSTICS ===
-      console.log('=== TIMING AND RETRY DIAGNOSTICS ===');
+      // === SIMPLIFIED TIMING CHECK ===
+      console.log('=== SIMPLIFIED TIMING CHECK ===');
 
-      // Test file detection at multiple time intervals
-      const timingTests = [0, 100, 500, 1000, 2000]; // milliseconds
-      for (let i = 0; i < timingTests.length; i++) {
-        const delay = timingTests[i];
-        if (delay > 0) {
-          console.log(`Waiting ${delay}ms before next check...`);
-          await new Promise(resolve => setTimeout(resolve, delay));
-        }
+      // Simple immediate check - no async needed
+      const immediateCheck = fs.existsSync(dbPath);
+      console.log('Immediate database file check:', immediateCheck);
 
-        const testExists = fs.existsSync(dbPath);
-        console.log(`T+${delay}ms: Database file exists = ${testExists}`);
-
-        if (testExists) {
-          try {
-            const stats = fs.statSync(dbPath);
-            console.log(`T+${delay}ms: File size = ${stats.size} bytes`);
-            break; // Found it, no need to continue timing tests
-          } catch (err) {
-            console.log(`T+${delay}ms: File stat error = ${err.message}`);
-          }
-        }
-      }
-
-      console.log('=== END TIMING DIAGNOSTICS ===');
+      console.log('=== END TIMING CHECK ===');
 
       // === DATABASE FILE DETECTION DIAGNOSTICS ===
       console.log('=== DATABASE FILE DETECTION DIAGNOSTICS ===');
@@ -229,6 +212,14 @@ class Database {
           reject(err);
         } else {
           console.log('Connected to SQLite database');
+
+          // TRACKING: Check if file exists immediately after connection
+          const fileExistsAfterConnection = fs.existsSync(dbPath);
+          console.log('TRACK: Database file exists after SQLite connection:', fileExistsAfterConnection);
+          if (fileExistsAfterConnection) {
+            const stats = fs.statSync(dbPath);
+            console.log('TRACK: Database file size after connection:', stats.size, 'bytes');
+          }
 
           // Check if database file exists after connection
           const dbExistsAfter = fs.existsSync(dbPath);
@@ -442,6 +433,19 @@ class Database {
           }
           console.log('Planned instances table ready');
           console.log('Database initialized successfully');
+
+          // TRACKING: Check if database file still exists after all tables created
+          const dbPath = process.env.NODE_ENV === 'production'
+            ? '/opt/render/project/src/database/fasting.db'
+            : path.join(__dirname, 'fasting.db');
+
+          const fileExistsAfterTables = fs.existsSync(dbPath);
+          console.log('TRACK: Database file exists after table creation:', fileExistsAfterTables);
+          if (fileExistsAfterTables) {
+            const stats = fs.statSync(dbPath);
+            console.log('TRACK: Database file size after table creation:', stats.size, 'bytes');
+          }
+
           resolve();
         });
       });
