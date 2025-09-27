@@ -10,12 +10,18 @@ class Database {
     return new Promise((resolve, reject) => {
       // Use persistent volume on Render, fallback to local for development
       const dbPath = process.env.NODE_ENV === 'production'
-        ? path.join(process.cwd(), 'database', 'fasting.db')
+        ? '/opt/render/project/src/database/fasting.db'
         : path.join(__dirname, 'fasting.db');
 
       console.log('Database path:', dbPath);
       console.log('NODE_ENV:', process.env.NODE_ENV);
       console.log('Current working directory:', process.cwd());
+      console.log('__dirname:', __dirname);
+      console.log('Resolved database path:', path.resolve(dbPath));
+
+      // Check if we're actually using the persistent volume
+      console.log('Expected persistent volume path: /opt/render/project/src/database');
+      console.log('Actual database directory:', path.dirname(dbPath));
 
       // Check if database file already exists
       const fs = require('fs');
