@@ -1741,6 +1741,57 @@ app.get('/settings', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'settings.html'));
 });
 
+// Debug endpoint to test minimal SQLite operations
+app.get('/api/debug/sqlite-test', async (req, res) => {
+  try {
+    console.log('=== Running minimal SQLite test via API ===');
+
+    // Import and run the test
+    const { spawn } = require('child_process');
+
+    return new Promise((resolve, reject) => {
+      const testProcess = spawn('node', ['debug-sqlite-simple.js'], {
+        stdio: 'pipe'
+      });
+
+      let output = '';
+      let errorOutput = '';
+
+      testProcess.stdout.on('data', (data) => {
+        const text = data.toString();
+        console.log('SQLite test output:', text);
+        output += text;
+      });
+
+      testProcess.stderr.on('data', (data) => {
+        const text = data.toString();
+        console.error('SQLite test error:', text);
+        errorOutput += text;
+      });
+
+      testProcess.on('close', (code) => {
+        const result = {
+          success: code === 0,
+          exitCode: code,
+          output: output,
+          errorOutput: errorOutput,
+          timestamp: new Date().toISOString()
+        };
+
+        console.log('SQLite test completed with exit code:', code);
+        res.json(result);
+      });
+    });
+  } catch (error) {
+    console.error('Error running SQLite test:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message,
+      timestamp: new Date().toISOString()
+    });
+  }
+});
+
 // Serve static files (after custom routes)
 app.use(express.static('public'));
 
