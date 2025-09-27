@@ -116,8 +116,7 @@ class Database {
       console.log('3. Database directory:', path.dirname(dbPath));
       console.log('4. Database filename:', path.basename(dbPath));
 
-      // Check directory exists
-      const dbDir = path.dirname(dbPath);
+      // Check directory exists (reuse dbDir from earlier)
       const dirExists = fs.existsSync(dbDir);
       console.log('5. Database directory exists:', dirExists);
 
