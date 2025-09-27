@@ -420,6 +420,43 @@
             color: #92400e;
         }
 
+        /* Permission control styling */
+        #permissionControl {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        #permissionButton {
+            padding: 8px 16px;
+            font-size: 14px;
+            min-width: 120px;
+            white-space: nowrap;
+        }
+
+        #permissionButton:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        #permissionButton:disabled:hover {
+            transform: none;
+            box-shadow: none;
+        }
+
+        .permission-action-needed {
+            background: #fef3c7;
+            color: #92400e;
+            border: 1px solid #fbbf24;
+        }
+
+        .permission-denied {
+            background: #fee2e2;
+            color: #991b1b;
+            border: 1px solid #f87171;
+        }
+
 
 
         @media (max-width: 480px) {
@@ -473,10 +510,15 @@
                 <div class="setting-item" id="permissionStatus">
                     <div class="setting-label">
                         <div class="setting-title">Browser Permission</div>
-                        <div class="setting-description">Required for notifications to work</div>
+                        <div class="setting-description" id="permissionDescription">Required for notifications to work</div>
                     </div>
-                    <div class="status-indicator" id="permissionIndicator">
-                        Unknown
+                    <div id="permissionControl">
+                        <div class="status-indicator" id="permissionIndicator">
+                            Unknown
+                        </div>
+                        <button class="btn-primary" id="permissionButton" style="display: none;" onclick="requestNotificationPermission()">
+                            Grant Permission
+                        </button>
                     </div>
                 </div>
 
@@ -600,6 +642,37 @@
                         </div>
                     </div>
                 </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Permission Instructions Modal -->
+    <div class="modal" id="permissionInstructionsModal">
+        <div class="modal-content">
+            <h3 class="modal-title">Enable Browser Notifications</h3>
+
+            <div style="margin-bottom: 20px;">
+                <p style="margin-bottom: 15px; color: #6b7280;">To receive hunger support notifications, you'll need to manually enable them in your browser:</p>
+
+                <div style="background: #f9fafb; padding: 15px; border-radius: 10px; margin-bottom: 15px;">
+                    <h4 style="margin: 0 0 8px 0; color: #1f2937; font-size: 14px;">📍 Look for these icons in your address bar:</h4>
+                    <p style="margin: 0; color: #6b7280; font-size: 14px;">🔒 (lock icon) or 🛡️ (shield icon) or ⚙️ (settings icon)</p>
+                </div>
+
+                <div style="background: #f0f9ff; padding: 15px; border-radius: 10px; border-left: 4px solid #3b82f6;">
+                    <h4 style="margin: 0 0 8px 0; color: #1e40af; font-size: 14px;">Steps:</h4>
+                    <ol style="margin: 0; padding-left: 18px; color: #1e40af; font-size: 14px;">
+                        <li>Click the icon in your address bar</li>
+                        <li>Find "Notifications" in the menu</li>
+                        <li>Change from "Block" to "Allow"</li>
+                        <li>Refresh this page</li>
+                    </ol>
+                </div>
+            </div>
+
+            <div class="modal-actions">
+                <button type="button" class="btn-secondary" onclick="closePermissionInstructions()">Close</button>
+                <button type="button" class="btn-primary" onclick="refreshPermissionStatus()">Check Again</button>
             </div>
         </div>
     </div>
@@ -783,23 +856,40 @@
         function updatePermissionStatus() {
             const permissionSection = document.getElementById('permissionStatus');
             const indicator = document.getElementById('permissionIndicator');
+            const button = document.getElementById('permissionButton');
+            const description = document.getElementById('permissionDescription');
 
             if ('Notification' in window) {
                 const permission = Notification.permission;
+
+                // Reset classes
                 indicator.className = 'status-indicator';
+                button.style.display = 'none';
+                indicator.style.display = 'inline-flex';
 
                 switch (permission) {
                     case 'granted':
                         indicator.classList.add('status-granted');
                         indicator.textContent = 'Granted';
+                        description.textContent = 'Browser notifications are enabled';
                         break;
                     case 'denied':
-                        indicator.classList.add('status-denied');
-                        indicator.textContent = 'Denied';
+                        indicator.style.display = 'none';
+                        button.style.display = 'inline-flex';
+                        button.textContent = 'How to Enable';
+                        button.className = 'btn-primary permission-denied';
+                        button.disabled = false;
+                        button.onclick = () => showPermissionInstructions();
+                        description.textContent = 'Notifications blocked - click for instructions to enable';
                         break;
-                    default:
-                        indicator.classList.add('status-default');
-                        indicator.textContent = 'Not Set';
+                    default: // 'default' permission state
+                        indicator.style.display = 'none';
+                        button.style.display = 'inline-flex';
+                        button.textContent = 'Grant Permission';
+                        button.className = 'btn-primary permission-action-needed';
+                        button.disabled = false;
+                        button.onclick = () => requestNotificationPermission();
+                        description.textContent = 'Click to enable browser notifications';
                 }
             } else {
                 permissionSection.style.display = 'none';
@@ -974,16 +1064,105 @@
             }
         }
 
+        // Show permission instructions modal
+        function showPermissionInstructions() {
+            document.getElementById('permissionInstructionsModal').classList.add('active');
+        }
+
+        // Close permission instructions modal
+        function closePermissionInstructions() {
+            document.getElementById('permissionInstructionsModal').classList.remove('active');
+        }
+
+        // Refresh permission status (check if user manually enabled)
+        function refreshPermissionStatus() {
+            updatePermissionStatus();
+
+            // If permission is now granted, close modal and show success
+            if (Notification.permission === 'granted') {
+                closePermissionInstructions();
+
+                // Show success notification
+                setTimeout(() => {
+                    const successNotification = new Notification('✅ Notifications are now enabled!', {
+                        icon: '/favicon.svg',
+                        badge: '/favicon.svg',
+                        tag: 'permission-enabled',
+                        requireInteraction: false,
+                        silent: true
+                    });
+
+                    // Auto-close after 3 seconds
+                    setTimeout(() => {
+                        successNotification.close();
+                    }, 3000);
+                }, 500);
+
+                // Update notification status
+                updateNotificationStatus();
+            } else if (Notification.permission === 'denied') {
+                // Still denied - provide encouragement
+                alert('Notifications are still blocked. Please make sure to change the setting from "Block" to "Allow" and try again.');
+            } else {
+                // Still default - they haven't set it yet
+                alert('No change detected. Please enable notifications in your browser settings and try again.');
+            }
+        }
+
+        // Request notification permission
+        async function requestNotificationPermission() {
+            const button = document.getElementById('permissionButton');
+            const originalText = button.textContent;
+
+            // Show loading state
+            button.disabled = true;
+            button.textContent = 'Requesting...';
+
+            try {
+                const permission = await Notification.requestPermission();
+
+                // Update UI based on result
+                updatePermissionStatus();
+
+                if (permission === 'granted') {
+                    // Test notification to confirm it works
+                    setTimeout(() => {
+                        const testNotification = new Notification('✅ Notifications enabled!', {
+                            icon: '/favicon.svg',
+                            badge: '/favicon.svg',
+                            tag: 'permission-success',
+                            requireInteraction: false,
+                            silent: true
+                        });
+
+                        // Auto-close after 3 seconds
+                        setTimeout(() => {
+                            testNotification.close();
+                        }, 3000);
+                    }, 500);
+
+                    // Update notification status
+                    await updateNotificationStatus();
+                } else {
+                    // Permission denied - update UI will show the appropriate state
+                    console.log('Notification permission denied');
+                }
+            } catch (error) {
+                console.error('Error requesting notification permission:', error);
+                button.disabled = false;
+                button.textContent = originalText;
+            }
+        }
+
         // Toggle notifications
         function toggleNotifications() {
             userSettings.hunger_coach_enabled = !userSettings.hunger_coach_enabled;
 
-            // Request permission if enabling notifications
+            // Check if permission is needed
             if (userSettings.hunger_coach_enabled && 'Notification' in window && Notification.permission === 'default') {
-                Notification.requestPermission().then(() => {
-                    updateUI();
-                    saveUserSettings();
-                });
+                // Don't automatically request permission - let user click the button
+                updateUI();
+                saveUserSettings();
             } else {
                 updateUI();
                 saveUserSettings();
