@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Dashboard - Fasting Forecast</title>
     <link rel="stylesheet" href="/css/navigation.css">
+    <link rel="stylesheet" href="/css/modal.css">
     <style>
         * {
             margin: 0;
@@ -624,167 +625,7 @@
             100% { transform: rotate(360deg); }
         }
         
-        /* Modal styles */
-        .modal {
-            display: none;
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0, 0, 0, 0.6);
-            backdrop-filter: blur(4px);
-            z-index: 2000;
-            align-items: center;
-            justify-content: center;
-            padding: 20px;
-        }
-        
-        .modal-content {
-            background: white;
-            border-radius: 20px;
-            max-width: 400px;
-            width: 100%;
-            max-height: 90vh;
-            overflow-y: auto;
-            position: relative;
-            animation: modalSlideIn 0.3s ease-out;
-        }
-        
-        @keyframes modalSlideIn {
-            from {
-                opacity: 0;
-                transform: scale(0.9) translateY(20px);
-            }
-            to {
-                opacity: 1;
-                transform: scale(1) translateY(0);
-            }
-        }
-        
-        .modal-header {
-            padding: 24px 24px 16px;
-            border-bottom: 1px solid #f0f0f0;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-        
-        .modal-header h2 {
-            font-size: 1.3rem;
-            font-weight: 700;
-            color: #333;
-        }
-        
-        .modal-close {
-            background: none;
-            border: none;
-            font-size: 24px;
-            cursor: pointer;
-            color: #666;
-            width: 32px;
-            height: 32px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            border-radius: 50%;
-            transition: background 0.2s ease;
-        }
-        
-        .modal-close:hover {
-            background: rgba(0, 0, 0, 0.1);
-        }
-        
-        .modal-body {
-            padding: 24px;
-        }
-        
-        .form-group {
-            margin-bottom: 20px;
-        }
-        
-        .form-group label {
-            display: block;
-            font-size: 0.9rem;
-            font-weight: 600;
-            color: #333;
-            margin-bottom: 6px;
-        }
-        
-        .form-group input,
-        .form-group select,
-        .form-group textarea {
-            width: 100%;
-            padding: 12px;
-            border: 2px solid #e9ecef;
-            border-radius: 10px;
-            font-size: 1rem;
-            transition: border-color 0.2s ease;
-            font-family: inherit;
-        }
-        
-        .form-group input:focus,
-        .form-group select:focus,
-        .form-group textarea:focus {
-            outline: none;
-            border-color: #fb923c;
-        }
-        
-        .form-group textarea {
-            resize: vertical;
-            min-height: 80px;
-        }
-        
-        .form-row {
-            display: flex;
-            gap: 12px;
-        }
-        
-        .form-row .form-group {
-            flex: 1;
-        }
-        
-        .form-actions {
-            display: flex;
-            gap: 12px;
-            justify-content: flex-end;
-            margin-top: 24px;
-        }
-        
-        .btn {
-            padding: 12px 24px;
-            border: none;
-            border-radius: 10px;
-            font-size: 1rem;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.2s ease;
-        }
-        
-        .btn-secondary {
-            background: #f8f9fa;
-            color: #666;
-        }
-        
-        .btn-secondary:hover {
-            background: #e9ecef;
-        }
-        
-        .btn-primary {
-            background: linear-gradient(135deg, #fcd34d 0%, #fb923c 50%, #ec4899 100%);
-            color: white;
-        }
-        
-        .btn-primary:hover {
-            transform: translateY(-1px);
-            box-shadow: 0 4px 15px rgba(251, 146, 60, 0.3);
-        }
-        
-        .form-hint {
-            font-size: 0.8rem;
-            color: #666;
-            margin-top: 4px;
-        }
+        /* Page-specific styles - modal styles now handled by /css/modal.css */
         
         @media (max-width: 768px) {
             .container {
@@ -1007,47 +848,46 @@
                 <button type="button" class="modal-close" onclick="hideAddFastModal()">×</button>
             </div>
             <div class="modal-body">
-                <form id="add-fast-form" onsubmit="submitAddFast(event)">
-                    <div class="form-group">
+                <form id="add-fast-form" class="modal-form" onsubmit="submitAddFast(event)">
+                    <div class="modal-form-group">
                         <label for="start-date">Fast Start</label>
-                        <div class="form-row">
-                            <div class="form-group">
+                        <div class="modal-form-row">
+                            <div class="modal-form-group">
                                 <input type="date" id="start-date" name="start-date" required>
                             </div>
-                            <div class="form-group">
+                            <div class="modal-form-group">
                                 <input type="time" id="start-time" name="start-time" required>
                             </div>
                         </div>
                     </div>
-                    
-                    <div class="form-group">
+
+                    <div class="modal-form-group">
                         <label for="end-date">Fast End (Optional)</label>
-                        <div class="form-row">
-                            <div class="form-group">
+                        <div class="modal-form-row">
+                            <div class="modal-form-group">
                                 <input type="date" id="end-date" name="end-date">
                             </div>
-                            <div class="form-group">
+                            <div class="modal-form-group">
                                 <input type="time" id="end-time" name="end-time">
                             </div>
                         </div>
-                        <div class="form-hint">Leave empty if fast is ongoing</div>
+                        <div class="modal-form-hint">Leave empty if fast is ongoing</div>
                     </div>
-                    
-                    
-                    <div class="form-group">
+
+                    <div class="modal-form-group">
                         <label for="weight">Weight (Optional)</label>
                         <input type="number" id="weight" name="weight" step="0.1" placeholder="Enter weight">
-                        <div class="form-hint">Your weight at the start of the fast</div>
+                        <div class="modal-form-hint">Your weight at the start of the fast</div>
                     </div>
-                    
-                    <div class="form-group">
+
+                    <div class="modal-form-group">
                         <label for="notes">Notes (Optional)</label>
                         <textarea id="notes" name="notes" placeholder="Add any notes about this fast..."></textarea>
                     </div>
-                    
-                    <div class="form-actions">
-                        <button type="button" class="btn btn-secondary" onclick="hideAddFastModal()">Cancel</button>
-                        <button type="submit" class="btn btn-primary">Add Fast</button>
+
+                    <div class="modal-actions">
+                        <button type="button" class="modal-btn modal-btn-secondary" onclick="hideAddFastModal()">Cancel</button>
+                        <button type="submit" class="modal-btn modal-btn-primary">Add Fast</button>
                     </div>
                 </form>
             </div>
@@ -1062,50 +902,48 @@
                 <button type="button" class="modal-close" onclick="hideEditFastModal()">×</button>
             </div>
             <div class="modal-body">
-                <form id="edit-fast-form" onsubmit="submitEditFast(event)">
-                    <div class="form-group">
+                <form id="edit-fast-form" class="modal-form" onsubmit="submitEditFast(event)">
+                    <div class="modal-form-group">
                         <label for="edit-start-date">Fast Start</label>
-                        <div class="form-row">
-                            <div class="form-group">
+                        <div class="modal-form-row">
+                            <div class="modal-form-group">
                                 <input type="date" id="edit-start-date" name="start-date" required>
                             </div>
-                            <div class="form-group">
+                            <div class="modal-form-group">
                                 <input type="time" id="edit-start-time" name="start-time" required>
                             </div>
                         </div>
                     </div>
-                    
-                    <div class="form-group">
+
+                    <div class="modal-form-group">
                         <label for="edit-end-date">Fast End (Optional)</label>
-                        <div class="form-row">
-                            <div class="form-group">
+                        <div class="modal-form-row">
+                            <div class="modal-form-group">
                                 <input type="date" id="edit-end-date" name="end-date">
                             </div>
-                            <div class="form-group">
+                            <div class="modal-form-group">
                                 <input type="time" id="edit-end-time" name="end-time">
                             </div>
                         </div>
-                        <div class="form-hint">Leave empty if fast is ongoing</div>
+                        <div class="modal-form-hint">Leave empty if fast is ongoing</div>
                     </div>
-                    
-                    
-                    <div class="form-group">
+
+                    <div class="modal-form-group">
                         <label for="edit-weight">Weight (Optional)</label>
                         <input type="number" id="edit-weight" name="weight" step="0.1" placeholder="Enter weight">
-                        <div class="form-hint">Your weight at the start of the fast</div>
+                        <div class="modal-form-hint">Your weight at the start of the fast</div>
                     </div>
-                    
-                    <div class="form-group">
+
+                    <div class="modal-form-group">
                         <label for="edit-notes">Notes (Optional)</label>
                         <textarea id="edit-notes" name="notes" placeholder="Add any notes about this fast..."></textarea>
                     </div>
-                    
-                    <div class="form-actions">
-                        <button type="button" class="btn btn-secondary" onclick="deleteFast(editingFastId)" 
-                                style="background: #dc3545; color: white;">Delete</button>
-                        <div style="flex: 1;"></div>
-                        <button type="button" class="btn btn-secondary" onclick="hideEditFastModal()">Cancel</button>
-                        <button type="submit" class="btn btn-primary">Save Changes</button>
+
+                    <div class="modal-actions-special">
+                        <button type="button" class="modal-btn modal-btn-danger" onclick="deleteFast(editingFastId)">Delete</button>
+                        <div class="modal-actions-spacer"></div>
+                        <button type="button" class="modal-btn modal-btn-secondary" onclick="hideEditFastModal()">Cancel</button>
+                        <button type="submit" class="modal-btn modal-btn-primary">Save Changes</button>
                     </div>
                 </form>
             </div>
@@ -1143,11 +981,11 @@
                     </p>
                 </div>
 
-                <div style="display: flex; gap: 10px; justify-content: center;">
-                    <button type="button" class="btn btn-secondary" onclick="goToBenefitsSettings()">
+                <div class="modal-actions">
+                    <button type="button" class="modal-btn modal-btn-secondary" onclick="goToBenefitsSettings()">
                         Customize Settings
                     </button>
-                    <button type="button" class="btn btn-primary" onclick="completeBenefitsOnboarding()">
+                    <button type="button" class="modal-btn modal-btn-primary" onclick="completeBenefitsOnboarding()">
                         Get Started
                     </button>
                 </div>
@@ -1556,11 +1394,11 @@
 
         // Benefits Onboarding Functions
         function showBenefitsOnboardingModal() {
-            document.getElementById('benefits-onboarding-modal').style.display = 'flex';
+            document.getElementById('benefits-onboarding-modal').classList.add('active');
         }
 
         function hideBenefitsOnboardingModal() {
-            document.getElementById('benefits-onboarding-modal').style.display = 'none';
+            document.getElementById('benefits-onboarding-modal').classList.remove('active');
         }
 
         function goToBenefitsSettings() {
@@ -2046,11 +1884,11 @@
         }
         
         function showAddFastModal() {
-            document.getElementById('add-fast-modal').style.display = 'flex';
+            document.getElementById('add-fast-modal').classList.add('active');
         }
-        
+
         function hideAddFastModal() {
-            document.getElementById('add-fast-modal').style.display = 'none';
+            document.getElementById('add-fast-modal').classList.remove('active');
             document.getElementById('add-fast-form').reset();
         }
         
@@ -2130,7 +1968,7 @@
                 if (response.ok) {
                     const fast = await response.json();
                     populateEditModal(fast);
-                    document.getElementById('edit-fast-modal').style.display = 'flex';
+                    document.getElementById('edit-fast-modal').classList.add('active');
                 } else {
                     console.error('Failed to load fast data:', response.status);
                     alert('Error loading fast data');
@@ -2175,7 +2013,7 @@
         }
         
         function hideEditFastModal() {
-            document.getElementById('edit-fast-modal').style.display = 'none';
+            document.getElementById('edit-fast-modal').classList.remove('active');
             document.getElementById('edit-fast-form').reset();
             editingFastId = null;
         }
