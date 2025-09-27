@@ -6,6 +6,7 @@
   "scripts": {
     "start": "node server.js",
     "dev": "nodemon server.js",
+    "build": "echo 'No build step required'",
     "check-duplicates": "node scripts/check-duplicates.js",
     "check-duplicates:timer": "node scripts/check-duplicates.js public/timer.html",
     "test": "node tests/run-all-tests.js",
@@ -16,7 +17,8 @@
     "test:quick": "node tests/quick-test.js",
     "test:ci": "npm run test && echo 'All tests passed - ready for deployment'",
     "precommit": "npm run test:quick",
-    "validate": "npm run check-duplicates && npm run test"
+    "validate": "npm run check-duplicates && npm run test",
+    "postinstall": "echo 'Installation complete'"
   },
   "dependencies": {
     "cors": "^2.8.5",
