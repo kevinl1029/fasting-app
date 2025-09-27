@@ -3573,27 +3573,39 @@
         
         async function endFastEntry() {
             if (!currentFastId) return;
-            
+
             try {
                 const endTimeISO = new Date().toISOString();
-                
+                const sessionId = window.getSessionId();
+
+                if (!sessionId) {
+                    console.error('No session ID available for ending fast');
+                    return;
+                }
+
                 const endResponse = await fetch(`/api/fasts/${currentFastId}/end`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json'
                     },
-                    body: JSON.stringify({ end_time: endTimeISO })
+                    body: JSON.stringify({
+                        end_time: endTimeISO,
+                        sessionId: sessionId
+                    })
                 });
                 
                 if (endResponse.ok) {
                     const completedFast = await endResponse.json();
                     console.log('Fast entry completed:', completedFast);
                     currentFastId = null;
-                    
+
                     // Update stats display after completing a fast
                     loadStats();
                 } else {
-                    console.error('Failed to end fast entry');
+                    const errorData = await endResponse.json().catch(() => ({}));
+                    console.error('Failed to end fast entry:', endResponse.status, errorData);
+                    console.error('Response status:', endResponse.status);
+                    console.error('Error details:', errorData);
                 }
             } catch (error) {
                 console.error('Error ending fast entry:', error);

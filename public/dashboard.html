@@ -2259,14 +2259,21 @@
         
         async function editFast(fastId) {
             editingFastId = fastId;
-            
+
             try {
-                const response = await fetch(`/api/fasts/${fastId}`);
+                const sessionId = window.getSessionId();
+                if (!sessionId) {
+                    alert('Session error. Please refresh the page.');
+                    return;
+                }
+
+                const response = await fetch(`/api/fasts/${fastId}?sessionId=${sessionId}`);
                 if (response.ok) {
                     const fast = await response.json();
                     populateEditModal(fast);
                     document.getElementById('edit-fast-modal').style.display = 'flex';
                 } else {
+                    console.error('Failed to load fast data:', response.status);
                     alert('Error loading fast data');
                 }
             } catch (error) {
@@ -2341,16 +2348,22 @@
                     return;
                 }
             }
-            
+
+            const sessionId = window.getSessionId();
+            if (!sessionId) {
+                alert('Session error. Please refresh the page.');
+                return;
+            }
+
             const fastData = {
                 start_time: startDateTime,
                 end_time: endDateTime,
                 notes: notes || null,
                 weight: weight ? parseFloat(weight) : null
             };
-            
+
             try {
-                const response = await fetch(`/api/fasts/${editingFastId}`, {
+                const response = await fetch(`/api/fasts/${editingFastId}?sessionId=${sessionId}`, {
                     method: 'PUT',
                     headers: {
                         'Content-Type': 'application/json'
@@ -2419,9 +2432,15 @@
             if (!confirm('Are you sure you want to delete this fast? This action cannot be undone.')) {
                 return;
             }
-            
+
+            const sessionId = window.getSessionId();
+            if (!sessionId) {
+                alert('Session error. Please refresh the page.');
+                return;
+            }
+
             try {
-                const response = await fetch(`/api/fasts/${fastId}`, {
+                const response = await fetch(`/api/fasts/${fastId}?sessionId=${sessionId}`, {
                     method: 'DELETE'
                 });
                 
