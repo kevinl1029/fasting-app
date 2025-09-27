@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Settings - Fasting Forecast</title>
     <link rel="stylesheet" href="/css/navigation.css">
+    <link rel="stylesheet" href="/css/modal.css">
     <style>
         * {
             margin: 0;
@@ -671,8 +672,8 @@
             </div>
 
             <div class="modal-actions">
-                <button type="button" class="btn-secondary" onclick="closePermissionInstructions()">Close</button>
-                <button type="button" class="btn-primary" onclick="refreshPermissionStatus()">Check Again</button>
+                <button type="button" class="modal-btn modal-btn-secondary" onclick="closePermissionInstructions()">Close</button>
+                <button type="button" class="modal-btn modal-btn-primary" onclick="refreshPermissionStatus()">Check Again</button>
             </div>
         </div>
     </div>
@@ -682,20 +683,20 @@
         <div class="modal-content">
             <h3 class="modal-title" id="modalTitle">Add Meal Time</h3>
 
-            <form id="mealForm">
-                <div class="form-group">
-                    <label class="form-label" for="mealName">Meal Name</label>
-                    <input type="text" id="mealName" class="form-input" placeholder="e.g., Breakfast, Lunch, Snack" required>
+            <form id="mealForm" class="modal-form">
+                <div class="modal-form-group">
+                    <label for="mealName">Meal Name</label>
+                    <input type="text" id="mealName" placeholder="e.g., Breakfast, Lunch, Snack" required>
                 </div>
 
-                <div class="form-group">
-                    <label class="form-label" for="mealTime">Time</label>
-                    <input type="time" id="mealTime" class="form-input" required>
+                <div class="modal-form-group">
+                    <label for="mealTime">Time</label>
+                    <input type="time" id="mealTime" required>
                 </div>
 
                 <div class="modal-actions">
-                    <button type="button" class="btn-secondary" onclick="closeMealModal()">Cancel</button>
-                    <button type="submit" class="btn-primary">Save Meal</button>
+                    <button type="button" class="modal-btn modal-btn-secondary" onclick="closeMealModal()">Cancel</button>
+                    <button type="submit" class="modal-btn modal-btn-primary">Save Meal</button>
                 </div>
             </form>
         </div>
