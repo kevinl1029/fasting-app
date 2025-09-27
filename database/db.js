@@ -8,7 +8,12 @@ class Database {
 
   async initialize() {
     return new Promise((resolve, reject) => {
-      const dbPath = path.join(__dirname, 'fasting.db');
+      // Use persistent volume on Render, fallback to local for development
+      const dbPath = process.env.NODE_ENV === 'production'
+        ? path.join(process.cwd(), 'database', 'fasting.db')
+        : path.join(__dirname, 'fasting.db');
+
+      console.log('Database path:', dbPath);
       this.db = new sqlite3.Database(dbPath, (err) => {
         if (err) {
           console.error('Error opening database:', err);

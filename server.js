@@ -42,11 +42,14 @@ async function validateSessionMiddleware(req, res, next) {
     try {
         const profile = await db.getUserProfileBySessionId(sessionId);
         if (!profile) {
-            // Valid session format but no user profile - redirect to onboarding
-            return res.status(403).json({
-                error: 'User not onboarded',
-                code: 'USER_NOT_ONBOARDED',
-                message: 'Valid session but user profile not found. Please complete onboarding.',
+            // Valid session format but no user profile - this could be due to database reset
+            // Return a special code that the frontend can handle for profile recovery
+            return res.status(200).json({
+                error: 'Profile recovery needed',
+                code: 'PROFILE_RECOVERY_NEEDED',
+                message: 'Session valid but user profile missing. Recovery needed.',
+                sessionId,
+                requiresRecovery: true,
                 redirectTo: '/welcome.html'
             });
         }
