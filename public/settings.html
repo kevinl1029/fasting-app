@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Settings - Fasting Forecast</title>
+    <link rel="stylesheet" href="/css/navigation.css">
     <style>
         * {
             margin: 0;
@@ -419,85 +420,7 @@
             color: #92400e;
         }
 
-        /* Bottom Navigation */
-        .bottom-nav {
-            position: fixed;
-            bottom: 0;
-            left: 0;
-            right: 0;
-            background: rgba(255, 255, 255, 0.95);
-            backdrop-filter: blur(10px);
-            border-top: 1px solid rgba(0, 0, 0, 0.1);
-            display: flex;
-            justify-content: space-around;
-            padding: 10px 0;
-            z-index: 100;
-        }
 
-        .nav-item {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            text-decoration: none;
-            color: #6b7280;
-            padding: 8px 12px;
-            border-radius: 12px;
-            min-width: 60px;
-            transition: all 0.3s ease;
-        }
-
-        .nav-item:hover {
-            color: #fb923c;
-            transform: translateY(-2px);
-        }
-
-        .nav-item.active {
-            color: #fb923c;
-            background: rgba(251, 146, 60, 0.1);
-        }
-
-        .nav-item.nav-primary {
-            transform: scale(1.1);
-            background: linear-gradient(135deg, #fcd34d 0%, #fb923c 50%, #ec4899 100%);
-            color: white;
-            box-shadow: 0 4px 15px rgba(251, 146, 60, 0.3);
-        }
-
-        .nav-item.nav-primary:hover {
-            transform: scale(1.15) translateY(-2px);
-            box-shadow: 0 6px 20px rgba(251, 146, 60, 0.4);
-            color: white;
-        }
-
-        .nav-item.nav-primary.active {
-            color: white;
-            background: linear-gradient(135deg, #fcd34d 0%, #fb923c 50%, #ec4899 100%);
-        }
-
-        .nav-icon {
-            width: 24px;
-            height: 24px;
-            margin-bottom: 4px;
-            stroke-width: 2;
-        }
-
-        .nav-primary .nav-icon {
-            width: 28px;
-            height: 28px;
-        }
-
-        .nav-label {
-            font-size: 10px;
-            font-weight: 500;
-            text-align: center;
-            line-height: 1.2;
-        }
-
-        .nav-primary .nav-label {
-            font-size: 11px;
-            font-weight: 600;
-        }
 
         @media (max-width: 480px) {
             .container {
@@ -509,28 +432,6 @@
                 margin: 15px 0;
             }
 
-            .nav-item {
-                padding: 6px 8px;
-            }
-
-            .nav-icon {
-                width: 20px;
-                height: 20px;
-                margin-bottom: 2px;
-            }
-
-            .nav-primary .nav-icon {
-                width: 24px;
-                height: 24px;
-            }
-
-            .nav-label {
-                font-size: 9px;
-            }
-
-            .nav-primary .nav-label {
-                font-size: 10px;
-            }
 
             body {
                 padding-bottom: 75px;
@@ -727,53 +628,11 @@
         </div>
     </div>
 
-    <!-- Bottom Navigation -->
-    <nav class="bottom-nav">
-        <a href="/schedule" class="nav-item" data-page="schedule">
-            <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
-                <line x1="16" y1="2" x2="16" y2="6"/>
-                <line x1="8" y1="2" x2="8" y2="6"/>
-                <line x1="3" y1="10" x2="21" y2="10"/>
-            </svg>
-            <span class="nav-label">Schedule</span>
-        </a>
+    <!-- Navigation Placeholder -->
+    <div id="navigation-placeholder"></div>
 
-        <a href="/dashboard" class="nav-item" data-page="dashboard">
-            <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <line x1="18" y1="20" x2="18" y2="10"/>
-                <line x1="12" y1="20" x2="12" y2="4"/>
-                <line x1="6" y1="20" x2="6" y2="14"/>
-            </svg>
-            <span class="nav-label">Dashboard</span>
-        </a>
-
-        <a href="/timer" class="nav-item nav-primary" data-page="timer">
-            <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <circle cx="12" cy="13" r="9"/>
-                <polyline points="12,7 12,13 16,15"/>
-                <path d="M9,2 L15,2"/>
-                <path d="M12,2 L12,6"/>
-            </svg>
-            <span class="nav-label">Timer</span>
-        </a>
-
-        <a href="/learning" class="nav-item" data-page="learning">
-            <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/>
-                <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/>
-            </svg>
-            <span class="nav-label">Learning Hub</span>
-        </a>
-
-        <a href="/settings" class="nav-item active" data-page="settings">
-            <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <circle cx="12" cy="12" r="3"/>
-                <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/>
-            </svg>
-            <span class="nav-label">Settings</span>
-        </a>
-    </nav>
+    <!-- Navigation Utility -->
+    <script src="/js/utils/navigation.js"></script>
 
     <!-- Global Notification Manager -->
     <script src="/js/modules/hunger-coach.js"></script>
@@ -829,7 +688,6 @@
 
             await loadUserSettings();
             updateUI();
-            updateActiveNavItem();
         }
 
         // Load user settings from backend API
@@ -1237,16 +1095,6 @@
             closeMealModal();
         });
 
-        // Update active navigation item
-        function updateActiveNavItem() {
-            const navItems = document.querySelectorAll('.nav-item');
-            navItems.forEach(item => {
-                item.classList.remove('active');
-                if (item.getAttribute('href') === '/settings') {
-                    item.classList.add('active');
-                }
-            });
-        }
 
         // Benefits Tracking Functions
         function updateBenefitsUI() {

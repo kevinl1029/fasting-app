@@ -1,0 +1,138 @@
+/* Bottom Navigation */
+.bottom-nav {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    width: 100%;
+    background: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(10px);
+    border-top: 1px solid rgba(251, 146, 60, 0.2);
+    display: flex;
+    justify-content: space-around;
+    align-items: center;
+    padding: 8px 0 max(8px, env(safe-area-inset-bottom));
+    z-index: 1000;
+    box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.1);
+}
+
+.nav-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-decoration: none;
+    color: #666;
+    transition: all 0.3s ease;
+    padding: 8px 12px;
+    border-radius: 12px;
+    min-width: 50px;
+    position: relative;
+}
+
+.nav-item:hover {
+    color: #fb923c;
+    transform: translateY(-2px);
+}
+
+.nav-item.active {
+    color: #fb923c;
+    background: rgba(251, 146, 60, 0.1);
+}
+
+.nav-item.nav-primary {
+    transform: scale(1.1);
+    background: linear-gradient(135deg, #fcd34d 0%, #fb923c 50%, #ec4899 100%);
+    color: white;
+    box-shadow: 0 4px 15px rgba(251, 146, 60, 0.3);
+}
+
+.nav-item.nav-primary:hover {
+    transform: scale(1.15) translateY(-2px);
+    box-shadow: 0 6px 20px rgba(251, 146, 60, 0.4);
+    color: white;
+}
+
+.nav-item.nav-primary.active {
+    color: white;
+    background: linear-gradient(135deg, #fcd34d 0%, #fb923c 50%, #ec4899 100%);
+}
+
+.nav-icon {
+    width: 24px;
+    height: 24px;
+    margin-bottom: 4px;
+    stroke-width: 2;
+}
+
+.nav-primary .nav-icon {
+    width: 28px;
+    height: 28px;
+}
+
+.nav-label {
+    font-size: 10px;
+    font-weight: 500;
+    text-align: center;
+    line-height: 1.2;
+}
+
+.nav-primary .nav-label {
+    font-size: 11px;
+    font-weight: 600;
+}
+
+/* Mobile responsiveness */
+@media (max-width: 768px) {
+    .bottom-nav {
+        padding: 6px 0 max(6px, env(safe-area-inset-bottom));
+    }
+
+    .nav-item {
+        padding: 6px 8px;
+    }
+
+    .nav-icon {
+        width: 20px;
+        height: 20px;
+        margin-bottom: 2px;
+    }
+
+    .nav-primary .nav-icon {
+        width: 24px;
+        height: 24px;
+    }
+
+    .nav-label {
+        font-size: 9px;
+    }
+
+    .nav-primary .nav-label {
+        font-size: 10px;
+    }
+}
+
+@media (max-width: 480px) {
+    .nav-item {
+        padding: 6px 8px;
+    }
+
+    .nav-icon {
+        width: 20px;
+        height: 20px;
+        margin-bottom: 2px;
+    }
+
+    .nav-primary .nav-icon {
+        width: 24px;
+        height: 24px;
+    }
+
+    .nav-label {
+        font-size: 9px;
+    }
+
+    .nav-primary .nav-label {
+        font-size: 10px;
+    }
+}
