@@ -253,11 +253,19 @@
         gap: 8px;
     }
 
+    .modal-form-group {
+        min-width: 0;
+        flex: 1;
+    }
+
     .modal-form-group input,
     .modal-form-group select,
     .modal-form-group textarea {
         padding: 14px 12px;
         font-size: 16px; /* Prevents zoom on iOS */
+        min-width: 0;
+        width: 100%;
+        max-width: 100%;
     }
 
     /* Button improvements for mobile */
@@ -276,29 +284,31 @@
 
     /* Special action layout for mobile */
     .modal-actions-special {
-        flex-direction: row;
-        align-items: center;
+        flex-direction: column;
+        gap: 8px;
         margin-top: 20px;
     }
 
     .modal-actions-special .modal-btn {
-        width: auto;
-        flex: 0 0 auto;
+        width: 100%;
     }
 
-    .modal-actions-special .modal-btn:not(.modal-btn-danger) {
-        width: 100%;
+    .modal-actions-spacer {
+        display: none; /* Hide spacer on mobile since we're stacking vertically */
     }
 }
 
 @media (max-width: 480px) {
     .modal {
-        padding: 8px;
+        padding: 4px;
+        align-items: flex-start;
+        padding-top: 20px;
     }
 
     .modal-content {
-        width: calc(100vw - 16px);
+        width: calc(100vw - 8px);
         border-radius: 12px;
+        max-height: calc(100vh - 40px);
     }
 
     .modal-header {
