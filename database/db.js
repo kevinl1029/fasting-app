@@ -116,8 +116,7 @@ class Database {
       console.log('3. Database directory:', path.dirname(dbPath));
       console.log('4. Database filename:', path.basename(dbPath));
 
-      // Check directory exists (reuse dbDir from earlier)
-      const dirExists = fs.existsSync(dbDir);
+      // Check directory exists (reuse dirExists from earlier)
       console.log('5. Database directory exists:', dirExists);
 
       if (dirExists) {
@@ -190,10 +189,10 @@ class Database {
       console.log('=== END DIAGNOSTICS ===');
 
       // Use the original existence check result for flow control
-      const dbExists = existsSync;
-      console.log('11. Final decision - Database file exists:', dbExists);
+      // dbExists already declared earlier, just use the existsSync result
+      console.log('11. Final decision - Database file exists:', existsSync);
 
-      if (dbExists) {
+      if (existsSync) {
         const stats = fs.statSync(dbPath);
         console.log('12. Existing database file size:', stats.size, 'bytes');
 
