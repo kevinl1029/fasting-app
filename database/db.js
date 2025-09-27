@@ -106,38 +106,6 @@ class Database {
 
   async createTables() {
     return new Promise((resolve, reject) => {
-      // First, check if protocol column exists and migrate if needed
-      const migrateFastsTable = `
-        CREATE TABLE IF NOT EXISTS fasts_new (
-          id INTEGER PRIMARY KEY AUTOINCREMENT,
-          start_time DATETIME NOT NULL,
-          end_time DATETIME,
-          duration_hours REAL,
-          notes TEXT,
-          weight REAL,
-          photos TEXT,
-          is_manual BOOLEAN DEFAULT FALSE,
-          is_active BOOLEAN DEFAULT FALSE,
-          user_profile_id INTEGER,
-          source TEXT DEFAULT 'manual',
-          planned_instance_id TEXT,
-          planned_duration_hours REAL,
-          created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-          updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-          FOREIGN KEY (user_profile_id) REFERENCES user_profiles (id)
-        )
-      `;
-
-      const copyDataFromOldTable = `
-        INSERT INTO fasts_new (id, start_time, end_time, duration_hours, notes, weight, photos, is_manual, is_active, source, created_at, updated_at)
-        SELECT id, start_time, end_time, duration_hours, notes, weight, photos, is_manual, is_active, 'manual' as source, created_at, updated_at
-        FROM fasts
-        WHERE EXISTS (SELECT name FROM sqlite_master WHERE type='table' AND name='fasts')
-      `;
-
-      const dropOldTable = `DROP TABLE IF EXISTS fasts`;
-      const renameNewTable = `ALTER TABLE fasts_new RENAME TO fasts`;
-
       const createUserProfilesTable = `
         CREATE TABLE IF NOT EXISTS user_profiles (
           id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -162,6 +130,27 @@ class Database {
         )
       `;
 
+      const createFastsTable = `
+        CREATE TABLE IF NOT EXISTS fasts (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          start_time DATETIME NOT NULL,
+          end_time DATETIME,
+          duration_hours REAL,
+          notes TEXT,
+          weight REAL,
+          photos TEXT,
+          is_manual BOOLEAN DEFAULT FALSE,
+          is_active BOOLEAN DEFAULT FALSE,
+          user_profile_id INTEGER,
+          source TEXT DEFAULT 'manual',
+          planned_instance_id TEXT,
+          planned_duration_hours REAL,
+          created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+          updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+          FOREIGN KEY (user_profile_id) REFERENCES user_profiles (id)
+        )
+      `;
+
       const createMilestonesTable = `
         CREATE TABLE IF NOT EXISTS milestones (
           id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -174,7 +163,6 @@ class Database {
         )
       `;
 
-      // Schedule feature tables
       const createSchedulesTable = `
         CREATE TABLE IF NOT EXISTS schedules (
           id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -232,143 +220,24 @@ class Database {
         )
       `;
 
+      // Create all tables in sequence
       this.db.serialize(() => {
-        // Create user profiles table first
         this.db.run(createUserProfilesTable, (err) => {
           if (err) {
             console.error('Error creating user_profiles table:', err);
             reject(err);
             return;
           }
-          console.log('User profiles table created successfully');
+          console.log('User profiles table ready');
         });
 
-        // Add hunger coach columns to existing user_profiles table if they don't exist
-        this.db.all("PRAGMA table_info(user_profiles)", (err, columns) => {
+        this.db.run(createFastsTable, (err) => {
           if (err) {
-            console.error('Error checking user_profiles columns:', err);
-            return;
-          }
-
-          const columnNames = columns.map(col => col.name);
-
-          if (!columnNames.includes('hunger_coach_enabled')) {
-            this.db.run("ALTER TABLE user_profiles ADD COLUMN hunger_coach_enabled BOOLEAN DEFAULT TRUE", (err) => {
-              if (err) console.error('Error adding hunger_coach_enabled column:', err);
-              else console.log('Added hunger_coach_enabled column to user_profiles');
-            });
-          }
-
-          if (!columnNames.includes('custom_mealtimes')) {
-            this.db.run("ALTER TABLE user_profiles ADD COLUMN custom_mealtimes TEXT", (err) => {
-              if (err) console.error('Error adding custom_mealtimes column:', err);
-              else console.log('Added custom_mealtimes column to user_profiles');
-            });
-          }
-
-          if (!columnNames.includes('last_hunger_notification')) {
-            this.db.run("ALTER TABLE user_profiles ADD COLUMN last_hunger_notification DATETIME", (err) => {
-              if (err) console.error('Error adding last_hunger_notification column:', err);
-              else console.log('Added last_hunger_notification column to user_profiles');
-            });
-          }
-
-          // Add benefits tracking columns
-          if (!columnNames.includes('avg_meal_cost')) {
-            this.db.run("ALTER TABLE user_profiles ADD COLUMN avg_meal_cost REAL DEFAULT 10.00", (err) => {
-              if (err) console.error('Error adding avg_meal_cost column:', err);
-              else console.log('Added avg_meal_cost column to user_profiles');
-            });
-          }
-
-          if (!columnNames.includes('avg_meal_duration')) {
-            this.db.run("ALTER TABLE user_profiles ADD COLUMN avg_meal_duration INTEGER DEFAULT 30", (err) => {
-              if (err) console.error('Error adding avg_meal_duration column:', err);
-              else console.log('Added avg_meal_duration column to user_profiles');
-            });
-          }
-
-          if (!columnNames.includes('benefits_enabled')) {
-            this.db.run("ALTER TABLE user_profiles ADD COLUMN benefits_enabled BOOLEAN DEFAULT TRUE", (err) => {
-              if (err) console.error('Error adding benefits_enabled column:', err);
-              else console.log('Added benefits_enabled column to user_profiles');
-            });
-          }
-
-          if (!columnNames.includes('benefits_onboarded')) {
-            this.db.run("ALTER TABLE user_profiles ADD COLUMN benefits_onboarded BOOLEAN DEFAULT FALSE", (err) => {
-              if (err) console.error('Error adding benefits_onboarded column:', err);
-              else console.log('Added benefits_onboarded column to user_profiles');
-            });
-          }
-        });
-
-        // Check if fasts table exists first
-        this.db.get("SELECT name FROM sqlite_master WHERE type='table' AND name='fasts'", (err, row) => {
-          if (err) {
-            console.error('Error checking if fasts table exists:', err);
+            console.error('Error creating fasts table:', err);
             reject(err);
             return;
           }
-
-          if (!row) {
-            // Table doesn't exist - create it with the correct schema
-            console.log('Creating fasts table with user_profile_id column...');
-            this.db.run(migrateFastsTable.replace('fasts_new', 'fasts'), (err) => {
-              if (err) {
-                console.error('Error creating fasts table:', err);
-                reject(err);
-                return;
-              }
-              console.log('Fasts table created successfully with user_profile_id column');
-            });
-          } else {
-            // Table exists - check if migration needed
-            this.db.all("PRAGMA table_info(fasts)", (err, columns) => {
-              if (err) {
-                console.error('Error checking fasts table:', err);
-                reject(err);
-                return;
-              }
-
-              const columnNames = columns.map(col => col.name);
-              const needsMigration = !columnNames.includes('user_profile_id');
-
-              if (needsMigration) {
-                console.log('Migrating fasts table to add user_profile_id...');
-
-                // Create new fasts table
-                this.db.run(migrateFastsTable, (err) => {
-                  if (err) {
-                    console.error('Error creating new fasts table:', err);
-                    reject(err);
-                    return;
-                  }
-
-                  // Copy existing data if old table exists
-                  this.db.run(copyDataFromOldTable, (err) => {
-                    // Ignore error if old table doesn't exist
-                  });
-
-                  // Drop old table and rename new one
-                  this.db.run(dropOldTable, (err) => {
-                    // Ignore error if old table doesn't exist
-                  });
-
-                  this.db.run(renameNewTable, (err) => {
-                    if (err) {
-                      console.error('Error renaming fasts table:', err);
-                      reject(err);
-                      return;
-                    }
-                    console.log('Fasts table migrated successfully (added user_profile_id)');
-                  });
-                });
-              } else {
-                console.log('Fasts table migration not needed - user_profile_id column already exists');
-              }
-            });
-          }
+          console.log('Fasts table ready');
         });
 
         this.db.run(createMilestonesTable, (err) => {
@@ -377,17 +246,16 @@ class Database {
             reject(err);
             return;
           }
-          console.log('Milestones table created successfully');
+          console.log('Milestones table ready');
         });
 
-        // Create schedule tables
         this.db.run(createSchedulesTable, (err) => {
           if (err) {
             console.error('Error creating schedules table:', err);
             reject(err);
             return;
           }
-          console.log('Schedules table created successfully');
+          console.log('Schedules table ready');
         });
 
         this.db.run(createFastingBlocksTable, (err) => {
@@ -396,7 +264,7 @@ class Database {
             reject(err);
             return;
           }
-          console.log('Fasting blocks table created successfully');
+          console.log('Fasting blocks table ready');
         });
 
         this.db.run(createOverridesTable, (err) => {
@@ -405,7 +273,7 @@ class Database {
             reject(err);
             return;
           }
-          console.log('Overrides table created successfully');
+          console.log('Overrides table ready');
         });
 
         this.db.run(createPlannedInstancesTable, (err) => {
@@ -414,7 +282,8 @@ class Database {
             reject(err);
             return;
           }
-          console.log('Planned instances table created successfully');
+          console.log('Planned instances table ready');
+          console.log('Database initialized successfully');
           resolve();
         });
       });
