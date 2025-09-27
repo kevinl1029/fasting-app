@@ -303,49 +303,71 @@ class Database {
           }
         });
 
-        // Check if migration is needed by checking if user_profile_id column exists
-        this.db.all("PRAGMA table_info(fasts)", (err, columns) => {
+        // Check if fasts table exists first
+        this.db.get("SELECT name FROM sqlite_master WHERE type='table' AND name='fasts'", (err, row) => {
           if (err) {
-            console.error('Error checking fasts table:', err);
+            console.error('Error checking if fasts table exists:', err);
             reject(err);
             return;
           }
 
-          const columnNames = columns.map(col => col.name);
-          const needsMigration = !columnNames.includes('user_profile_id');
-
-          if (needsMigration) {
-            console.log('Migrating fasts table to add user_profile_id...');
-
-            // Create new fasts table
-            this.db.run(migrateFastsTable, (err) => {
+          if (!row) {
+            // Table doesn't exist - create it with the correct schema
+            console.log('Creating fasts table with user_profile_id column...');
+            this.db.run(migrateFastsTable.replace('fasts_new', 'fasts'), (err) => {
               if (err) {
-                console.error('Error creating new fasts table:', err);
+                console.error('Error creating fasts table:', err);
                 reject(err);
                 return;
               }
-            });
-
-            // Copy existing data if old table exists
-            this.db.run(copyDataFromOldTable, (err) => {
-              // Ignore error if old table doesn't exist
-            });
-
-            // Drop old table and rename new one
-            this.db.run(dropOldTable, (err) => {
-              // Ignore error if old table doesn't exist
-            });
-
-            this.db.run(renameNewTable, (err) => {
-              if (err) {
-                console.error('Error renaming fasts table:', err);
-                reject(err);
-                return;
-              }
-              console.log('Fasts table migrated successfully (added user_profile_id)');
+              console.log('Fasts table created successfully with user_profile_id column');
             });
           } else {
-            console.log('Fasts table migration not needed - user_profile_id column already exists');
+            // Table exists - check if migration needed
+            this.db.all("PRAGMA table_info(fasts)", (err, columns) => {
+              if (err) {
+                console.error('Error checking fasts table:', err);
+                reject(err);
+                return;
+              }
+
+              const columnNames = columns.map(col => col.name);
+              const needsMigration = !columnNames.includes('user_profile_id');
+
+              if (needsMigration) {
+                console.log('Migrating fasts table to add user_profile_id...');
+
+                // Create new fasts table
+                this.db.run(migrateFastsTable, (err) => {
+                  if (err) {
+                    console.error('Error creating new fasts table:', err);
+                    reject(err);
+                    return;
+                  }
+
+                  // Copy existing data if old table exists
+                  this.db.run(copyDataFromOldTable, (err) => {
+                    // Ignore error if old table doesn't exist
+                  });
+
+                  // Drop old table and rename new one
+                  this.db.run(dropOldTable, (err) => {
+                    // Ignore error if old table doesn't exist
+                  });
+
+                  this.db.run(renameNewTable, (err) => {
+                    if (err) {
+                      console.error('Error renaming fasts table:', err);
+                      reject(err);
+                      return;
+                    }
+                    console.log('Fasts table migrated successfully (added user_profile_id)');
+                  });
+                });
+              } else {
+                console.log('Fasts table migration not needed - user_profile_id column already exists');
+              }
+            });
           }
         });
 
