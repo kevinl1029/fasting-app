@@ -2,6 +2,61 @@ const sqlite3 = require('sqlite3').verbose();
 const path = require('path');
 const fs = require('fs');
 
+// ADD FILE SYSTEM MONITORING to track database file operations
+let fileWatcher = null;
+
+function startDatabaseFileMonitoring(dbPath) {
+  const dbDir = path.dirname(dbPath);
+  const dbFile = path.basename(dbPath);
+
+  console.log('=== STARTING DATABASE FILE MONITORING ===');
+  console.log('Monitoring directory:', dbDir);
+  console.log('Watching for changes to:', dbFile);
+
+  try {
+    // Watch the entire database directory for any changes
+    fileWatcher = fs.watch(dbDir, (eventType, filename) => {
+      const timestamp = new Date().toISOString();
+
+      if (filename === dbFile) {
+        console.log(`🚨 [${timestamp}] DATABASE FILE EVENT: ${eventType} on ${filename}`);
+
+        // Check if file still exists after the event
+        const stillExists = fs.existsSync(dbPath);
+        console.log(`🚨 [${timestamp}] Database file exists after event: ${stillExists}`);
+
+        if (!stillExists) {
+          console.log(`🚨🚨🚨 [${timestamp}] DATABASE FILE WAS DELETED! 🚨🚨🚨`);
+          console.log('Stack trace for deletion detection:');
+          console.trace();
+        } else {
+          // File still exists, check size
+          try {
+            const stats = fs.statSync(dbPath);
+            console.log(`🚨 [${timestamp}] Database file size after event: ${stats.size} bytes`);
+          } catch (err) {
+            console.log(`🚨 [${timestamp}] Error checking file size: ${err.message}`);
+          }
+        }
+      } else if (filename) {
+        console.log(`📁 [${timestamp}] Directory event: ${eventType} on ${filename}`);
+      }
+    });
+
+    console.log('✅ File system monitoring started successfully');
+  } catch (err) {
+    console.error('❌ Failed to start file monitoring:', err.message);
+  }
+}
+
+function stopDatabaseFileMonitoring() {
+  if (fileWatcher) {
+    fileWatcher.close();
+    fileWatcher = null;
+    console.log('=== STOPPED DATABASE FILE MONITORING ===');
+  }
+}
+
 class Database {
   constructor() {
     this.db = null;
@@ -443,6 +498,9 @@ class Database {
             const stats = fs.statSync(dbPath);
             console.log('TRACK: Database file size after table creation:', stats.size, 'bytes');
           }
+
+          // START FILE SYSTEM MONITORING after database is fully initialized
+          startDatabaseFileMonitoring(dbPath);
 
           resolve();
         });
@@ -1210,6 +1268,8 @@ class Database {
             reject(err);
           } else {
             console.log('Database connection closed');
+            // STOP FILE SYSTEM MONITORING when database closes
+            stopDatabaseFileMonitoring();
             resolve();
           }
         });
