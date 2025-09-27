@@ -79,6 +79,27 @@ app.get('/api/time', (req, res) => {
   });
 });
 
+// TEMPORARY DEBUG: List user profiles (remove after debugging)
+app.get('/api/debug/profiles', async (req, res) => {
+  try {
+    const profiles = await new Promise((resolve, reject) => {
+      db.db.all('SELECT id, session_id, created_at, updated_at, onboarded_at FROM user_profiles ORDER BY created_at DESC', (err, rows) => {
+        if (err) reject(err);
+        else resolve(rows);
+      });
+    });
+
+    res.json({
+      count: profiles.length,
+      profiles: profiles,
+      requestedSession: req.query.check || 'none'
+    });
+  } catch (error) {
+    console.error('Debug profiles error:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // Session validation endpoint
 app.get('/api/session/validate', async (req, res) => {
     const sessionId = req.query.sessionId;
