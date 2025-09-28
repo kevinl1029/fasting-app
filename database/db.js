@@ -878,39 +878,54 @@ class Database {
 
   async generateInstancesForBlock(block, schedule, startDate, endDate) {
     const instances = [];
-    
+
+    // Helper function to create consistent dates for "floating timezone" behavior
+    const createFloatingTimezoneDate = (baseDate, hour, minute) => {
+      // For floating timezone behavior: "8:00 PM" should always mean 8:00 PM in user's current timezone
+      // Solution: Create date string that avoids server timezone interpretation entirely
+
+      const year = baseDate.getFullYear();
+      const month = String(baseDate.getMonth() + 1).padStart(2, '0');
+      const day = String(baseDate.getDate()).padStart(2, '0');
+      const hourStr = String(hour).padStart(2, '0');
+      const minuteStr = String(minute).padStart(2, '0');
+
+      // Create ISO string without 'Z' suffix to avoid UTC interpretation
+      // This creates a "naive" datetime that the frontend can interpret in user's timezone
+      const isoString = `${year}-${month}-${day}T${hourStr}:${minuteStr}:00`;
+
+      return new Date(isoString);
+    };
+
     // Find the next occurrence of the specified day of week (start_dow)
     const current = new Date(startDate);
     current.setHours(0, 0, 0, 0);
-    
+
     // Find the first occurrence of this day of week on or after startDate
     const targetDayOfWeek = block.start_dow; // 0 = Sunday, 1 = Monday, etc.
     const currentDayOfWeek = current.getDay();
-    
+
     let daysUntilTarget = (targetDayOfWeek - currentDayOfWeek + 7) % 7;
     if (daysUntilTarget === 0) {
       // If it's the same day, check if we've passed the start time
       const [startHour, startMinute] = block.start_time.split(':').map(Number);
-      const startTimeToday = new Date(current);
-      startTimeToday.setHours(startHour, startMinute, 0, 0);
-      
+      const startTimeToday = createFloatingTimezoneDate(current, startHour, startMinute);
+
       if (startDate > startTimeToday) {
         // We've passed today's start time, so look for next week
         daysUntilTarget = 7;
       }
     }
-    
+
     current.setDate(current.getDate() + daysUntilTarget);
 
     // Generate instances week by week
     while (current <= endDate) {
-      const instanceStartDate = new Date(current);
-      
       const [startHour, startMinute] = block.start_time.split(':').map(Number);
-      instanceStartDate.setHours(startHour, startMinute, 0, 0);
+      const instanceStartDate = createFloatingTimezoneDate(current, startHour, startMinute);
 
       // Calculate end date using end_dow and end_time
-      const instanceEndDate = new Date(current);
+      const endDateBase = new Date(current);
 
       // Calculate days from start_dow to end_dow
       let daysDifference = (block.end_dow - block.start_dow + 7) % 7;
@@ -920,10 +935,10 @@ class Database {
         daysDifference = 7;
       }
 
-      instanceEndDate.setDate(instanceEndDate.getDate() + daysDifference);
+      endDateBase.setDate(endDateBase.getDate() + daysDifference);
 
       const [endHour, endMinute] = block.end_time.split(':').map(Number);
-      instanceEndDate.setHours(endHour, endMinute, 0, 0);
+      const instanceEndDate = createFloatingTimezoneDate(endDateBase, endHour, endMinute);
 
       // Only include instances that start after the current time
       if (instanceStartDate >= startDate) {
