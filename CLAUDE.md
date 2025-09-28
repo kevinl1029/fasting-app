@@ -317,3 +317,13 @@ Periodically run `npm run test` and ensure:
 - Test execution time remains reasonable (under 30s)
 - New features have corresponding test coverage
 - Test failures provide clear, actionable error messages
+
+## Debug File Policy
+
+**CRITICAL**: Never create debug or test files in the project root directory.
+
+**Temporary debug files**: Use `/tmp/` or `~/Desktop/` - these auto-clean and stay outside the project
+**Permanent tests**: Use `tests/` directory only with proper npm script integration
+**NEVER create**: `test-*.js`, `debug-*.html`, or similar files in project root or `public/` directories
+
+This prevents workspace clutter and maintains clean project organization.
