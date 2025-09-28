@@ -78,6 +78,27 @@ class BenefitsDataService {
     }
 
     /**
+     * Get user preferences with optional cache usage
+     */
+    async getPreferences({ forceRefresh = false } = {}) {
+        if (!forceRefresh) {
+            const cached = this.getCachedPreferences();
+            if (cached) {
+                return cached;
+            }
+        }
+
+        return await this.loadUserPreferences();
+    }
+
+    /**
+     * Backwards-compatible alias for existing integrations
+     */
+    async getUserPreferences(options = {}) {
+        return await this.getPreferences(options);
+    }
+
+    /**
      * Fetch user preferences from API
      */
     async fetchUserPreferencesFromAPI() {
