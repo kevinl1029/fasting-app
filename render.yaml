@@ -10,5 +10,5 @@ services:
         value: production
     disk:
       name: sqlite-data
-      mountPath: /opt/render/project/src/database
+      mountPath: /data
       sizeGB: 1

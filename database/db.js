@@ -66,7 +66,7 @@ class Database {
     return new Promise((resolve, reject) => {
       // Use persistent volume on Render, fallback to local for development
       const dbPath = process.env.NODE_ENV === 'production'
-        ? '/opt/render/project/src/database/fasting.db'
+        ? '/data/fasting.db'
         : path.join(__dirname, 'fasting.db');
 
       console.log('=== DATABASE INITIALIZATION DIAGNOSTICS ===');
@@ -183,9 +183,9 @@ class Database {
 
       // Test 4: Absolute Path Validation
       console.log('--- Test 4: Absolute Path Validation ---');
-      console.log('Expected persistent volume path: /opt/render/project/src/database');
+      console.log('Expected persistent volume path: /data');
       console.log('Actual database directory:', dbDir);
-      console.log('Paths match:', dbDir === '/opt/render/project/src/database');
+      console.log('Paths match:', dbDir === '/data');
       console.log('Resolved absolute path:', path.resolve(dbPath));
       console.log('Database file will be created at:', dbPath);
 

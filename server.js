@@ -1751,7 +1751,7 @@ app.get('/api/debug/persistence-diagnostics', async (req, res) => {
 
     // Database path
     const dbPath = process.env.NODE_ENV === 'production'
-      ? '/opt/render/project/src/database/fasting.db'
+      ? '/data/fasting.db'
       : path.join(__dirname, 'database', 'fasting.db');
 
     const dbDir = path.dirname(dbPath);
