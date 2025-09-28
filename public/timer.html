@@ -1687,6 +1687,7 @@
         
         // Session management - use global function from PageGuard
         const globalSessionId = window.getSessionId();
+        const clientTimeZone = Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC';
 
         // Contextual Cards System
         let notificationService = null;
@@ -3054,7 +3055,7 @@
         // Load and display the next scheduled fast
         async function loadNextScheduledFast() {
             try {
-                const upcomingScheduleResponse = await fetch(`/api/schedule/upcoming?sessionId=${globalSessionId}`);
+                const upcomingScheduleResponse = await fetch(`/api/schedule/upcoming?sessionId=${globalSessionId}&tz=${encodeURIComponent(clientTimeZone)}`);
                 if (upcomingScheduleResponse.ok) {
                     const upcomingScheduleData = await upcomingScheduleResponse.json();
                     if (upcomingScheduleData.upcoming) {
@@ -3802,7 +3803,7 @@
         async function checkForUpcomingFast() {
             try {
                 // Check for upcoming fast
-                const upcomingResponse = await fetch(`/api/schedule/upcoming?sessionId=${sessionId}`);
+                const upcomingResponse = await fetch(`/api/schedule/upcoming?sessionId=${sessionId}&tz=${encodeURIComponent(clientTimeZone)}`);
                 if (upcomingResponse.ok) {
                     const upcomingData = await upcomingResponse.json();
                     if (upcomingData.upcoming) {
@@ -3821,7 +3822,7 @@
                 }
                 
                 // Check if user has a schedule and hide setup prompt if they do
-                const scheduleResponse = await fetch(`/api/schedule?sessionId=${globalSessionId}`);
+                const scheduleResponse = await fetch(`/api/schedule?sessionId=${globalSessionId}&tz=${encodeURIComponent(clientTimeZone)}`);
                 if (scheduleResponse.ok) {
                     const scheduleData = await scheduleResponse.json();
                     const scheduleSetupElement = document.getElementById('scheduleSetupState');
@@ -3943,7 +3944,8 @@
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
                         sessionId: globalSessionId,
-                        upcomingId: upcomingId
+                        upcomingId: upcomingId,
+                        timeZone: clientTimeZone
                     })
                 });
                 

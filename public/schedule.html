@@ -788,6 +788,7 @@
         // Session management - moved to initializeSchedulePage()
         // const sessionId = window.getSessionId();
         let sessionId = null; // Will be set when session is ready
+        const clientTimeZone = Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC';
 
         // Global state
         let scheduleData = {
@@ -892,7 +893,7 @@
         
         async function loadSchedule() {
             try {
-                const response = await fetch(`/api/schedule?sessionId=${sessionId}`);
+                const response = await fetch(`/api/schedule?sessionId=${sessionId}&tz=${encodeURIComponent(clientTimeZone)}`);
                 const data = await response.json();
                 
                 if (!response.ok) {
@@ -909,6 +910,13 @@
                     throw new Error(data.error || 'Failed to load schedule');
                 }
                 
+                if (Array.isArray(data.blocks)) {
+                    data.blocks = data.blocks.map(block => ({
+                        ...block,
+                        anchor_tz: block.anchor_tz || clientTimeZone
+                    }));
+                }
+
                 scheduleData = data;
                 console.log('📅 Schedule data loaded successfully:', data);
                 renderSchedule();
@@ -1277,6 +1285,7 @@
                 end_dow: parseInt(document.getElementById('create-end-dow').value),
                 end_time: document.getElementById('create-end-time').value,
                 tz_mode: 'local',
+                anchor_tz: clientTimeZone,
                 notifications: {
                     pre_start: ['3h', '30m'],
                     start_grace_mins: 60,
@@ -1319,7 +1328,8 @@
                 start_dow: parseInt(document.getElementById('edit-start-dow').value),
                 start_time: document.getElementById('edit-start-time').value,
                 end_dow: parseInt(document.getElementById('edit-end-dow').value),
-                end_time: document.getElementById('edit-end-time').value
+                end_time: document.getElementById('edit-end-time').value,
+                anchor_tz: clientTimeZone
             };
             
             try {
@@ -1382,7 +1392,8 @@
                 start_time: document.getElementById('create-start-time').value,
                 end_dow: parseInt(document.getElementById('create-end-dow').value),
                 end_time: document.getElementById('create-end-time').value,
-                tz_mode: 'local'
+                tz_mode: 'local',
+                anchor_tz: clientTimeZone
             };
             
             // Check for overlaps
@@ -1398,7 +1409,8 @@
                 start_time: document.getElementById('edit-start-time').value,
                 end_dow: parseInt(document.getElementById('edit-end-dow').value),
                 end_time: document.getElementById('edit-end-time').value,
-                tz_mode: 'local'
+                tz_mode: 'local',
+                anchor_tz: clientTimeZone
             };
             
             // Check for overlaps (exclude current block being edited)
@@ -1413,7 +1425,14 @@
                 const response = await fetch('/api/schedule/preview', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ sessionId: sessionId, blocks: blocks })
+                    body: JSON.stringify({
+                        sessionId: sessionId,
+                        timeZone: clientTimeZone,
+                        blocks: blocks.map(block => ({
+                            ...block,
+                            anchor_tz: block.anchor_tz || clientTimeZone
+                        }))
+                    })
                 });
                 
                 const result = await response.json();

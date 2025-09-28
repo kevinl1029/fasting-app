@@ -432,6 +432,8 @@ app.get('/api/schedule', validateSessionMiddleware, async (req, res) => {
     if (!sessionId) {
       return res.status(400).json({ error: 'sessionId is required' });
     }
+
+    const clientTimeZone = req.query.tz;
     
     // Get user profile
     const profile = await db.getUserProfileBySessionId(sessionId);
@@ -449,7 +451,7 @@ app.get('/api/schedule', validateSessionMiddleware, async (req, res) => {
     const blocks = await db.getFastingBlocksBySchedule(schedule.id);
     
     // Generate next instances (4 weeks ahead)
-    const nextInstances = await db.generatePlannedInstances(schedule.id, 4);
+    const nextInstances = await db.generatePlannedInstances(schedule.id, 4, { timeZone: clientTimeZone });
     
     res.json({
       schedule,
@@ -498,7 +500,7 @@ app.post('/api/schedule', validateSessionMiddleware, async (req, res) => {
 
 app.post('/api/schedule/blocks', validateSessionMiddleware, async (req, res) => {
   try {
-    const { name, start_dow, start_time, end_dow, end_time, tz_mode = 'local', anchor_tz, notifications } = req.body;
+    const { name, start_dow, start_time, end_dow, end_time, tz_mode = 'local', anchor_tz, notifications, timeZone } = req.body;
 
     if (start_dow === undefined || !start_time || end_dow === undefined || !end_time) {
       return res.status(400).json({ error: 'Missing required fields' });
@@ -527,7 +529,7 @@ app.post('/api/schedule/blocks', validateSessionMiddleware, async (req, res) => 
       end_dow,
       end_time,
       tz_mode,
-      anchor_tz,
+      anchor_tz: anchor_tz || timeZone,
       notifications
     };
     
@@ -542,7 +544,7 @@ app.post('/api/schedule/blocks', validateSessionMiddleware, async (req, res) => 
 app.patch('/api/schedule/blocks/:id', validateSessionMiddleware, async (req, res) => {
   try {
     const blockId = parseInt(req.params.id);
-    const { sessionId, name, start_dow, start_time, end_dow, end_time, tz_mode, anchor_tz, notifications } = req.body;
+    const { sessionId, name, start_dow, start_time, end_dow, end_time, tz_mode, anchor_tz, notifications, timeZone } = req.body;
     
     if (!sessionId) {
       return res.status(400).json({ error: 'sessionId is required' });
@@ -573,7 +575,7 @@ app.patch('/api/schedule/blocks/:id', validateSessionMiddleware, async (req, res
     if (end_dow !== undefined) updateData.end_dow = end_dow;
     if (end_time !== undefined) updateData.end_time = end_time;
     if (tz_mode !== undefined) updateData.tz_mode = tz_mode;
-    if (anchor_tz !== undefined) updateData.anchor_tz = anchor_tz;
+    if (anchor_tz !== undefined || timeZone) updateData.anchor_tz = anchor_tz || timeZone;
     if (notifications !== undefined) updateData.notifications = notifications;
     
     const result = await db.updateFastingBlock(blockId, updateData);
@@ -664,7 +666,7 @@ app.post('/api/schedule/blocks/:id/overrides', validateSessionMiddleware, async 
 
 app.post('/api/schedule/preview', validateSessionMiddleware, async (req, res) => {
   try {
-    const { sessionId, blocks } = req.body;
+    const { sessionId, blocks, timeZone } = req.body;
     
     if (!sessionId || !blocks || !Array.isArray(blocks)) {
       return res.status(400).json({ error: 'sessionId and blocks array are required' });
@@ -697,7 +699,7 @@ app.post('/api/schedule/preview', validateSessionMiddleware, async (req, res) =>
       };
       
       // Generate instances for this preview block
-      const blockInstances = await db.generateInstancesForBlock(block, mockSchedule, now, endDate);
+      const blockInstances = await db.generateInstancesForBlock(block, mockSchedule, now, endDate, { timeZone });
       allInstances.push(...blockInstances);
     }
     
@@ -718,6 +720,8 @@ app.post('/api/schedule/preview', validateSessionMiddleware, async (req, res) =>
 // Get upcoming scheduled instances for Timer integration
 app.get('/api/schedule/upcoming', validateSessionMiddleware, async (req, res) => {
   try {
+    const clientTimeZone = req.query.tz;
+
     // Session is guaranteed valid here - use req.userProfile
 
     // Get user's schedule
@@ -739,7 +743,7 @@ app.get('/api/schedule/upcoming', validateSessionMiddleware, async (req, res) =>
     
     const allInstances = [];
     for (const block of blocks) {
-      const instances = await db.generateInstancesForBlock(block, schedule, now, endDate);
+      const instances = await db.generateInstancesForBlock(block, schedule, now, endDate, { timeZone: clientTimeZone });
       allInstances.push(...instances);
     }
     
@@ -775,7 +779,7 @@ app.get('/api/schedule/upcoming', validateSessionMiddleware, async (req, res) =>
 // Start early endpoint for scheduled fasts
 app.post('/api/schedule/start-early', validateSessionMiddleware, async (req, res) => {
   try {
-    const { sessionId, upcomingId } = req.body;
+    const { sessionId, upcomingId, timeZone } = req.body;
     
     if (!sessionId || !upcomingId) {
       return res.status(400).json({ error: 'sessionId and upcomingId are required' });
@@ -800,7 +804,7 @@ app.post('/api/schedule/start-early', validateSessionMiddleware, async (req, res
     
     let upcomingInstance = null;
     for (const block of blocks) {
-      const instances = await db.generateInstancesForBlock(block, schedule, now, tomorrow);
+      const instances = await db.generateInstancesForBlock(block, schedule, now, tomorrow, { timeZone });
       upcomingInstance = instances.find(instance => 
         new Date(instance.start_at_utc) > now && instance.id === upcomingId
       );

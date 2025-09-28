@@ -838,7 +838,7 @@ class Database {
   }
 
   // Instance generation methods
-  async generatePlannedInstances(scheduleId, weeksAhead = 4) {
+  async generatePlannedInstances(scheduleId, weeksAhead = 4, options = {}) {
     return new Promise(async (resolve, reject) => {
       try {
         // Get schedule details
@@ -862,7 +862,7 @@ class Database {
 
         for (const block of blocks) {
           // Generate instances for this block
-          const blockInstances = await this.generateInstancesForBlock(block, schedule, now, endDate);
+          const blockInstances = await this.generateInstancesForBlock(block, schedule, now, endDate, options);
           instances.push(...blockInstances);
         }
 
@@ -876,86 +876,161 @@ class Database {
     });
   }
 
-  async generateInstancesForBlock(block, schedule, startDate, endDate) {
+  async generateInstancesForBlock(block, schedule, startDate, endDate, options = {}) {
     const instances = [];
 
-    // Helper function to create consistent dates for "floating timezone" behavior
-    const createFloatingTimezoneDate = (baseDate, hour, minute) => {
-      // For floating timezone behavior: "8:00 PM" should always mean 8:00 PM in user's current timezone
-      // Solution: Create date string that avoids server timezone interpretation entirely
-
-      const year = baseDate.getFullYear();
-      const month = String(baseDate.getMonth() + 1).padStart(2, '0');
-      const day = String(baseDate.getDate()).padStart(2, '0');
-      const hourStr = String(hour).padStart(2, '0');
-      const minuteStr = String(minute).padStart(2, '0');
-
-      // Create ISO string without 'Z' suffix to avoid UTC interpretation
-      // This creates a "naive" datetime that the frontend can interpret in user's timezone
-      const isoString = `${year}-${month}-${day}T${hourStr}:${minuteStr}:00`;
-
-      return new Date(isoString);
+    const resolveTimeZone = () => {
+      if (block && block.tz_mode === 'fixed' && block.anchor_tz) {
+        return block.anchor_tz;
+      }
+      if (block && block.anchor_tz) {
+        return block.anchor_tz;
+      }
+      if (options && typeof options.timeZone === 'string' && options.timeZone.trim()) {
+        return options.timeZone;
+      }
+      return 'UTC';
     };
 
-    // Find the next occurrence of the specified day of week (start_dow)
-    const current = new Date(startDate);
-    current.setHours(0, 0, 0, 0);
+    let timeZone = resolveTimeZone();
 
-    // Find the first occurrence of this day of week on or after startDate
-    const targetDayOfWeek = block.start_dow; // 0 = Sunday, 1 = Monday, etc.
-    const currentDayOfWeek = current.getDay();
+    const buildDateTimeFormatter = (tz) => new Intl.DateTimeFormat('en-US', {
+      timeZone: tz,
+      hour12: false,
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit'
+    });
 
-    let daysUntilTarget = (targetDayOfWeek - currentDayOfWeek + 7) % 7;
-    if (daysUntilTarget === 0) {
-      // If it's the same day, check if we've passed the start time
-      const [startHour, startMinute] = block.start_time.split(':').map(Number);
-      const startTimeToday = createFloatingTimezoneDate(current, startHour, startMinute);
+    const weekdayNames = {
+      Sunday: 0,
+      Monday: 1,
+      Tuesday: 2,
+      Wednesday: 3,
+      Thursday: 4,
+      Friday: 5,
+      Saturday: 6
+    };
 
-      if (startDate > startTimeToday) {
-        // We've passed today's start time, so look for next week
-        daysUntilTarget = 7;
-      }
+    let dateTimeFormatter;
+    let weekdayFormatter;
+
+    try {
+      dateTimeFormatter = buildDateTimeFormatter(timeZone);
+      weekdayFormatter = new Intl.DateTimeFormat('en-US', { timeZone, weekday: 'long' });
+    } catch (error) {
+      console.warn('Invalid timezone provided, falling back to UTC:', timeZone, error);
+      timeZone = 'UTC';
+      dateTimeFormatter = buildDateTimeFormatter(timeZone);
+      weekdayFormatter = new Intl.DateTimeFormat('en-US', { timeZone, weekday: 'long' });
     }
 
-    current.setDate(current.getDate() + daysUntilTarget);
-
-    // Generate instances week by week
-    while (current <= endDate) {
-      const [startHour, startMinute] = block.start_time.split(':').map(Number);
-      const instanceStartDate = createFloatingTimezoneDate(current, startHour, startMinute);
-
-      // Calculate end date using end_dow and end_time
-      const endDateBase = new Date(current);
-
-      // Calculate days from start_dow to end_dow
-      let daysDifference = (block.end_dow - block.start_dow + 7) % 7;
-
-      // If end_dow equals start_dow, the fast spans to the same day next week
-      if (daysDifference === 0) {
-        daysDifference = 7;
+    const getZonedParts = (date) => {
+      const parts = dateTimeFormatter.formatToParts(date);
+      const mapped = {};
+      for (const part of parts) {
+        if (part.type !== 'literal') {
+          mapped[part.type] = part.value;
+        }
       }
+      return {
+        year: Number(mapped.year),
+        month: Number(mapped.month),
+        day: Number(mapped.day),
+        hour: Number(mapped.hour),
+        minute: Number(mapped.minute),
+        second: Number(mapped.second)
+      };
+    };
 
-      endDateBase.setDate(endDateBase.getDate() + daysDifference);
+    const getWeekdayIndex = (date) => {
+      const name = weekdayFormatter.format(date);
+      return weekdayNames[name] ?? 0;
+    };
 
-      const [endHour, endMinute] = block.end_time.split(':').map(Number);
-      const instanceEndDate = createFloatingTimezoneDate(endDateBase, endHour, endMinute);
+    const getTimeZoneOffset = (date) => {
+      const parts = getZonedParts(date);
+      const asUTC = Date.UTC(
+        parts.year,
+        parts.month - 1,
+        parts.day,
+        parts.hour,
+        parts.minute,
+        parts.second
+      );
+      return asUTC - date.getTime();
+    };
 
-      // Only include instances that start after the current time
+    const createZonedDate = (year, month, day, hour, minute, second = 0) => {
+      const naiveUtc = Date.UTC(year, month - 1, day, hour, minute, second);
+      const candidate = new Date(naiveUtc);
+      const offset = getTimeZoneOffset(candidate);
+      return new Date(naiveUtc - offset);
+    };
+
+    const createZonedDateFromBase = (baseDate, hour, minute, second = 0) => {
+      const parts = getZonedParts(baseDate);
+      return createZonedDate(parts.year, parts.month, parts.day, hour, minute, second);
+    };
+
+    const toLocalMidnight = (date) => createZonedDateFromBase(date, 0, 0, 0);
+
+    const addDays = (date, days) => {
+      const result = new Date(date.getTime());
+      result.setUTCDate(result.getUTCDate() + days);
+      return result;
+    };
+
+    const prepareDayBoundary = (date) => toLocalMidnight(date);
+
+    const [startHour, startMinute] = block.start_time.split(':').map(Number);
+    const [endHour, endMinute] = block.end_time.split(':').map(Number);
+
+    const computeDaysDifference = () => {
+      let diff = (block.end_dow - block.start_dow + 7) % 7;
+      if (diff === 0) {
+        diff = 7;
+      }
+      return diff;
+    };
+
+    const daysDifference = computeDaysDifference();
+
+    let current = prepareDayBoundary(startDate);
+    let currentDayOfWeek = getWeekdayIndex(current);
+
+    const targetDayOfWeek = block.start_dow;
+    let daysUntilTarget = (targetDayOfWeek - currentDayOfWeek + 7) % 7;
+
+    const startTimeToday = createZonedDateFromBase(current, startHour, startMinute);
+    if (daysUntilTarget === 0 && startDate > startTimeToday) {
+      daysUntilTarget = 7;
+    }
+
+    if (daysUntilTarget > 0) {
+      current = prepareDayBoundary(addDays(current, daysUntilTarget));
+    }
+
+    while (current <= endDate) {
+      const instanceStartDate = createZonedDateFromBase(current, startHour, startMinute);
+      const endDateBase = addDays(current, daysDifference);
+      const instanceEndDate = createZonedDateFromBase(endDateBase, endHour, endMinute);
+
       if (instanceStartDate >= startDate) {
-        // Format occurrence date (the date this instance represents)
         const occurrenceDate = instanceStartDate.toISOString().split('T')[0];
 
-        // Check for overrides for this occurrence
         const override = await this.getOverrideByBlockAndDate(block.id, occurrenceDate);
         let status = 'upcoming';
-        
+
         if (override) {
           switch (override.type) {
             case 'skip':
               status = 'skipped';
               break;
             case 'shift':
-              // Apply time shift from override payload
               if (override.payload && override.payload.hours) {
                 instanceStartDate.setHours(instanceStartDate.getHours() + override.payload.hours);
                 instanceEndDate.setHours(instanceEndDate.getHours() + override.payload.hours);
@@ -974,11 +1049,11 @@ class Database {
           }
         }
 
-        // Determine if this instance is currently active
         if (status !== 'skipped') {
-          if (instanceStartDate <= new Date() && new Date() <= instanceEndDate) {
+          const now = new Date();
+          if (instanceStartDate <= now && now <= instanceEndDate) {
             status = 'active';
-          } else if (instanceEndDate < new Date()) {
+          } else if (instanceEndDate < now) {
             status = 'completed';
           }
         }
@@ -995,8 +1070,9 @@ class Database {
         });
       }
 
-      // Move to next week
-      current.setDate(current.getDate() + 7);
+      const nextWeek = addDays(current, 7);
+      current = prepareDayBoundary(nextWeek);
+      currentDayOfWeek = getWeekdayIndex(current);
     }
 
     return instances;
