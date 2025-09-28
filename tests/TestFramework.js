@@ -39,9 +39,8 @@ class FastingForecastTestFramework {
 
         // Set up console and error logging
         this.page.on('console', msg => {
-            if (this.options.verbose) {
-                console.log(`[${msg.type().toUpperCase()}]`, msg.text());
-            }
+            // Show all console messages for debugging
+            console.log(`[${msg.type().toUpperCase()}]`, msg.text());
         });
 
         this.page.on('pageerror', error => {
@@ -114,18 +113,21 @@ class FastingForecastTestFramework {
     // Core test utilities
     async testSessionManagement() {
         return await this.runTest('Session Management', async (page) => {
+            // Wait a reasonable time for page initialization to complete
+            await new Promise(resolve => setTimeout(resolve, 3000));
+
             const result = await page.evaluate(() => {
                 return {
                     sessionIdFunction: typeof window.getSessionId === 'function',
                     sessionIdValue: window.getSessionId ? window.getSessionId() : null,
-                    pageGuardAvailable: !!window.pageGuard,
-                    pageGuardReady: window.pageGuard ? window.pageGuard.isReady : false
+                    sessionManagerAvailable: !!window.FastingForecastSessionManager,
+                    sessionFetchAvailable: typeof window.sessionFetch === 'function'
                 };
             });
 
             if (!result.sessionIdFunction) throw new Error('Session ID function not available');
-            if (!result.pageGuardAvailable) throw new Error('Page guard not available');
             if (!result.sessionIdValue) throw new Error('Session ID not set');
+            if (!result.sessionManagerAvailable) throw new Error('Session manager not available');
 
             return result;
         });

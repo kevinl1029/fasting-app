@@ -774,9 +774,9 @@
 
                     <!-- Timeframe Toggle -->
                     <div class="timeframe-toggle">
-                        <button class="timeframe-btn active" data-timeframe="week">Week</button>
+                        <button class="timeframe-btn" data-timeframe="week">Week</button>
                         <button class="timeframe-btn" data-timeframe="month">Month</button>
-                        <button class="timeframe-btn" data-timeframe="all">All Time</button>
+                        <button class="timeframe-btn active" data-timeframe="all">All Time</button>
                     </div>
 
                     <!-- Milestones Section -->
@@ -955,7 +955,7 @@
         <div class="modal-content">
             <div class="modal-header">
                 <h2>Welcome to Benefits Tracking! 🎉</h2>
-                <button type="button" class="modal-close" onclick="hideBenefitsOnboardingModal()">×</button>
+                <button type="button" class="modal-close" onclick="dismissBenefitsOnboarding()">×</button>
             </div>
             <div class="modal-body">
                 <div style="text-align: center; margin-bottom: 20px;">
@@ -1073,9 +1073,9 @@
                 }
             });
 
-            document.getElementById('benefits-onboarding-modal').addEventListener('click', function(e) {
+            document.getElementById('benefits-onboarding-modal').addEventListener('click', async function(e) {
                 if (e.target === this) {
-                    hideBenefitsOnboardingModal();
+                    await dismissBenefitsOnboarding();
                 }
             });
 
@@ -1098,7 +1098,25 @@
 
         // Benefits Tab Functionality
         let benefitsDataService = null;
-        let currentTimeframe = 'week';
+        let currentTimeframe = 'all';
+        const BENEFITS_ONBOARDING_KEY = 'fastingForecast_benefitsOnboardingAcknowledged';
+
+        function hasAcknowledgedBenefitsOnboarding() {
+            try {
+                return localStorage.getItem(BENEFITS_ONBOARDING_KEY) === 'true';
+            } catch (error) {
+                console.warn('Unable to read benefits onboarding state:', error);
+                return false;
+            }
+        }
+
+        function setBenefitsOnboardingAcknowledgedLocally() {
+            try {
+                localStorage.setItem(BENEFITS_ONBOARDING_KEY, 'true');
+            } catch (error) {
+                console.warn('Unable to persist benefits onboarding locally:', error);
+            }
+        }
 
         // Meal times functionality for card rotation
         let userMealtimes = null;
@@ -1401,32 +1419,49 @@
             document.getElementById('benefits-onboarding-modal').classList.remove('active');
         }
 
-        function goToBenefitsSettings() {
+        async function acknowledgeBenefitsOnboarding({ persist = true } = {}) {
+            const alreadyAcknowledged = hasAcknowledgedBenefitsOnboarding();
+            setBenefitsOnboardingAcknowledgedLocally();
+
+            if (!persist || alreadyAcknowledged) {
+                return;
+            }
+
+            try {
+                if (benefitsDataService && typeof benefitsDataService.markBenefitsOnboarded === 'function') {
+                    await benefitsDataService.markBenefitsOnboarded();
+                } else {
+                    const sessionId = window.getSessionId();
+                    if (!sessionId) {
+                        return;
+                    }
+
+                    await fetch('/api/benefits/onboarding-complete', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({ sessionId })
+                    });
+                }
+            } catch (error) {
+                console.error('Error marking benefits onboarding complete:', error);
+            }
+        }
+
+        async function dismissBenefitsOnboarding({ persist = true } = {}) {
             hideBenefitsOnboardingModal();
+            await acknowledgeBenefitsOnboarding({ persist });
+        }
+
+        async function goToBenefitsSettings() {
+            await dismissBenefitsOnboarding();
             window.location.href = '/settings#benefits';
         }
 
         async function completeBenefitsOnboarding() {
             try {
-                hideBenefitsOnboardingModal();
-
-                // Mark user as onboarded
-                const sessionId = window.getSessionId();
-                if (sessionId) {
-                    const response = await fetch('/api/benefits/onboarding-complete', {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                        },
-                        body: JSON.stringify({ sessionId })
-                    });
-
-                    if (!response.ok) {
-                        console.error('Failed to mark onboarding as complete');
-                    }
-                }
-
-                // Load benefits data
+                await dismissBenefitsOnboarding();
                 await loadBenefitsData();
 
                 console.log('Benefits onboarding completed successfully');
@@ -1443,11 +1478,23 @@
                     return false;
                 }
 
+                if (hasAcknowledgedBenefitsOnboarding()) {
+                    return true;
+                }
+
                 const preferences = await benefitsDataService.getUserPreferences();
-                return preferences && preferences.benefits_onboarded === true;
+                const onboardingFlag = preferences ?
+                    (preferences.benefitsOnboarded ?? preferences.benefits_onboarded) : false;
+
+                if (onboardingFlag === true) {
+                    setBenefitsOnboardingAcknowledgedLocally();
+                    return true;
+                }
+
+                return false;
             } catch (error) {
                 console.error('Error checking benefits onboarding status:', error);
-                return false;
+                return hasAcknowledgedBenefitsOnboarding();
             }
         }
 

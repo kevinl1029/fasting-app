@@ -79,7 +79,32 @@ class BenefitsCalculator {
      * Update user meal times
      */
     updateMealtimes(mealtimes) {
-        this.userMealtimes = { ...mealtimes };
+        if (!mealtimes) {
+            this.userMealtimes = null;
+            return;
+        }
+
+        if (Array.isArray(mealtimes)) {
+            const normalized = {};
+
+            mealtimes.forEach(meal => {
+                if (!meal || typeof meal.time !== 'string') {
+                    return;
+                }
+
+                const key = meal.name ? meal.name.toLowerCase().replace(/\s+/g, '_') : `meal_${Object.keys(normalized).length}`;
+                normalized[key] = meal.time;
+            });
+
+            if (Object.keys(normalized).length > 0) {
+                this.userMealtimes = normalized;
+            } else {
+                this.userMealtimes = { ...this.options.defaultMealtimes };
+            }
+        } else {
+            this.userMealtimes = { ...mealtimes };
+        }
+
         console.log('Updated meal times:', this.userMealtimes);
     }
 
@@ -260,20 +285,32 @@ class BenefitsCalculator {
             let totalDurationHours = 0;
 
             filteredFasts.forEach(fast => {
-                if (fast.start_time) {
-                    const startTime = new Date(fast.start_time);
-                    const endTime = fast.end_time ? new Date(fast.end_time) : new Date();
+                if (!fast.start_time) {
+                    return;
+                }
 
-                    const mealsSkipped = this.calculateMealsSkippedInPeriod(startTime, endTime);
-                    const moneySaved = this.calculateMoneySaved(mealsSkipped);
-                    const timeReclaimed = this.calculateTimeReclaimed(mealsSkipped);
+                const startTime = new Date(fast.start_time);
+                const endTime = fast.end_time ? new Date(fast.end_time) : new Date();
 
-                    totalMealsSkipped += mealsSkipped;
-                    totalMoneySaved += moneySaved;
-                    totalTimeReclaimed += timeReclaimed;
+                if (Number.isNaN(startTime.getTime())) {
+                    return;
+                }
 
-                    if (fast.duration_hours) {
-                        totalDurationHours += fast.duration_hours;
+                const mealsSkipped = this.calculateMealsSkippedInPeriod(startTime, endTime);
+                const moneySaved = this.calculateMoneySaved(mealsSkipped);
+                const timeReclaimed = this.calculateTimeReclaimed(mealsSkipped);
+
+                totalMealsSkipped += mealsSkipped;
+                totalMoneySaved += moneySaved;
+                totalTimeReclaimed += timeReclaimed;
+
+                // Use stored duration when available, otherwise derive it from timestamps
+                if (typeof fast.duration_hours === 'number' && fast.duration_hours >= 0) {
+                    totalDurationHours += fast.duration_hours;
+                } else {
+                    const derivedDuration = (endTime - startTime) / (1000 * 60 * 60);
+                    if (!Number.isNaN(derivedDuration) && derivedDuration > 0) {
+                        totalDurationHours += derivedDuration;
                     }
                 }
             });
