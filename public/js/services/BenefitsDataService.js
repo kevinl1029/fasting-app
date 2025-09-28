@@ -244,7 +244,20 @@ class BenefitsDataService {
                 return null;
             }
 
-            const benefits = this.calculator.calculateCumulativeBenefits(fasts, timeframe);
+            const fastList = Array.isArray(fasts) ? [...fasts] : [];
+
+            // Ensure an active fast is included if the fasts endpoint omits it
+            if (!fastList.some(fast => fast && fast.is_active)) {
+                const activeFast = await this.getActiveFast();
+                if (activeFast && activeFast.start_time) {
+                    const alreadyPresent = fastList.some(fast => fast && fast.id && activeFast.id && fast.id === activeFast.id);
+                    if (!alreadyPresent) {
+                        fastList.push(activeFast);
+                    }
+                }
+            }
+
+            const benefits = this.calculator.calculateCumulativeBenefits(fastList, timeframe);
 
             // Cache result
             this.setCache(cacheKey, benefits);
@@ -300,11 +313,16 @@ class BenefitsDataService {
                 method: 'GET'
             });
 
-            if (response && response.success && response.data) {
-                return response.data;
+            if (!response) {
+                return null;
             }
 
-            return null;
+            if (typeof response === 'object' && 'success' in response) {
+                return response.success ? response.data : null;
+            }
+
+            // API returns the fast object directly when using modern endpoints
+            return response;
         } catch (error) {
             console.warn('Could not get active fast:', error.message);
             return null;
@@ -331,6 +349,10 @@ class BenefitsDataService {
             const response = await this.makeRequest(endpoint, {
                 method: 'GET'
             });
+
+            if (Array.isArray(response)) {
+                return response;
+            }
 
             if (response && response.success && response.data) {
                 return response.data;
