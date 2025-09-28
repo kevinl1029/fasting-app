@@ -4220,11 +4220,24 @@
         };
 
         // Initialize session management first
-        const pageGuard = new window.FastingForecastPageSessionGuard();
-        window.pageGuard = pageGuard; // Make it available globally for getSessionId()
+        let pageGuard;
+        try {
+            pageGuard = new window.FastingForecastPageSessionGuard();
+            window.pageGuard = pageGuard; // Make it available globally for getSessionId()
+        } catch (error) {
+            console.error('❌ Failed to create PageSessionGuard:', error);
+            // Set a fallback so tests can see that we tried
+            window.pageGuard = {
+                isReady: false,
+                error: error.message,
+                waitForReady: () => Promise.reject(error)
+            };
+            pageGuard = window.pageGuard;
+        }
 
         // Wait for session to be ready before continuing with page logic
-        pageGuard.waitForReady().then(() => {
+        if (window.pageGuard && !window.pageGuard.error) {
+            window.pageGuard.waitForReady().then(() => {
             console.log('✓ Session manager ready for timer.html');
 
             // Test session ID
@@ -4252,9 +4265,12 @@
             }).catch(error => {
                 console.error('✗ initializeUserState failed:', error);
             });
-        }).catch(error => {
-            console.error('✗ Session manager failed to initialize:', error);
-        });
+            }).catch(error => {
+                console.error('✗ Session manager failed to initialize:', error);
+            });
+        } else {
+            console.error('❌ PageSessionGuard not available, skipping session initialization');
+        }
     </script>
 </body>
 </html>
