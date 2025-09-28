@@ -2,60 +2,6 @@ const sqlite3 = require('sqlite3').verbose();
 const path = require('path');
 const fs = require('fs');
 
-// ADD FILE SYSTEM MONITORING to track database file operations
-let fileWatcher = null;
-
-function startDatabaseFileMonitoring(dbPath) {
-  const dbDir = path.dirname(dbPath);
-  const dbFile = path.basename(dbPath);
-
-  console.log('=== STARTING DATABASE FILE MONITORING ===');
-  console.log('Monitoring directory:', dbDir);
-  console.log('Watching for changes to:', dbFile);
-
-  try {
-    // Watch the entire database directory for any changes
-    fileWatcher = fs.watch(dbDir, (eventType, filename) => {
-      const timestamp = new Date().toISOString();
-
-      if (filename === dbFile) {
-        console.log(`🚨 [${timestamp}] DATABASE FILE EVENT: ${eventType} on ${filename}`);
-
-        // Check if file still exists after the event
-        const stillExists = fs.existsSync(dbPath);
-        console.log(`🚨 [${timestamp}] Database file exists after event: ${stillExists}`);
-
-        if (!stillExists) {
-          console.log(`🚨🚨🚨 [${timestamp}] DATABASE FILE WAS DELETED! 🚨🚨🚨`);
-          console.log('Stack trace for deletion detection:');
-          console.trace();
-        } else {
-          // File still exists, check size
-          try {
-            const stats = fs.statSync(dbPath);
-            console.log(`🚨 [${timestamp}] Database file size after event: ${stats.size} bytes`);
-          } catch (err) {
-            console.log(`🚨 [${timestamp}] Error checking file size: ${err.message}`);
-          }
-        }
-      } else if (filename) {
-        console.log(`📁 [${timestamp}] Directory event: ${eventType} on ${filename}`);
-      }
-    });
-
-    console.log('✅ File system monitoring started successfully');
-  } catch (err) {
-    console.error('❌ Failed to start file monitoring:', err.message);
-  }
-}
-
-function stopDatabaseFileMonitoring() {
-  if (fileWatcher) {
-    fileWatcher.close();
-    fileWatcher = null;
-    console.log('=== STOPPED DATABASE FILE MONITORING ===');
-  }
-}
 
 class Database {
   constructor() {
@@ -69,297 +15,48 @@ class Database {
         ? '/data/fasting.db'
         : path.join(__dirname, 'fasting.db');
 
-      console.log('=== DATABASE INITIALIZATION DIAGNOSTICS ===');
-      console.log('Timestamp:', new Date().toISOString());
       console.log('Database path:', dbPath);
       console.log('NODE_ENV:', process.env.NODE_ENV);
-      console.log('Current working directory:', process.cwd());
-      console.log('__dirname:', __dirname);
-      console.log('Resolved database path:', path.resolve(dbPath));
 
-      // === PHASE 1: MOUNT PATH ACCESSIBILITY TESTS ===
-      console.log('\n=== PHASE 1: MOUNT PATH ACCESSIBILITY TESTS ===');
-
-      // Test 1: Mount Directory Verification
-      console.log('--- Test 1: Mount Directory Verification ---');
+      // Ensure database directory exists
       const dbDir = path.dirname(dbPath);
-      const dbFile = path.basename(dbPath);
-      console.log('Database directory:', dbDir);
-      console.log('Database filename:', dbFile);
-
-      try {
-        // Check if mount directory exists
-        const dirExists = fs.existsSync(dbDir);
-        console.log('Mount directory exists:', dirExists);
-
-        if (dirExists) {
-          // Check directory permissions and stats
-          try {
-            const dirStats = fs.statSync(dbDir);
-            console.log('Directory stats:', {
-              isDirectory: dirStats.isDirectory(),
-              mode: dirStats.mode.toString(8),
-              uid: dirStats.uid,
-              gid: dirStats.gid,
-              size: dirStats.size,
-              modified: dirStats.mtime
-            });
-          } catch (statErr) {
-            console.error('Error getting directory stats:', statErr.message);
-          }
-
-          // Test write accessibility to mount path
-          const testFile = path.join(dbDir, 'mount-write-test.tmp');
-          const testContent = `Mount write test: ${new Date().toISOString()}`;
-          try {
-            fs.writeFileSync(testFile, testContent);
-            console.log('✅ Mount directory is writable');
-
-            // Verify read access
-            const readContent = fs.readFileSync(testFile, 'utf8');
-            console.log('✅ Mount directory is readable');
-            console.log('Test file content matches:', readContent === testContent);
-
-            // Clean up test file
-            fs.unlinkSync(testFile);
-            console.log('✅ Mount directory allows file deletion');
-
-          } catch (writeErr) {
-            console.error('❌ Mount directory write test failed:', writeErr.message);
-            console.error('Error code:', writeErr.code);
-            console.error('Error path:', writeErr.path);
-          }
-
-        } else {
-          console.log('⚠️ Mount directory does not exist, attempting to create...');
-          try {
-            fs.mkdirSync(dbDir, { recursive: true });
-            console.log('✅ Successfully created mount directory');
-          } catch (mkdirErr) {
-            console.error('❌ Failed to create mount directory:', mkdirErr.message);
-          }
-        }
-
-      } catch (dirTestErr) {
-        console.error('❌ Directory test failed:', dirTestErr.message);
+      if (!fs.existsSync(dbDir)) {
+        console.log('Creating database directory:', dbDir);
+        fs.mkdirSync(dbDir, { recursive: true });
       }
 
-      // Test 2: Mount Timing Analysis
-      console.log('\n--- Test 2: Mount Timing Analysis ---');
-      const startTime = Date.now();
-      console.log('App startup time:', new Date(startTime).toISOString());
-
-      // Test mount readiness with retry logic
-      let mountReady = false;
-      let retryCount = 0;
-      const maxRetries = 5;
-
-      while (!mountReady && retryCount < maxRetries) {
-        try {
-          const testMountFile = path.join(dbDir, `mount-timing-test-${retryCount}.tmp`);
-          fs.writeFileSync(testMountFile, `Timing test ${retryCount}: ${Date.now()}`);
-          fs.unlinkSync(testMountFile);
-          mountReady = true;
-          console.log(`✅ Mount ready after ${retryCount} retries (${Date.now() - startTime}ms)`);
-        } catch (timingErr) {
-          retryCount++;
-          console.log(`⏳ Mount not ready, retry ${retryCount}/${maxRetries} (${Date.now() - startTime}ms)`);
-          if (retryCount < maxRetries) {
-            // Wait 100ms before retry
-            const waitStart = Date.now();
-            while (Date.now() - waitStart < 100) {
-              // Synchronous wait
-            }
-          }
-        }
+      // Check if database already exists
+      const dbExists = fs.existsSync(dbPath);
+      console.log('Database file exists:', dbExists);
+      if (dbExists) {
+        const stats = fs.statSync(dbPath);
+        console.log('Database file size:', stats.size, 'bytes');
       }
 
-      if (!mountReady) {
-        console.error('❌ Mount never became ready after', maxRetries, 'retries');
-      }
-
-      // === PHASE 2: PATH VERIFICATION TESTS ===
-      console.log('\n=== PHASE 2: PATH VERIFICATION TESTS ===');
-
-      // Test 4: Absolute Path Validation
-      console.log('--- Test 4: Absolute Path Validation ---');
-      console.log('Expected persistent volume path: /data');
-      console.log('Actual database directory:', dbDir);
-      console.log('Paths match:', dbDir === '/data');
-      console.log('Resolved absolute path:', path.resolve(dbPath));
-      console.log('Database file will be created at:', dbPath);
-
-      // Check for symlinks or path resolution issues
-      try {
-        const realPath = fs.realpathSync(dbDir);
-        console.log('Real path (resolved symlinks):', realPath);
-        console.log('Real path matches expected:', realPath === dbDir);
-      } catch (realPathErr) {
-        console.error('Error resolving real path:', realPathErr.message);
-      }
-
-      // Test 5: Directory Pre-creation
-      console.log('\n--- Test 5: Directory Pre-creation ---');
-      try {
-        // Ensure the directory exists with proper permissions
-        if (!fs.existsSync(dbDir)) {
-          fs.mkdirSync(dbDir, { recursive: true, mode: 0o755 });
-          console.log('✅ Created database directory with mode 755');
-        } else {
-          console.log('✅ Database directory already exists');
-        }
-
-        // Set explicit permissions
-        fs.chmodSync(dbDir, 0o755);
-        console.log('✅ Set directory permissions to 755');
-
-        // Verify final directory state
-        const finalStats = fs.statSync(dbDir);
-        console.log('Final directory permissions:', finalStats.mode.toString(8));
-
-      } catch (permErr) {
-        console.error('❌ Error setting directory permissions:', permErr.message);
-      }
-
-      // === PHASE 3: SQLITE BEHAVIOR ANALYSIS ===
-      console.log('\n=== PHASE 3: SQLITE BEHAVIOR ANALYSIS ===');
-
-      // Test 6: SQLite File Creation Monitoring
-      console.log('--- Test 6: SQLite File Creation Monitoring ---');
-
-      // Check if database file already exists before SQLite connection
-      const dbExistsBeforeConnection = fs.existsSync(dbPath);
-      console.log('Database file exists before SQLite connection:', dbExistsBeforeConnection);
-
-      if (dbExistsBeforeConnection) {
-        try {
-          const existingStats = fs.statSync(dbPath);
-          console.log('Existing database file stats:', {
-            size: existingStats.size,
-            modified: existingStats.mtime,
-            mode: existingStats.mode.toString(8)
-          });
-        } catch (statErr) {
-          console.error('Error reading existing database stats:', statErr.message);
-        }
-      }
-
-      // Check for SQLite auxiliary files
-      const walFile = dbPath + '-wal';
-      const shmFile = dbPath + '-shm';
-      const journalFile = dbPath + '-journal';
-
-      console.log('SQLite auxiliary files check:');
-      console.log('  WAL file exists:', fs.existsSync(walFile));
-      console.log('  SHM file exists:', fs.existsSync(shmFile));
-      console.log('  Journal file exists:', fs.existsSync(journalFile));
-
-      // Test 7: SQLite Connection Mode Testing
-      console.log('\n--- Test 7: SQLite Connection Mode Testing ---');
-      const connectionFlags = sqlite3.OPEN_READWRITE | sqlite3.OPEN_CREATE;
-      console.log('SQLite connection flags:', {
-        OPEN_READWRITE: !!(connectionFlags & sqlite3.OPEN_READWRITE),
-        OPEN_CREATE: !!(connectionFlags & sqlite3.OPEN_CREATE),
-        combined: connectionFlags
-      });
-
-      console.log('About to create SQLite database connection...');
-      console.log('Target path:', dbPath);
-      console.log('Connection timestamp:', new Date().toISOString());
-
-      // Final check before SQLite connection
-      const dbExistsPreConnection = fs.existsSync(dbPath);
-      console.log('Database file exists before connection:', dbExistsPreConnection);
-
-      if (dbExistsPreConnection) {
-        try {
-          const preStats = fs.statSync(dbPath);
-          console.log('Pre-connection database stats:', {
-            size: preStats.size,
-            modified: preStats.mtime,
-            mode: preStats.mode.toString(8)
-          });
-        } catch (preStatErr) {
-          console.error('Error reading pre-connection stats:', preStatErr.message);
-        }
-      }
-
-      console.log('\n=== INITIATING SQLITE CONNECTION ===');
-
-      this.db = new sqlite3.Database(dbPath, connectionFlags, (err) => {
+      this.db = new sqlite3.Database(dbPath, sqlite3.OPEN_READWRITE | sqlite3.OPEN_CREATE, (err) => {
         if (err) {
-          console.error('❌ SQLite connection failed:', err.message);
-          console.error('Error code:', err.code);
-          console.error('Error errno:', err.errno);
+          console.error('Error opening database:', err);
           reject(err);
         } else {
-          console.log('✅ SQLite connection successful');
+          console.log('Connected to SQLite database');
 
-          // === POST-CONNECTION DIAGNOSTICS ===
-          console.log('\n=== POST-CONNECTION DIAGNOSTICS ===');
-
-          // Check if database file exists immediately after connection
-          const dbExistsPostConnection = fs.existsSync(dbPath);
-          console.log('Database file exists after SQLite connection:', dbExistsPostConnection);
-
-          if (dbExistsPostConnection) {
-            try {
-              const postStats = fs.statSync(dbPath);
-              console.log('Post-connection database stats:', {
-                size: postStats.size,
-                modified: postStats.mtime,
-                mode: postStats.mode.toString(8)
-              });
-
-              // Compare with pre-connection stats if file existed before
-              if (dbExistsPreConnection) {
-                console.log('Database file size changed during connection:',
-                  postStats.size !== (preStats?.size || 0));
-              } else {
-                console.log('✅ Database file created by SQLite connection');
-              }
-
-            } catch (postStatErr) {
-              console.error('❌ Error reading post-connection stats:', postStatErr.message);
-            }
-          } else {
-            console.error('❌ Database file missing after SQLite connection!');
-          }
-
-          // Check for auxiliary files after connection
-          console.log('\nSQLite auxiliary files after connection:');
-          console.log('  WAL file exists:', fs.existsSync(walFile));
-          console.log('  SHM file exists:', fs.existsSync(shmFile));
-          console.log('  Journal file exists:', fs.existsSync(journalFile));
-
-          // Test basic database operation
-          console.log('\n--- Testing Database Write Operation ---');
-          try {
-            this.db.run("CREATE TABLE IF NOT EXISTS test_table (id INTEGER, test_data TEXT)", (createErr) => {
-              if (createErr) {
-                console.error('❌ Test table creation failed:', createErr.message);
-              } else {
-                console.log('✅ Test table creation successful');
-
-                // Verify file after write operation
-                const dbExistsAfterWrite = fs.existsSync(dbPath);
-                console.log('Database file exists after write operation:', dbExistsAfterWrite);
-
-                if (dbExistsAfterWrite) {
-                  try {
-                    const writeStats = fs.statSync(dbPath);
-                    console.log('Database size after write operation:', writeStats.size, 'bytes');
-                  } catch (writeStatErr) {
-                    console.error('Error reading stats after write:', writeStatErr.message);
+          // Check if this is an existing database by looking for tables
+          this.db.get("SELECT name FROM sqlite_master WHERE type='table' AND name='user_profiles'", (err, row) => {
+            if (err) {
+              console.error('Error checking for existing tables:', err);
+            } else {
+              console.log('user_profiles table exists:', !!row);
+              if (row) {
+                // Count existing user profiles
+                this.db.get("SELECT COUNT(*) as count FROM user_profiles", (err, countRow) => {
+                  if (!err && countRow) {
+                    console.log('Existing user profiles count:', countRow.count);
                   }
-                }
+                });
               }
-            });
-          } catch (testErr) {
-            console.error('❌ Database test operation failed:', testErr.message);
-          }
+            }
+          });
 
-          // Continue with table creation
           this.createTables().then(resolve).catch(reject);
         }
       });
@@ -546,22 +243,6 @@ class Database {
           }
           console.log('Planned instances table ready');
           console.log('Database initialized successfully');
-
-          // TRACKING: Check if database file still exists after all tables created
-          const dbPath = process.env.NODE_ENV === 'production'
-            ? '/opt/render/project/src/database/fasting.db'
-            : path.join(__dirname, 'fasting.db');
-
-          const fileExistsAfterTables = fs.existsSync(dbPath);
-          console.log('TRACK: Database file exists after table creation:', fileExistsAfterTables);
-          if (fileExistsAfterTables) {
-            const stats = fs.statSync(dbPath);
-            console.log('TRACK: Database file size after table creation:', stats.size, 'bytes');
-          }
-
-          // START FILE SYSTEM MONITORING after database is fully initialized
-          startDatabaseFileMonitoring(dbPath);
-
           resolve();
         });
       });
@@ -1328,8 +1009,6 @@ class Database {
             reject(err);
           } else {
             console.log('Database connection closed');
-            // STOP FILE SYSTEM MONITORING when database closes
-            stopDatabaseFileMonitoring();
             resolve();
           }
         });
