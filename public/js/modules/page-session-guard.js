@@ -8,6 +8,7 @@ class PageSessionGuard {
         this.sessionManager = null;
         this.isReady = false;
         this.readyPromise = this.initialize();
+        this.redirectingToOnboarding = false;
     }
 
     /**
@@ -47,6 +48,12 @@ class PageSessionGuard {
         try {
             // Perform comprehensive validation and repair if needed
             const isValid = await this.sessionManager.validateAndRepair();
+
+            if (this.requiresCompletedProfile() && !this.hasCompletedOnboarding()) {
+                console.warn('Onboarding incomplete - restricting access to current page');
+                this.redirectToOnboarding();
+                return false;
+            }
 
             if (!isValid) {
                 console.warn('Session was invalid and has been repaired');
@@ -199,6 +206,44 @@ class PageSessionGuard {
      */
     async waitForReady() {
         return await this.readyPromise;
+    }
+
+    /**
+     * Determines if the current page requires a completed profile
+     */
+    requiresCompletedProfile() {
+        const path = (window.location.pathname || '').toLowerCase();
+        const onboardingPaths = new Set(['/', '/forecaster', '/forecaster.html']);
+        return !onboardingPaths.has(path);
+    }
+
+    /**
+     * Checks if the user has completed onboarding
+     */
+    hasCompletedOnboarding() {
+        try {
+            return localStorage.getItem('fastingForecast_profileSaved') === 'true';
+        } catch (error) {
+            console.warn('Unable to read onboarding status from localStorage:', error);
+            return false;
+        }
+    }
+
+    /**
+     * Redirects the user back to onboarding when required
+     */
+    redirectToOnboarding() {
+        if (this.redirectingToOnboarding) {
+            return;
+        }
+
+        const path = (window.location.pathname || '').toLowerCase();
+        if (path === '/forecaster' || path === '/forecaster.html') {
+            return;
+        }
+
+        this.redirectingToOnboarding = true;
+        window.location.replace('/forecaster');
     }
 
     /**
