@@ -25,8 +25,8 @@ async function runTimerTests() {
         await framework.runTest('Timer Display Elements', async (page) => {
             const result = await page.evaluate(() => {
                 return {
-                    hasElapsedTime: !!document.getElementById('elapsed-time'),
-                    hasStartTime: !!document.getElementById('start-time'),
+                    hasElapsedTime: !!document.getElementById('timerDisplay'),
+                    hasStartTime: !!document.querySelector('.start-time-section'),
                     hasTimerContainer: !!document.querySelector('.timer-display'),
                     hasStartButton: !!document.getElementById('start-timer-btn'),
                     hasEndButton: !!document.getElementById('end-timer-btn')

@@ -6,3 +6,4 @@ feature_docs/
 database/fasting.db
 database/*.db
 database/persistence-test.txt
+.cache/
