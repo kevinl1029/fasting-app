@@ -70,6 +70,72 @@
             color: #666;
             margin: 30px 0 20px 0;
         }
+
+        /* Phase Banner Styles */
+        .phase-banner {
+            margin: 30px 0 20px 0;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .phase-banner:hover {
+            opacity: 0.9;
+        }
+
+        .banner-content {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: #fb923c;
+            flex-wrap: wrap;
+        }
+
+        .phase-section {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            color: #fb923c;
+        }
+
+        .phase-icon {
+            font-size: 1.1em;
+        }
+
+        .banner-description {
+            background: linear-gradient(135deg, rgba(251, 146, 60, 0.08), rgba(236, 72, 153, 0.08));
+            border-radius: 12px;
+            margin-top: 12px;
+            border-left: 4px solid #fb923c;
+            transition: all 0.3s ease;
+            opacity: 0;
+            max-height: 0;
+            overflow: hidden;
+            padding: 0 16px;
+        }
+
+        .banner-description.slide-down {
+            opacity: 1;
+            max-height: 200px;
+            padding: 16px;
+        }
+
+        .banner-description.hidden {
+            display: none;
+        }
+
+        .banner-description p {
+            margin: 0;
+            color: #555;
+            font-size: 0.95rem;
+            line-height: 1.4;
+        }
+
+        .phase-banner.expanded .banner-content {
+            margin-bottom: 8px;
+        }
         
         .circular-timer {
             width: min(280px, 70vw);
@@ -1350,6 +1416,30 @@
                 margin: 25px 0 15px 0;
                 font-size: 1rem;
             }
+
+            /* Phase Banner Mobile Styles */
+            .phase-banner {
+                margin: 25px 0 15px 0;
+            }
+
+            .banner-content {
+                font-size: 1rem;
+                gap: 6px;
+                text-align: center;
+            }
+
+            .phase-section {
+                justify-content: center;
+            }
+
+            .banner-description {
+                padding: 12px;
+                border-radius: 10px;
+            }
+
+            .banner-description p {
+                font-size: 0.9rem;
+            }
             
             .control-buttons {
                 margin: 15px 0 25px 0;
@@ -1512,9 +1602,16 @@
             
             <!-- Active Fast State -->
             <div id="activeFastState" style="display: none;">
-                <div class="status-text">
-                    <span class="status-indicator fasting" id="statusIndicator"></span>
-                    <span id="statusText">Fasting Active</span>
+                <div id="phaseBanner" class="phase-banner">
+                    <div class="banner-content" id="bannerContent">
+                        <span class="phase-section" id="phaseSection">
+                            <span class="phase-icon">🌟</span>
+                            <span id="phaseText">Getting Started</span>
+                        </span>
+                    </div>
+                    <div class="banner-description hidden" id="bannerDescription">
+                        <p id="phaseDescription">Your body is beginning to use stored glucose and transitioning away from constant feeding.</p>
+                    </div>
                 </div>
                 
                 <div class="circular-timer">
@@ -1599,7 +1696,8 @@
                     </div>
                 </div>
                 
-                <div class="phase-info" id="phaseInfo">
+                <!-- Phase info moved to banner above the fold -->
+                <div class="phase-info" id="phaseInfo" style="display: none;">
                     <div class="phase-title" id="phaseTitle">Metabolic Shift</div>
                     <div class="phase-description" id="phaseDescription">
                         Your body is starting to switch from glucose to fat burning. Energy may fluctuate.
@@ -1674,6 +1772,7 @@
     <script src="/js/services/BenefitsCalculator.js"></script>
     <script src="/js/services/BenefitsDataService.js"></script>
     <script src="/js/managers/CardRotationManager.js"></script>
+    <script src="/js/components/PhaseBanner.js"></script>
 
     <script>
         // Timer state
@@ -1722,6 +1821,31 @@
                 icon: "✨"
             }
         ];
+
+        // Phase Banner Functions
+        function initializePhaseBanner() {
+            try {
+                if (window.PhaseBanner) {
+                    phaseBanner = new PhaseBanner({
+                        expandOnClick: true,
+                        animationDuration: 300
+                    });
+                    const success = phaseBanner.init();
+                    if (success) {
+                        return true;
+                    } else {
+                        console.warn('Phase Banner initialization failed');
+                        return false;
+                    }
+                } else {
+                    console.warn('PhaseBanner class not available');
+                    return false;
+                }
+            } catch (error) {
+                console.error('Failed to initialize Phase Banner:', error);
+                return false;
+            }
+        }
 
         // Card Rotation Manager Functions
         async function initializeCardRotationManager() {
@@ -2600,6 +2724,11 @@
             // Create milestone markers
             createMilestoneMarkers();
 
+            // Initialize phase banner
+            if (!phaseBanner) {
+                initializePhaseBanner();
+            }
+
             // Initialize and show contextual cards
             if (!cardRotationManager) {
                 await initializeCardRotationManager();
@@ -2626,7 +2755,6 @@
             console.log('Starting timer interval - fastStartTime:', fastStartTime);
             timerInterval = setInterval(() => {
                 const newElapsedTime = Date.now() - fastStartTime.getTime();
-                console.log('Timer tick - elapsed:', Math.round(newElapsedTime/1000), 'seconds');
                 elapsedTime = newElapsedTime;
                 updateTimerDisplay();
             }, 1000);
@@ -2657,11 +2785,9 @@
         
         // Update timer display with elapsed/remaining logic
         function updateTimerDisplay() {
-            console.log('updateTimerDisplay called - elapsedTime:', elapsedTime, 'fastDuration:', fastDuration);
             const totalFastDuration = fastDuration * 60 * 60 * 1000; // Convert hours to milliseconds
             const remainingTime = Math.max(0, totalFastDuration - elapsedTime);
             const isShowingElapsed = elapsedTime <= totalFastDuration / 2;
-            console.log('totalFastDuration:', totalFastDuration, 'remainingTime:', remainingTime, 'isShowingElapsed:', isShowingElapsed);
             const isPastOriginalGoal = elapsedTime > totalFastDuration;
             
             let displayTime, label;
@@ -2689,9 +2815,7 @@
                 ? `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`
                 : `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
 
-            console.log('Setting timerDisplay to:', formattedTime);
             document.getElementById('timerDisplay').textContent = formattedTime;
-            console.log('timerDisplay DOM element now shows:', document.getElementById('timerDisplay').textContent);
             
             document.getElementById('timerLabel').textContent = label;
             
@@ -2814,22 +2938,40 @@
         // Update phase information based on elapsed hours
         function updatePhaseInfo(hours) {
             let currentPhase = phases[0];
-            
+
             // Find the appropriate phase
             for (const phaseHour in phases) {
                 if (hours >= parseInt(phaseHour)) {
                     currentPhase = phases[phaseHour];
                 }
             }
-            
-            document.getElementById('phaseTitle').textContent = currentPhase.title;
-            document.getElementById('phaseDescription').textContent = currentPhase.description;
+
+            // Update phase banner if available
+            if (phaseBanner) {
+                phaseBanner.updatePhase(currentPhase);
+            } else {
+                // Fallback to direct DOM manipulation if banner not initialized
+                const phaseTextElement = document.getElementById('phaseText');
+                const phaseDescElement = document.getElementById('phaseDescription');
+                if (phaseTextElement) phaseTextElement.textContent = currentPhase.title;
+                if (phaseDescElement) phaseDescElement.textContent = currentPhase.description;
+            }
         }
-        
+
         // Update phase info container with milestone details
         function updatePhaseInfoWithMilestone(milestone) {
-            document.getElementById('phaseTitle').textContent = `${milestone.icon} ${milestone.title}`;
-            document.getElementById('phaseDescription').textContent = milestone.message;
+            // Update phase banner if available
+            if (phaseBanner) {
+                phaseBanner.updateMilestone(milestone);
+            } else {
+                // Fallback to direct DOM manipulation if banner not initialized
+                const phaseTextElement = document.getElementById('phaseText');
+                const phaseDescElement = document.getElementById('phaseDescription');
+                const phaseIconElement = document.querySelector('.phase-icon');
+                if (phaseTextElement) phaseTextElement.textContent = milestone.title;
+                if (phaseDescElement) phaseDescElement.textContent = milestone.message;
+                if (phaseIconElement) phaseIconElement.textContent = milestone.icon;
+            }
         }
         
         
@@ -3649,7 +3791,6 @@
                             console.log('🚀 Starting timer interval from session restoration - fastStartTime:', fastStartTime);
                             timerInterval = setInterval(() => {
                                 const newElapsedTime = Date.now() - fastStartTime.getTime();
-                                console.log('Session restore timer tick - elapsed:', Math.round(newElapsedTime/1000), 'seconds');
                                 elapsedTime = newElapsedTime;
                                 updateTimerDisplay();
                             }, 1000);
@@ -3672,6 +3813,11 @@
 
                         } catch (timerError) {
                             console.error('🚀 Error setting up timer:', timerError);
+                        }
+
+                        // Initialize phase banner
+                        if (!phaseBanner) {
+                            initializePhaseBanner();
                         }
 
                         // Initialize cards and notifications
@@ -3747,6 +3893,11 @@
                 // Create milestone markers
                 createMilestoneMarkers();
 
+                // Initialize phase banner
+                if (!phaseBanner) {
+                    initializePhaseBanner();
+                }
+
                 // Initialize and show contextual cards
                 if (!cardRotationManager) {
                     await initializeCardRotationManager();
@@ -3771,7 +3922,6 @@
                 console.log('Starting timer interval from localStorage restoration - fastStartTime:', fastStartTime);
                 timerInterval = setInterval(() => {
                     const newElapsedTime = Date.now() - fastStartTime.getTime();
-                    console.log('localStorage restore timer tick - elapsed:', Math.round(newElapsedTime/1000), 'seconds');
                     elapsedTime = newElapsedTime;
                     updateTimerDisplay();
                 }, 1000);
@@ -4029,6 +4179,7 @@
         let cardRotationManager = null; // Card rotation manager instance
         let hungerCoach = null; // Legacy hunger coach instance
         let currentFastId = null; // Current active fast ID
+        let phaseBanner = null; // Phase banner instance
         let tipRotationInterval = null; // Tip rotation interval
         const TIP_ROTATION_INTERVAL = 12000; // 12 seconds for tip rotation
 
