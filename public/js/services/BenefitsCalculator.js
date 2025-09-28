@@ -79,7 +79,32 @@ class BenefitsCalculator {
      * Update user meal times
      */
     updateMealtimes(mealtimes) {
-        this.userMealtimes = { ...mealtimes };
+        if (!mealtimes) {
+            this.userMealtimes = null;
+            return;
+        }
+
+        if (Array.isArray(mealtimes)) {
+            const normalized = {};
+
+            mealtimes.forEach(meal => {
+                if (!meal || typeof meal.time !== 'string') {
+                    return;
+                }
+
+                const key = meal.name ? meal.name.toLowerCase().replace(/\s+/g, '_') : `meal_${Object.keys(normalized).length}`;
+                normalized[key] = meal.time;
+            });
+
+            if (Object.keys(normalized).length > 0) {
+                this.userMealtimes = normalized;
+            } else {
+                this.userMealtimes = { ...this.options.defaultMealtimes };
+            }
+        } else {
+            this.userMealtimes = { ...mealtimes };
+        }
+
         console.log('Updated meal times:', this.userMealtimes);
     }
 

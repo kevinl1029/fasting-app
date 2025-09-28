@@ -337,6 +337,9 @@ class BenefitsDataService {
             let endpoint = '/fasts';
             const params = new URLSearchParams();
 
+            // Request a generous number of records so all historical fasts are included
+            params.append('limit', '1000');
+
             // Add timeframe filtering
             if (timeframe !== 'all') {
                 params.append('timeframe', timeframe);
@@ -386,6 +389,10 @@ class BenefitsDataService {
                 console.warn('Error parsing custom mealtimes:', error);
             }
         }
+
+        // Preferences impact benefit calculations, so invalidate cached totals
+        this.clearCache('cumulative_benefits_');
+        this.clearCache('current_fast_benefits');
     }
 
     /**
