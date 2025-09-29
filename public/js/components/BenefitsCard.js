@@ -308,11 +308,11 @@ class BenefitsCard extends ContextualCard {
      * Get different benefit display options for rotation
      */
     getBenefitDisplays(benefits) {
-        const displays = [];
+        const realDisplays = [];
 
         // Traditional benefits (money/time/meals)
         if (benefits.moneySaved > 0) {
-            displays.push({
+            realDisplays.push({
                 text: `You've saved $${benefits.moneySaved.toFixed(2)} so far`,
                 icon: '💰',
                 type: 'money',
@@ -321,7 +321,7 @@ class BenefitsCard extends ContextualCard {
         }
 
         if (benefits.timeReclaimed > 0) {
-            displays.push({
+            realDisplays.push({
                 text: `You've reclaimed ${benefits.timeReclaimed_formatted}`,
                 icon: '⏰',
                 type: 'time',
@@ -331,7 +331,7 @@ class BenefitsCard extends ContextualCard {
 
         if (benefits.mealsSkipped > 0) {
             const mealText = benefits.mealsSkipped === 1 ? 'meal' : 'meals';
-            displays.push({
+            realDisplays.push({
                 text: `${benefits.mealsSkipped} ${mealText} skipped successfully`,
                 icon: '🎯',
                 type: 'meals',
@@ -341,16 +341,28 @@ class BenefitsCard extends ContextualCard {
 
         // Physiological benefits from expanded calculator
         if (benefits.physiological) {
-            this.addPhysiologicalDisplays(displays, benefits);
+            this.addPhysiologicalDisplays(realDisplays, benefits);
         }
 
         // Lifestyle benefits from expanded calculator
         if (benefits.lifestyle) {
-            this.addLifestyleDisplays(displays, benefits);
+            this.addLifestyleDisplays(realDisplays, benefits);
         }
 
         // Duration-specific milestone content
-        this.addMilestoneDisplays(displays, benefits);
+        this.addMilestoneDisplays(realDisplays, benefits);
+
+        const earlyStageDisplays = this.getEarlyStageDisplays(benefits, realDisplays);
+
+        let displays;
+        if (realDisplays.length === 0 && earlyStageDisplays.length > 0) {
+            displays = [...earlyStageDisplays];
+        } else {
+            displays = [...realDisplays];
+            if (earlyStageDisplays.length > 0) {
+                displays = displays.concat(earlyStageDisplays);
+            }
+        }
 
         // Fallback display
         if (displays.length === 0) {
@@ -363,6 +375,80 @@ class BenefitsCard extends ContextualCard {
         }
 
         return displays;
+    }
+
+    /**
+     * Provide early-stage preview displays before calculations unlock richer content
+     */
+    getEarlyStageDisplays(benefits, realDisplays = []) {
+        const hours = benefits.fastDurationHours || 0;
+        const previews = [];
+        const hasRealContent = realDisplays.length > 0;
+
+        // Only surface previews during the first few hours or when we have no real content
+        if (hours >= 4 && hasRealContent) {
+            return previews;
+        }
+
+        const physiological = benefits.physiological || {};
+        const lifestyle = benefits.lifestyle || {};
+
+        const hasAutophagyContent = Array.isArray(physiological.cellularHealth) &&
+            physiological.cellularHealth.some(item => item?.type === 'autophagy');
+        const hasKetoneContent = (
+            Array.isArray(physiological.brainBenefits) && physiological.brainBenefits.some(item => item?.type === 'mental_clarity')
+        ) || (
+            Array.isArray(physiological.metabolicBenefits) && physiological.metabolicBenefits.some(item => item?.type === 'fat_burning')
+        );
+        const hasStressResilience = Array.isArray(lifestyle.mentalBenefits) &&
+            lifestyle.mentalBenefits.some(item => item?.type === 'stress_resilience');
+        const hasMentalBandwidth = Array.isArray(lifestyle.timeReclamation) &&
+            lifestyle.timeReclamation.some(item => item?.type === 'mental_bandwidth');
+
+        if (!hasAutophagyContent) {
+            previews.push({
+                text: 'Cellular cleanup is on the horizon',
+                icon: '🧹',
+                type: 'preview_autophagy',
+                extended: 'Autophagy usually ramps up around 16 hours in. Every hour now is priming your cells for that deep clean.'
+            });
+        }
+
+        if (!hasKetoneContent) {
+            previews.push({
+                text: 'Your body is gearing up for ketone fuel',
+                icon: '⚡',
+                type: 'preview_ketones',
+                extended: 'Most people feel the ketone clarity around 12 hours. Hydrate and ride the rising focus.'
+            });
+        }
+
+        if (!hasStressResilience) {
+            previews.push({
+                text: 'Every minute is resilience training',
+                icon: '🛡️',
+                type: 'preview_resilience',
+                extended: 'Fasting is hormetic stress. You\'re practicing staying calm under cue pressure with every moment.'
+            });
+        }
+
+        if (!hasMentalBandwidth) {
+            previews.push({
+                text: 'Fewer food decisions already',
+                icon: '🧩',
+                type: 'preview_focus',
+                extended: 'You\'ve shut down dozens of "what should I eat?" loops already. That mental bandwidth is back in your control.'
+            });
+        }
+
+        previews.push({
+            text: 'Gut taking a well-earned break',
+            icon: '😌',
+            type: 'preview_digestive',
+            extended: 'Digestive rest starts within a couple hours. Expect less bloat and smoother digestion when you refuel.'
+        });
+
+        return previews;
     }
 
     /**
