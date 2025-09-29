@@ -567,6 +567,16 @@
             box-shadow: 0 8px 25px rgba(251, 146, 60, 0.15);
             background: linear-gradient(135deg, rgba(251, 146, 60, 0.12), rgba(236, 72, 153, 0.12));
         }
+
+        .scheduled-fast.scheduled-actionable {
+            border-left-color: #22c55e;
+            background: linear-gradient(135deg, rgba(34, 197, 94, 0.12), rgba(59, 130, 246, 0.12));
+        }
+
+        .scheduled-fast.scheduled-recent {
+            border-left-color: #f97316;
+            background: linear-gradient(135deg, rgba(249, 115, 22, 0.12), rgba(236, 72, 153, 0.12));
+        }
         
         .scheduled-title {
             color: #fb923c;
@@ -1561,22 +1571,22 @@
                     <div class="duration-presets">
                         <h4>Choose Duration</h4>
                         <div class="preset-buttons">
-                            <button class="preset-btn active" data-hours="24" onclick="selectDuration(24)">
+                            <button class="preset-btn active" data-hours="24" onclick="selectDuration(24, { userInitiated: true })">
                                 <span class="duration">24h</span>
                                 <span class="description">Metabolic reset & fat burning</span>
                                 <span class="checkmark">✓</span>
                             </button>
-                            <button class="preset-btn" data-hours="36" onclick="selectDuration(36)">
+                            <button class="preset-btn" data-hours="36" onclick="selectDuration(36, { userInitiated: true })">
                                 <span class="duration">36h</span>
                                 <span class="description">Deep ketosis & mental clarity</span>
                                 <span class="checkmark">✓</span>
                             </button>
-                            <button class="preset-btn" data-hours="48" onclick="selectDuration(48)">
+                            <button class="preset-btn" data-hours="48" onclick="selectDuration(48, { userInitiated: true })">
                                 <span class="duration">48h</span>
                                 <span class="description">Peak autophagy & cellular renewal</span>
                                 <span class="checkmark">✓</span>
                             </button>
-                            <button class="preset-btn" data-hours="72" onclick="selectDuration(72)">
+                            <button class="preset-btn" data-hours="72" onclick="selectDuration(72, { userInitiated: true })">
                                 <span class="duration">72h</span>
                                 <span class="description">Extended therapeutic benefits</span>
                                 <span class="checkmark">✓</span>
@@ -1806,6 +1816,7 @@
     <script src="/js/components/PhaseBanner.js"></script>
     <script src="/js/modules/draft-schedule-api.js"></script>
     <script src="/js/modules/timer-onboarding-controller.js"></script>
+    <script src="/js/modules/fast-duration-resolver.js"></script>
 
     <script>
         // Timer state
@@ -1816,6 +1827,13 @@
         let fastDuration = 24; // Default 24-hour fast
         let selectedDuration = 24; // Selected duration for next fast
         let selectedStartTime = null; // Selected start time (null = start now)
+        let durationResolver = null;
+        let latestScheduleWindow = null;
+        let scheduledFastContext = null;
+        let isScheduledFastActionable = false;
+        let canStartScheduledFast = false;
+        let hasUserAdjustedDuration = false;
+        let autoSelectedDuration = 24;
         
         // Session management - use global function from PageGuard
         const globalSessionId = window.getSessionId();
@@ -2396,32 +2414,50 @@
         }
         
         // Select a preset duration
-        function selectDuration(hours) {
-            selectedDuration = hours;
-            
+        function selectDuration(hours, options = {}) {
+            const { userInitiated = true } = options;
+            const normalizedHours = Math.max(1, Math.round(Number(hours) || 0));
+            selectedDuration = normalizedHours;
+
+            if (userInitiated) {
+                hasUserAdjustedDuration = normalizedHours !== autoSelectedDuration;
+                if (hasUserAdjustedDuration) {
+                    durationResolver?.markManualSelection();
+                } else {
+                    durationResolver?.clearManualSelection?.();
+                }
+            } else if (normalizedHours === autoSelectedDuration) {
+                hasUserAdjustedDuration = false;
+                durationResolver?.clearManualSelection?.();
+            }
+
             // Update active state on buttons
             document.querySelectorAll('.preset-btn').forEach(btn => {
                 btn.classList.remove('active', 'selected-confirmation');
             });
-            const selectedBtn = document.querySelector(`[data-hours="${hours}"]`);
-            selectedBtn.classList.add('active');
-            
-            // Add confirmation animation
-            selectedBtn.classList.add('selected-confirmation');
-            setTimeout(() => {
-                selectedBtn.classList.remove('selected-confirmation');
-            }, 1200); // Remove after 1.2 seconds
-            
-            // Clear custom input
-            document.getElementById('customHours').value = '';
-            
+
+            const selectedBtn = document.querySelector(`[data-hours="${normalizedHours}"]`);
+            if (selectedBtn) {
+                selectedBtn.classList.add('active');
+
+                if (userInitiated) {
+                    selectedBtn.classList.add('selected-confirmation');
+                    setTimeout(() => {
+                        selectedBtn.classList.remove('selected-confirmation');
+                    }, 1200);
+                }
+
+                // Clear custom input when using presets
+                document.getElementById('customHours').value = '';
+            }
+
             // Update start button text
             updateStartButtonText();
-            
+
             // Update sticky button visibility
             updateStickyButtonVisibility();
         }
-        
+
         // Apply custom duration
         function applyCustomDuration() {
             const customInput = document.getElementById('customHours');
@@ -2434,6 +2470,8 @@
             }
             
             selectedDuration = customHours;
+            hasUserAdjustedDuration = true;
+            durationResolver?.markManualSelection();
             
             // Remove active state from preset buttons
             document.querySelectorAll('.preset-btn').forEach(btn => {
@@ -2516,6 +2554,9 @@
             const stickyBtn = document.getElementById('stickyStartBtn');
             const stickyBtnText = document.getElementById('stickyBtnText');
             const stickyBtnBadge = document.getElementById('stickyBtnBadge');
+            const usingRecommendedDuration = selectedDuration === autoSelectedDuration;
+            const actionableScheduled = isScheduledFastActionable && usingRecommendedDuration && !selectedStartTime;
+            const scheduledStatus = scheduledFastContext?.status;
             
             if (selectedStartTime) {
                 const startTimeStr = selectedStartTime.toLocaleTimeString('en-US', {
@@ -2526,6 +2567,12 @@
                 btn.textContent = `Resume ${selectedDuration}h Fast (started ${startTimeStr})`;
                 stickyBtnText.textContent = `Resume ${selectedDuration}h Fast`;
                 stickyBtnBadge.textContent = `Started: ${startTimeStr}`;
+            } else if (actionableScheduled) {
+                const isRecent = scheduledStatus === 'actionable_recent';
+                const primaryLabel = isRecent ? 'Start Today\'s Scheduled Fast' : 'Start Scheduled Fast';
+                btn.textContent = `${primaryLabel} (${selectedDuration}h)`;
+                stickyBtnText.textContent = primaryLabel;
+                stickyBtnBadge.textContent = `Scheduled: ${selectedDuration} hours`;
             } else {
                 btn.textContent = `Start ${selectedDuration}h Fast`;
                 stickyBtnText.textContent = `Start ${selectedDuration}h Fast`;
@@ -2549,7 +2596,7 @@
             const mainButtonRect = mainButton.getBoundingClientRect();
             const isMainButtonVisible = mainButtonRect.top >= 0 && mainButtonRect.bottom <= window.innerHeight;
             const isDurationSelectorVisible = durationSelector.style.display !== 'none';
-            const hasCustomDuration = selectedDuration !== 24 || selectedStartTime !== null;
+            const hasCustomDuration = selectedStartTime !== null || selectedDuration !== autoSelectedDuration;
             
             // Show sticky button when main button is not visible AND user has made a selection
             if (!isMainButtonVisible && isDurationSelectorVisible && hasCustomDuration) {
@@ -2720,6 +2767,17 @@
         
         // Start a fast
         async function startFast() {
+            if (shouldUseScheduledStart()) {
+                const scheduledInstanceId = scheduledFastContext?.actionableInstance?.id;
+                if (scheduledInstanceId) {
+                    const started = await startScheduledFast(scheduledInstanceId);
+                    if (started) {
+                        return;
+                    }
+                    console.warn('Scheduled fast start failed, falling back to manual start');
+                }
+            }
+
             // Use selected duration for this fast
             fastDuration = selectedDuration;
             
@@ -3198,7 +3256,7 @@
             document.getElementById('startFastBtn').style.display = 'block';
 
             // Update button text for users with schedules
-            document.getElementById('startFastBtn').textContent = 'Start 24h Fast';
+            document.getElementById('startFastBtn').textContent = `Start ${selectedDuration}h Fast`;
 
             // Load actual scheduled fast data
             await loadNextScheduledFast();
@@ -3232,29 +3290,277 @@
             }
         }
 
+        function deriveScheduledFastContext(windowData) {
+            const context = {
+                status: 'none',
+                actionableInstance: null,
+                upcoming: windowData?.upcoming || null,
+                recent: windowData?.recent || null
+            };
+
+            if (!windowData) {
+                return context;
+            }
+
+            const now = new Date();
+            const sixHoursMs = 6 * 60 * 60 * 1000;
+            const twelveHoursMs = 12 * 60 * 60 * 1000;
+
+            if (windowData.recent?.start_at_utc) {
+                const recentStart = new Date(windowData.recent.start_at_utc);
+                if (recentStart <= now && (now - recentStart) <= sixHoursMs) {
+                    context.status = 'actionable_recent';
+                    context.actionableInstance = windowData.recent;
+                    return context;
+                }
+            }
+
+            if (windowData.upcoming?.start_at_utc) {
+                const upcomingStart = new Date(windowData.upcoming.start_at_utc);
+                const diff = upcomingStart.getTime() - now.getTime();
+
+                if (diff >= 0 && diff <= twelveHoursMs) {
+                    context.status = 'actionable_upcoming';
+                    context.actionableInstance = windowData.upcoming;
+                } else if (diff > twelveHoursMs) {
+                    context.status = 'future';
+                    context.actionableInstance = windowData.upcoming;
+                }
+            }
+
+            return context;
+        }
+
+        function formatTimeUntil(targetDate, currentDate = new Date()) {
+            const diffMs = targetDate.getTime() - currentDate.getTime();
+            if (diffMs <= 0) {
+                return 'now';
+            }
+
+            const totalMinutes = Math.round(diffMs / (1000 * 60));
+            if (totalMinutes < 60) {
+                const minutes = Math.max(totalMinutes, 1);
+                return `${minutes} minute${minutes === 1 ? '' : 's'}`;
+            }
+
+            const totalHours = Math.round(totalMinutes / 60);
+            if (totalHours < 24) {
+                return `${totalHours} hour${totalHours === 1 ? '' : 's'}`;
+            }
+
+            const totalDays = Math.round(totalHours / 24);
+            return `${totalDays} day${totalDays === 1 ? '' : 's'}`;
+        }
+
+        function formatTimeSince(targetDate, currentDate = new Date()) {
+            const diffMs = currentDate.getTime() - targetDate.getTime();
+            if (diffMs <= 0) {
+                return 'moments';
+            }
+
+            const totalMinutes = Math.round(diffMs / (1000 * 60));
+            if (totalMinutes < 60) {
+                const minutes = Math.max(totalMinutes, 1);
+                return `${minutes} minute${minutes === 1 ? '' : 's'}`;
+            }
+
+            const totalHours = Math.round(totalMinutes / 60);
+            if (totalHours < 24) {
+                return `${totalHours} hour${totalHours === 1 ? '' : 's'}`;
+            }
+
+            const totalDays = Math.round(totalHours / 24);
+            return `${totalDays} day${totalDays === 1 ? '' : 's'}`;
+        }
+
+        function updateScheduledFastCard(windowData) {
+            const card = document.getElementById('scheduledFastInfo');
+            const detailsEl = document.getElementById('scheduledFastDetails');
+            if (!card || !detailsEl) {
+                return;
+            }
+
+            const titleEl = card.querySelector('.scheduled-title');
+            const hintEl = card.querySelector('.scheduled-info small');
+
+            card.classList.remove('scheduled-actionable', 'scheduled-recent');
+
+            if (!windowData || (!windowData.upcoming && !windowData.recent)) {
+                if (detailsEl) {
+                    detailsEl.textContent = 'No upcoming fasts scheduled';
+                }
+                if (titleEl) {
+                    titleEl.textContent = '🗓️ Next Scheduled Fast';
+                }
+                if (hintEl) {
+                    hintEl.textContent = 'Tap to modify schedule';
+                }
+                return;
+            }
+
+            const context = scheduledFastContext || deriveScheduledFastContext(windowData);
+            const now = new Date();
+            const displayInstance = context.actionableInstance || windowData.upcoming || windowData.recent;
+
+            if (!displayInstance || !displayInstance.start_at_utc) {
+                detailsEl.textContent = 'Schedule unavailable';
+                if (titleEl) {
+                    titleEl.textContent = '🗓️ Next Scheduled Fast';
+                }
+                if (hintEl) {
+                    hintEl.textContent = 'Tap to modify schedule';
+                }
+                return;
+            }
+
+            const start = new Date(displayInstance.start_at_utc);
+            const durationText = displayInstance.duration_hours === 24
+                ? '24-hour fast'
+                : `${displayInstance.duration_hours}-hour fast`;
+
+            let descriptor = formatRelativeDate(start);
+            let titleText = '🗓️ Next Scheduled Fast';
+            let hintText = 'Tap to modify schedule';
+            let primaryLine = `${descriptor} • ${durationText}`;
+            let supplementaryLine = '';
+
+            switch (context.status) {
+                case 'actionable_upcoming': {
+                    const timeUntil = formatTimeUntil(start, now);
+                    card.classList.add('scheduled-actionable');
+                    titleText = '🚀 Upcoming Scheduled Fast';
+                    hintText = 'Use the start button below to begin when ready';
+                    primaryLine = `${descriptor} • ${durationText} • starts in ${timeUntil}`;
+                    break;
+                }
+                case 'actionable_recent': {
+                    const timeSince = formatTimeSince(start, now);
+                    card.classList.add('scheduled-recent');
+                    titleText = '⏰ Scheduled Fast Reminder';
+                    primaryLine = `Today's scheduled fast was set for ${start.toLocaleTimeString('en-US', {
+                        hour: 'numeric',
+                        minute: '2-digit',
+                        hour12: true
+                    })} • started ${timeSince} ago`;
+                    if (context.upcoming && context.upcoming.id !== displayInstance.id) {
+                        const nextStart = new Date(context.upcoming.start_at_utc);
+                        const nextDurationText = context.upcoming.duration_hours === 24 ? '24-hour fast' : `${context.upcoming.duration_hours}-hour fast`;
+                        supplementaryLine = `Next scheduled fast: ${formatRelativeDate(nextStart)} • ${nextDurationText}`;
+                    }
+                    hintText = 'Start whenever you\'re ready to follow the plan.';
+                    break;
+                }
+                case 'future': {
+                    const timeUntil = formatTimeUntil(start, now);
+                    primaryLine = `${descriptor} • ${durationText} • in ${timeUntil}`;
+                    break;
+                }
+                default:
+                    break;
+            }
+
+            if (detailsEl) {
+                detailsEl.textContent = primaryLine;
+            }
+
+            if (titleEl) {
+                titleText = titleText || '🗓️ Next Scheduled Fast';
+                titleEl.textContent = titleText;
+            }
+
+            if (hintEl) {
+                if (supplementaryLine) {
+                    hintEl.textContent = `${hintText} ${supplementaryLine}`.trim();
+                } else {
+                    hintEl.textContent = hintText;
+                }
+            }
+        }
+
+        function handleScheduleWindowData(data, { allowAutoApply = false } = {}) {
+            latestScheduleWindow = data || null;
+
+            if (!data) {
+                scheduledFastContext = null;
+                isScheduledFastActionable = false;
+                canStartScheduledFast = false;
+                updateScheduledFastCard(null);
+                updateStartButtonText();
+                return null;
+            }
+
+            if (typeof window.FastingForecastFastDurationResolver === 'function') {
+                const resolverPayload = {
+                    upcoming: data.upcoming || null,
+                    recent: data.recent || null,
+                    defaultDurationHours: data.defaultDurationHours || 24,
+                    now: new Date()
+                };
+
+                const resolverWasMissing = !durationResolver;
+
+                if (!durationResolver) {
+                    durationResolver = new window.FastingForecastFastDurationResolver(resolverPayload);
+                } else {
+                    durationResolver.updateData(resolverPayload);
+                }
+
+                const suggestedBaseline = typeof durationResolver.peekRecommendedDuration === 'function'
+                    ? durationResolver.peekRecommendedDuration()
+                    : (typeof durationResolver.getDefaultDuration === 'function'
+                        ? durationResolver.getDefaultDuration()
+                        : 24);
+
+                const parsedBaseline = Number(suggestedBaseline);
+                if (Number.isFinite(parsedBaseline) && parsedBaseline > 0) {
+                    autoSelectedDuration = Math.max(1, Math.round(parsedBaseline));
+                }
+
+                const shouldAutoApply = (allowAutoApply || resolverWasMissing) && !hasUserAdjustedDuration;
+
+                if (shouldAutoApply) {
+                    applyAutoDuration(durationResolver.getRecommendedDuration());
+                }
+            }
+
+            scheduledFastContext = deriveScheduledFastContext(data);
+            isScheduledFastActionable = scheduledFastContext.status === 'actionable_upcoming' || scheduledFastContext.status === 'actionable_recent';
+            canStartScheduledFast = scheduledFastContext.status === 'actionable_upcoming';
+
+            updateScheduledFastCard(data);
+            updateStartButtonText();
+
+            return data;
+        }
+
+        function applyAutoDuration(duration) {
+            const parsedDuration = Number(duration);
+            if (!Number.isFinite(parsedDuration) || parsedDuration <= 0) {
+                return;
+            }
+
+            const normalized = Math.max(1, Math.round(parsedDuration));
+            autoSelectedDuration = normalized;
+
+            if (!isRunning) {
+                fastDuration = normalized;
+            }
+
+            if (selectedDuration === normalized && !hasUserAdjustedDuration) {
+                // Ensure UI reflects the default selection without triggering manual mode
+                selectDuration(normalized, { userInitiated: false });
+                return;
+            }
+
+            selectDuration(normalized, { userInitiated: false });
+        }
+
         // Load and display the next scheduled fast
         async function loadNextScheduledFast() {
             try {
                 const upcomingScheduleResponse = await fetch(`/api/schedule/upcoming?sessionId=${globalSessionId}&tz=${encodeURIComponent(clientTimeZone)}`);
                 if (upcomingScheduleResponse.ok) {
-                    const upcomingScheduleData = await upcomingScheduleResponse.json();
-                    if (upcomingScheduleData.upcoming) {
-                        const nextFast = upcomingScheduleData.upcoming;
-                        const fastStartDate = new Date(nextFast.start_at_utc);
-                        const fastEndDate = new Date(nextFast.end_at_utc);
-
-                        // Use duration from API or calculate as fallback
-                        const durationHours = nextFast.duration_hours || Math.round((fastEndDate.getTime() - fastStartDate.getTime()) / (1000 * 60 * 60));
-
-                        // Format the display text
-                        const relativeDate = formatRelativeDate(fastStartDate);
-                        const durationText = durationHours === 24 ? '24-hour fast' : `${durationHours}-hour fast`;
-
-                        document.getElementById('scheduledFastDetails').textContent = `${relativeDate} • ${durationText}`;
-                    } else {
-                        // No upcoming fasts found
-                        document.getElementById('scheduledFastDetails').textContent = 'No upcoming fasts scheduled';
-                    }
+                    handleScheduleWindowData(await upcomingScheduleResponse.json(), { allowAutoApply: !durationResolver });
                 } else {
                     console.error('Failed to fetch upcoming schedule');
                     // Set fallback text if API fails
@@ -3997,12 +4303,9 @@
         async function checkForUpcomingFast() {
             try {
                 // Check for upcoming fast
-                const upcomingResponse = await fetch(`/api/schedule/upcoming?sessionId=${sessionId}&tz=${encodeURIComponent(clientTimeZone)}`);
+                const upcomingResponse = await fetch(`/api/schedule/upcoming?sessionId=${globalSessionId}&tz=${encodeURIComponent(clientTimeZone)}`);
                 if (upcomingResponse.ok) {
-                    const upcomingData = await upcomingResponse.json();
-                    if (upcomingData.upcoming) {
-                        showUpcomingFast(upcomingData.upcoming);
-                    }
+                    handleScheduleWindowData(await upcomingResponse.json(), { allowAutoApply: true });
                 } else if (upcomingResponse.status === 404) {
                     // If user profile not found (database was reset), clear localStorage and redirect to onboarding
                     const upcomingErrorData = await upcomingResponse.json();
@@ -4044,166 +4347,97 @@
                 console.error('Error checking for upcoming fast:', error);
             }
         }
-        
-        // Display upcoming fast information
-        function showUpcomingFast(upcomingFast) {
-            // Only show if no active timer (pre-timer page)
-            if (isRunning) return;
-            
-            const upcomingStartTime = new Date(upcomingFast.start_at_utc);
-            const now = new Date();
-            const hoursUntil = Math.round((upcomingStartTime - now) / (1000 * 60 * 60));
-            const isActionable = hoursUntil <= 6; // Within 6 hours = actionable with Start Early
-            
-            // Create upcoming fast display
-            const upcomingDiv = document.getElementById('upcoming-fast-notice') || createUpcomingNotice();
-            
-            const dayName = upcomingStartTime.toLocaleDateString('en-US', { weekday: 'short' });
-            const upcomingTimeStr = upcomingStartTime.toLocaleTimeString('en-US', { 
-                hour: 'numeric', 
-                minute: '2-digit',
-                hour12: true 
-            });
-            
-            // Format time until fast
-            let timeUntilText = '';
-            if (hoursUntil > 24) {
-                const daysUntil = Math.round(hoursUntil / 24);
-                timeUntilText = ` (in ${daysUntil} day${daysUntil === 1 ? '' : 's'})`;
-            } else if (hoursUntil > 1) {
-                timeUntilText = ` (in ${hoursUntil} hour${hoursUntil === 1 ? '' : 's'})`;
-            } else if (hoursUntil === 1) {
-                timeUntilText = ' (in 1 hour)';
-            } else if (hoursUntil === 0) {
-                timeUntilText = ' (starting now!)';
-            }
-            
-            // Different styling and content based on actionability
-            const label = isActionable ? 'Upcoming:' : 'Next:';
-            const startEarlyButton = isActionable ? 
-                `<button class="btn btn-start-early" onclick="startEarly('${upcomingFast.id}')">
-                    Start Early
-                </button>` : '';
-            
-            upcomingDiv.innerHTML = `
-                <div class="upcoming-fast-content">
-                    <div class="upcoming-text">
-                        <strong>${label}</strong> ${dayName} ${upcomingTimeStr}${timeUntilText}
-                        <br><small>${upcomingFast.block_name || 'Scheduled Fast'} • ${upcomingFast.duration_hours}h</small>
-                    </div>
-                    ${startEarlyButton}
-                </div>
-            `;
-            
-            // Apply different CSS class based on actionability
-            upcomingDiv.className = isActionable ? 'upcoming-fast-notice actionable' : 'upcoming-fast-notice informational';
-            upcomingDiv.style.display = 'block';
+
+        function shouldUseScheduledStart() {
+            return canStartScheduledFast &&
+                scheduledFastContext?.actionableInstance?.id &&
+                selectedDuration === autoSelectedDuration &&
+                !selectedStartTime;
         }
-        
-        // Create upcoming fast notice element (pre-timer page only)
-        function createUpcomingNotice() {
-            const newUpcomingDiv = document.createElement('div');
-            newUpcomingDiv.id = 'upcoming-fast-notice';
-            newUpcomingDiv.className = 'upcoming-fast-notice';
-            newUpcomingDiv.style.display = 'none';
-            
-            // Insert before START FAST NOW button on pre-timer page
-            const startButton = document.querySelector('.start-fast-btn') || 
-                              document.querySelector('#startFastBtn') ||
-                              document.querySelector('button[onclick="startFast()"]');
-            if (startButton) {
-                startButton.parentNode.insertBefore(newUpcomingDiv, startButton);
-            } else {
-                // Final fallback: add to body
-                document.body.appendChild(newUpcomingDiv);
-            }
-            
-            return newUpcomingDiv;
-        }
-        
-        // Handle start early action
-        async function startEarly(upcomingId) {
+
+        async function startScheduledFast(instanceId) {
             try {
-                console.log('Starting early for upcoming fast:', upcomingId);
-                
-                // Show a confirmation dialog first per spec
-                const confirmEarly = confirm('Do you want to start your scheduled fast early? This will update today\'s plan.');
-                if (!confirmEarly) {
-                    return;
-                }
-                
-                // Call the start early API
-                const earlyResponse = await fetch('/api/schedule/start-early', {
+                const response = await fetch('/api/schedule/start-early', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
                         sessionId: globalSessionId,
-                        upcomingId: upcomingId,
+                        upcomingId: instanceId,
                         timeZone: clientTimeZone
                     })
                 });
-                
-                if (earlyResponse.ok) {
-                    const result = await earlyResponse.json();
-                    
-                    // Set the fast ID for tracking
-                    currentFastId = result.fastId;
-                    
-                    // Start the timer UI by setting up the state similar to startFast()
-                    isRunning = true;
-                    fastStartTime = new Date(); // Starting now for early start
-                    elapsedTime = 0;
-                    
-                    // For early start, we need to get the duration from the result
-                    // Assuming the API returns the duration
-                    if (result.duration) {
-                        fastDuration = result.duration;
-                    } else {
-                        fastDuration = 16; // Default to 16 hours if not provided
-                    }
-                    
-                    // Save timer state to localStorage for persistence
-                    const earlyStartTimerState = {
-                        isRunning: true,
-                        fastStartTime: fastStartTime.toISOString(),
-                        fastDuration: fastDuration,
-                        currentFastId: currentFastId
-                    };
-                    localStorage.setItem('fastingForecast_timerState', JSON.stringify(earlyStartTimerState));
-                    
-                    // Show active fast UI
-                    document.getElementById('preFastState').style.display = 'none';
-                    document.getElementById('activeFastState').style.display = 'block';
-                    document.querySelector('.welcome-message').style.display = 'none';
-                    
-                    // Create milestone markers and update display
-                    createMilestoneMarkers();
-                    updateTimeDisplay();
-                    updateTimerDisplay();
-                    
-                    // Start the timer interval
-                    timerInterval = setInterval(() => {
-                        elapsedTime = Date.now() - fastStartTime.getTime();
-                        updateTimerDisplay();
-                    }, 1000);
-                    
-                    // Hide the upcoming notice
-                    const hideUpcomingDiv = document.getElementById('upcoming-fast-notice');
-                    if (hideUpcomingDiv) {
-                        hideUpcomingDiv.style.display = 'none';
-                    }
-                    
-                    console.log('Scheduled fast started early:', result);
-                } else {
-                    const error = await earlyResponse.json();
-                    alert('Failed to start early: ' + (error.error || 'Unknown error'));
+
+                if (!response.ok) {
+                    const errorData = await response.json().catch(() => ({}));
+                    alert('Failed to start scheduled fast: ' + (errorData.error || 'Unknown error'));
+                    return false;
                 }
-                
+
+                const result = await response.json();
+
+                currentFastId = result.fastId || null;
+                fastStartTime = result.startTime ? new Date(result.startTime) : new Date();
+                fastDuration = Number(result.duration) > 0 ? Math.round(result.duration) : autoSelectedDuration;
+                selectedDuration = fastDuration;
+                autoSelectedDuration = fastDuration;
+                hasUserAdjustedDuration = false;
+                durationResolver?.clearManualSelection?.();
+
+                document.getElementById('durationSelector').style.display = 'none';
+                document.getElementById('preFastState').style.display = 'none';
+                document.getElementById('activeFastState').style.display = 'block';
+                document.querySelector('.welcome-message').style.display = 'none';
+
+                isRunning = true;
+                selectedStartTime = null;
+                elapsedTime = 0;
+
+                createMilestoneMarkers();
+
+                if (!phaseBanner) {
+                    initializePhaseBanner();
+                }
+
+                if (!cardRotationManager) {
+                    await initializeCardRotationManager();
+                }
+                await showContextualCards();
+
+                if (globalNotificationManager) {
+                    await globalNotificationManager.startNotificationsForFast(fastStartTime, fastDuration);
+                }
+
+                const timerState = {
+                    isRunning: true,
+                    fastStartTime: fastStartTime.toISOString(),
+                    fastDuration: fastDuration,
+                    currentFastId: currentFastId
+                };
+                localStorage.setItem('fastingForecast_timerState', JSON.stringify(timerState));
+
+                updateStartButtonText();
+                updateTimeDisplay();
+                updateTimerDisplay();
+
+                if (timerInterval) {
+                    clearInterval(timerInterval);
+                }
+                timerInterval = setInterval(() => {
+                    elapsedTime = Date.now() - fastStartTime.getTime();
+                    updateTimerDisplay();
+                }, 1000);
+
+                await loadStats();
+                await checkForUpcomingFast();
+
+                return true;
             } catch (error) {
-                console.error('Error starting early:', error);
-                alert('Failed to start early. Please try again.');
+                console.error('Error starting scheduled fast:', error);
+                alert('Failed to start scheduled fast. Please try again.');
+                return false;
             }
         }
+        
         
         // Check for active fast and upcoming fast when page loads - moved to session ready callback
         // checkForActiveFast();

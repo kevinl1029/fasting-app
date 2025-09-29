@@ -68,7 +68,7 @@ class TimerOnboardingController {
 
         if (durationHours && window.selectDuration) {
             try {
-                window.selectDuration(durationHours);
+                window.selectDuration(durationHours, { userInitiated: false });
                 if (window.updateStartButtonText) {
                     window.updateStartButtonText();
                 }

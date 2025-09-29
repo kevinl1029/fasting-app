@@ -26,6 +26,8 @@ async function runTimerTests() {
 
         // Timer-specific tests
         await framework.runTest('Timer Display Elements', async (page) => {
+            await page.waitForSelector('#timerDisplay', { timeout: 5000 });
+
             const result = await page.evaluate(() => {
                 return {
                     hasElapsedTime: !!document.getElementById('timerDisplay'),
@@ -94,18 +96,53 @@ async function runTimerTests() {
         });
 
         await framework.runTest('Timer Draft Prefill', async (page) => {
-            const result = await page.evaluate(() => {
+            const result = await page.evaluate(async () => {
                 const startBtn = document.getElementById('startFastBtn');
                 const draftBadge = document.querySelector('.draft-ready');
+                const sessionId = window.getSessionId();
+                const tz = Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC';
+
+                let recommendedDuration = 24;
+
+                const draftDuration = window.timerOnboardingController?.draft?.protocol?.durationHours;
+
+                if (draftDuration) {
+                    recommendedDuration = draftDuration;
+                } else {
+                    try {
+                        const response = await fetch(`/api/schedule/upcoming?sessionId=${sessionId}&tz=${encodeURIComponent(tz)}`);
+                        if (response.ok) {
+                            const windowData = await response.json();
+                            if (window.FastingForecastFastDurationResolver) {
+                                const resolver = new window.FastingForecastFastDurationResolver({
+                                    upcoming: windowData.upcoming,
+                                    recent: windowData.recent,
+                                    defaultDurationHours: windowData.defaultDurationHours,
+                                    now: new Date()
+                                });
+                                recommendedDuration = resolver.getRecommendedDuration({ respectManual: false });
+                            } else if (windowData.upcoming && windowData.upcoming.duration_hours) {
+                                recommendedDuration = windowData.upcoming.duration_hours;
+                            } else if (windowData.defaultDurationHours) {
+                                recommendedDuration = windowData.defaultDurationHours;
+                            }
+                        }
+                    } catch (error) {
+                        console.warn('Unable to load schedule window data during test:', error);
+                    }
+                }
+
+                const startButtonText = startBtn ? startBtn.textContent : '';
 
                 return {
-                    startButtonText: startBtn ? startBtn.textContent : '',
-                    draftApplied: !!draftBadge
+                    startButtonText,
+                    draftApplied: !!draftBadge,
+                    recommendedDuration
                 };
             });
 
-            if (!result.startButtonText.includes('36')) {
-                throw new Error(`Expected prefilled duration in start button, got "${result.startButtonText}"`);
+            if (!result.startButtonText.includes(`${result.recommendedDuration}h`)) {
+                throw new Error(`Expected start button to include "${result.recommendedDuration}h", got "${result.startButtonText}"`);
             }
 
             if (!result.draftApplied) {

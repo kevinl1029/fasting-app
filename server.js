@@ -794,58 +794,146 @@ app.post('/api/schedule/preview', validateSessionMiddleware, async (req, res) =>
 });
 
 // Get upcoming scheduled instances for Timer integration
+const calculateBlockDurationHours = (block) => {
+  if (!block || !block.start_time || !block.end_time) {
+    return null;
+  }
+
+  const parseToMinutes = (value) => {
+    const [hours, minutes] = value.split(':').map(Number);
+    return (hours * 60) + (minutes || 0);
+  };
+
+  const startDow = Number(block.start_dow);
+  const endDow = Number(block.end_dow);
+  const startMinutes = parseToMinutes(block.start_time);
+  const endMinutes = parseToMinutes(block.end_time);
+
+  let dayDiff = endDow - startDow;
+  if (Number.isNaN(dayDiff)) {
+    return null;
+  }
+
+  if (dayDiff < 0) {
+    dayDiff += 7;
+  }
+
+  let durationMinutes = (dayDiff * 24 * 60) + (endMinutes - startMinutes);
+
+  if (durationMinutes <= 0) {
+    durationMinutes += 24 * 60;
+  }
+
+  return Math.round(durationMinutes / 60);
+};
+
+const summarizeDefaultDuration = (blocks) => {
+  if (!Array.isArray(blocks) || blocks.length === 0) {
+    return 24;
+  }
+
+  const histogram = new Map();
+
+  for (const block of blocks) {
+    const duration = calculateBlockDurationHours(block);
+    if (!duration) {
+      continue;
+    }
+
+    histogram.set(duration, (histogram.get(duration) || 0) + 1);
+  }
+
+  if (histogram.size === 0) {
+    return 24;
+  }
+
+  let selectedDuration = 24;
+  let highestFrequency = 0;
+
+  for (const [duration, frequency] of histogram.entries()) {
+    if (frequency > highestFrequency) {
+      selectedDuration = duration;
+      highestFrequency = frequency;
+      continue;
+    }
+
+    const isTied = frequency === highestFrequency;
+    if (isTied && duration > selectedDuration) {
+      selectedDuration = duration;
+    }
+  }
+
+  return selectedDuration;
+};
+
+const mapInstanceForResponse = (instance) => {
+  if (!instance) {
+    return null;
+  }
+
+  const start = new Date(instance.start_at_utc);
+  const end = new Date(instance.end_at_utc);
+  const durationInHours = Math.round((end - start) / (1000 * 60 * 60));
+
+  return {
+    id: instance.id,
+    block_id: instance.block_id,
+    block_name: instance.block_name,
+    start_at_utc: instance.start_at_utc,
+    end_at_utc: instance.end_at_utc,
+    duration_hours: durationInHours
+  };
+};
+
 app.get('/api/schedule/upcoming', validateSessionMiddleware, async (req, res) => {
   try {
     const clientTimeZone = req.query.tz;
 
-    // Session is guaranteed valid here - use req.userProfile
-
-    // Get user's schedule
     const schedule = await db.getScheduleByUserProfile(req.userProfile.id);
     if (!schedule) {
-      return res.json({ upcoming: null }); // No schedule set
+      return res.json({ upcoming: null, recent: null, defaultDurationHours: 24 });
     }
-    
-    // Get active blocks
+
     const blocks = await db.getFastingBlocksBySchedule(schedule.id);
     if (blocks.length === 0) {
-      return res.json({ upcoming: null }); // No blocks
+      return res.json({ upcoming: null, recent: null, defaultDurationHours: 24 });
     }
-    
-    // Generate upcoming instances for next 7 days to catch upcoming fasts
+
+    const defaultDurationHours = summarizeDefaultDuration(blocks);
+
     const now = new Date();
+    const lookbackStart = new Date(now.getTime() - (6 * 60 * 60 * 1000));
     const endDate = new Date();
     endDate.setDate(endDate.getDate() + 7);
-    
+
     const allInstances = [];
     for (const block of blocks) {
-      const instances = await db.generateInstancesForBlock(block, schedule, now, endDate, { timeZone: clientTimeZone });
+      const instances = await db.generateInstancesForBlock(block, schedule, lookbackStart, endDate, { timeZone: clientTimeZone });
       allInstances.push(...instances);
     }
-    
-    // Sort by start time and get the next upcoming instance
+
     allInstances.sort((a, b) => new Date(a.start_at_utc) - new Date(b.start_at_utc));
-    
-    const upcoming = allInstances.find(instance => {
-      const startTime = new Date(instance.start_at_utc);
-      return startTime > now;
-    });
-    
-    if (!upcoming) {
-      return res.json({ upcoming: null });
-    }
-    
-    res.json({ 
-      upcoming: {
-        id: upcoming.id,
-        block_id: upcoming.block_id,
-        block_name: upcoming.block_name,
-        start_at_utc: upcoming.start_at_utc,
-        end_at_utc: upcoming.end_at_utc,
-        duration_hours: Math.round((new Date(upcoming.end_at_utc) - new Date(upcoming.start_at_utc)) / (1000 * 60 * 60))
+
+    const upcomingInstance = allInstances.find(instance => new Date(instance.start_at_utc) > now) || null;
+
+    const sixHoursAgo = new Date(now.getTime() - (6 * 60 * 60 * 1000));
+    let recentInstance = null;
+    for (let i = allInstances.length - 1; i >= 0; i -= 1) {
+      const instanceStart = new Date(allInstances[i].start_at_utc);
+      if (instanceStart <= now && instanceStart >= sixHoursAgo) {
+        recentInstance = allInstances[i];
+        break;
       }
+      if (instanceStart < sixHoursAgo) {
+        break;
+      }
+    }
+
+    return res.json({
+      upcoming: mapInstanceForResponse(upcomingInstance),
+      recent: mapInstanceForResponse(recentInstance),
+      defaultDurationHours
     });
-    
   } catch (error) {
     console.error('Error getting upcoming scheduled instances:', error);
     res.status(500).json({ error: 'Failed to get upcoming instances' });

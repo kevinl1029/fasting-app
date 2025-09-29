@@ -33,6 +33,15 @@ class FastingForecastTestFramework {
 
         this.page = await this.browser.newPage();
 
+        await this.page.evaluateOnNewDocument((sessionId) => {
+            try {
+                localStorage.setItem('fastingForecast_sessionId', sessionId);
+                localStorage.setItem('fastingForecast_profileSaved', 'true');
+            } catch (error) {
+                console.warn('Unable to seed session storage before navigation:', error);
+            }
+        }, this.options.sessionId);
+
         // Grant notification permissions
         const context = this.browser.defaultBrowserContext();
         await context.overridePermissions(this.options.baseUrl, ['notifications']);
@@ -68,6 +77,7 @@ class FastingForecastTestFramework {
         // Set session ID for authenticated testing
         await this.page.evaluate((sessionId) => {
             localStorage.setItem('fastingForecast_sessionId', sessionId);
+            localStorage.setItem('fastingForecast_profileSaved', 'true');
         }, this.options.sessionId);
 
         // Reload with session
