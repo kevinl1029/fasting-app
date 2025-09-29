@@ -3788,11 +3788,41 @@
             // Hide active state and show completion
             document.getElementById('activeFastState').style.display = 'none';
             document.getElementById('completionState').style.display = 'block';
-            
+
+            // Check if user has a schedule and hide "Add to schedule" button if they do
+            checkAndHideScheduleButtonIfNeeded();
+
             // Trigger confetti animation
             createConfetti();
         }
-        
+
+        // Check if user has a schedule and hide "Add to schedule" button if they do
+        async function checkAndHideScheduleButtonIfNeeded() {
+            try {
+                const sessionId = getSessionId();
+                if (!sessionId) return;
+
+                const userScheduleResponse = await fetch(`/api/schedule?sessionId=${sessionId}`);
+                if (userScheduleResponse.ok) {
+                    const userScheduleData = await userScheduleResponse.json();
+                    const addToScheduleBtn = document.getElementById('addToScheduleBtn');
+
+                    if (addToScheduleBtn) {
+                        // Hide the button if user has a schedule with fasting blocks
+                        if (userScheduleData.schedule && userScheduleData.blocks && userScheduleData.blocks.length > 0) {
+                            addToScheduleBtn.style.display = 'none';
+                        } else {
+                            // Show the button if user doesn't have a schedule
+                            addToScheduleBtn.style.display = 'block';
+                        }
+                    }
+                }
+            } catch (error) {
+                console.warn('Unable to check user schedule status:', error);
+                // On error, default to showing the button (fail gracefully)
+            }
+        }
+
         // Handle refeed notes CTA (placeholder)
         function openRefeedNotes() {
             // Placeholder - would open a modal or navigate to notes page
