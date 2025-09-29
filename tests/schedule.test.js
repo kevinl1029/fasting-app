@@ -14,6 +14,9 @@ async function runScheduleTests() {
     try {
         await framework.setup();
         await framework.navigateToPage('/schedule.html');
+        await framework.seedForecastProfile();
+        await framework.page.reload({ waitUntil: 'networkidle0' });
+        await framework.page.waitForTimeout(framework.options.waitTime);
 
         console.log('🔍 SCHEDULE PAGE TEST SUITE');
         console.log('='.repeat(40));
@@ -28,31 +31,35 @@ async function runScheduleTests() {
                     hasLoadingElement: !!document.getElementById('loading'),
                     hasScheduleContent: !!document.getElementById('schedule-content'),
                     hasEmptyState: !!document.getElementById('empty-state'),
-                    hasContainer: !!document.querySelector('.container'),
-                    hasHeader: !!document.querySelector('.header')
+                    hasDraftState: !!document.getElementById('draft-state'),
+                    hasContainer: !!document.querySelector('.container')
                 };
             });
 
             if (!result.hasLoadingElement) throw new Error('Loading element not found');
             if (!result.hasScheduleContent) throw new Error('Schedule content element not found');
             if (!result.hasEmptyState) throw new Error('Empty state element not found');
+            if (!result.hasDraftState) throw new Error('Draft state container not found');
 
             return result;
         });
 
-        await framework.runTest('Schedule Content State', async (page) => {
+        await framework.runTest('Schedule Draft Visibility', async (page) => {
             const result = await page.evaluate(() => {
                 const loading = document.getElementById('loading');
                 const scheduleContent = document.getElementById('schedule-content');
                 const emptyState = document.getElementById('empty-state');
+                const draftState = document.getElementById('draft-state');
 
                 return {
                     loadingVisible: loading && loading.offsetParent !== null,
                     scheduleContentVisible: scheduleContent && scheduleContent.offsetParent !== null,
                     emptyStateVisible: emptyState && emptyState.offsetParent !== null,
+                    draftVisible: draftState && draftState.offsetParent !== null,
                     loadingDisplay: loading ? window.getComputedStyle(loading).display : 'none',
                     scheduleDisplay: scheduleContent ? window.getComputedStyle(scheduleContent).display : 'none',
-                    emptyDisplay: emptyState ? window.getComputedStyle(emptyState).display : 'none'
+                    emptyDisplay: emptyState ? window.getComputedStyle(emptyState).display : 'none',
+                    draftDisplay: draftState ? window.getComputedStyle(draftState).display : 'none'
                 };
             });
 
@@ -61,75 +68,55 @@ async function runScheduleTests() {
                 throw new Error('Loading spinner still visible - possible infinite loading');
             }
 
-            // Should show either content or empty state, but not both
-            if (result.scheduleContentVisible && result.emptyStateVisible) {
-                throw new Error('Both schedule content and empty state are visible');
+            if (!result.draftVisible) {
+                throw new Error('Draft state should be visible for new onboarding flow');
             }
 
-            if (!result.scheduleContentVisible && !result.emptyStateVisible) {
-                throw new Error('Neither schedule content nor empty state is visible');
+            if (result.emptyStateVisible) {
+                throw new Error('Empty state should be hidden when draft is available');
             }
 
             return result;
         });
 
-        await framework.runTest('Schedule Data Loading', async (page) => {
+        await framework.runTest('Schedule Draft Actions Present', async (page) => {
             const result = await page.evaluate(() => {
                 return {
-                    nextFastExists: !!window.nextFast,
-                    scheduledFastsExists: !!window.scheduledFasts,
-                    sessionManagerReady: !!window.pageGuard,
-                    dataLoaded: true
+                    confirmExists: !!document.getElementById('draft-confirm-btn'),
+                    customizeExists: !!document.getElementById('draft-customize-btn'),
+                    dismissExists: !!document.getElementById('draft-dismiss-btn')
                 };
             });
+
+            if (!result.confirmExists) throw new Error('Draft confirm button missing');
+            if (!result.dismissExists) throw new Error('Draft dismiss button missing');
 
             return result;
         });
 
-        await framework.runTest('Fast Schedule Display', async (page) => {
+        await framework.runTest('Schedule Draft Confirmation Flow', async (page) => {
+            await page.click('#draft-confirm-btn');
+            await page.waitForTimeout(1000);
+            await page.waitForFunction(() => {
+                const draftState = document.getElementById('draft-state');
+                const scheduleContent = document.getElementById('schedule-content');
+                return draftState && window.getComputedStyle(draftState).display === 'none' &&
+                       scheduleContent && window.getComputedStyle(scheduleContent).display !== 'none';
+            }, { timeout: 5000 });
+
             const result = await page.evaluate(() => {
-                const scheduleItems = document.querySelectorAll('.fast-item, .schedule-item');
-                const nextFastElement = document.querySelector('.next-fast');
-                const upcomingSection = document.querySelector('.upcoming-fasts');
+                const draftState = document.getElementById('draft-state');
+                const scheduleContent = document.getElementById('schedule-content');
 
                 return {
-                    hasScheduleItems: scheduleItems.length > 0,
-                    scheduleItemCount: scheduleItems.length,
-                    hasNextFastElement: !!nextFastElement,
-                    hasUpcomingSection: !!upcomingSection
+                    draftHidden: draftState && window.getComputedStyle(draftState).display === 'none',
+                    scheduleVisible: scheduleContent && window.getComputedStyle(scheduleContent).display !== 'none'
                 };
             });
 
-            return result;
-        });
-
-        await framework.runTest('Schedule Interaction Elements', async (page) => {
-            const result = await page.evaluate(() => {
-                const addButtons = document.querySelectorAll('.add-btn, .btn-add, [class*="add"]');
-                const editButtons = document.querySelectorAll('.edit-btn, .btn-edit, [class*="edit"]');
-
-                return {
-                    hasAddButtons: addButtons.length > 0,
-                    hasEditButtons: editButtons.length > 0,
-                    totalInteractiveElements: addButtons.length + editButtons.length
-                };
-            });
-
-            return result;
-        });
-
-        await framework.runTest('Schedule Page Initialization', async (page) => {
-            const result = await page.evaluate(() => {
-                return {
-                    pageFullyLoaded: document.readyState === 'complete',
-                    sessionInitialized: !!window.getSessionId(),
-                    scheduleInitialized: typeof window.initializeSchedulePage === 'function',
-                    noJavaScriptErrors: true  // If we get here, no critical JS errors occurred
-                };
-            });
-
-            if (!result.pageFullyLoaded) throw new Error('Page not fully loaded');
-            if (!result.sessionInitialized) throw new Error('Session not initialized');
+            if (!result.scheduleVisible) {
+                throw new Error('Schedule content not visible after confirming draft');
+            }
 
             return result;
         });

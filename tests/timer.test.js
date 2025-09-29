@@ -14,6 +14,9 @@ async function runTimerTests() {
     try {
         await framework.setup();
         await framework.navigateToPage('/timer.html');
+        await framework.seedForecastProfile();
+        await framework.page.reload({ waitUntil: 'networkidle0' });
+        await framework.page.waitForTimeout(framework.options.waitTime);
 
         console.log('🔍 TIMER PAGE TEST SUITE');
         console.log('='.repeat(40));
@@ -28,14 +31,16 @@ async function runTimerTests() {
                     hasElapsedTime: !!document.getElementById('timerDisplay'),
                     hasStartTime: !!document.querySelector('.start-time-section'),
                     hasTimerContainer: !!document.querySelector('.timer-display'),
-                    hasStartButton: !!document.getElementById('start-timer-btn'),
-                    hasEndButton: !!document.getElementById('end-timer-btn')
+                    hasStartButton: !!document.getElementById('startFastBtn'),
+                    hasDraftCta: !!document.getElementById('addToScheduleBtn')
                 };
             });
 
             if (!result.hasElapsedTime) throw new Error('Elapsed time display not found');
             if (!result.hasStartTime) throw new Error('Start time display not found');
             if (!result.hasTimerContainer) throw new Error('Timer container not found');
+            if (!result.hasStartButton) throw new Error('Start button not found');
+            if (!result.hasDraftCta) throw new Error('Add to schedule CTA not found');
 
             return result;
         });
@@ -75,16 +80,37 @@ async function runTimerTests() {
         // Test timer button interactions (if no active fast)
         await framework.runTest('Timer Button States', async (page) => {
             const result = await page.evaluate(() => {
-                const startBtn = document.getElementById('start-timer-btn');
-                const endBtn = document.getElementById('end-timer-btn');
+                const startBtn = document.getElementById('startFastBtn');
+                const endBtn = document.querySelector('button[onclick="endFast()"]');
 
                 return {
                     startButtonVisible: startBtn && window.getComputedStyle(startBtn).display !== 'none',
-                    endButtonVisible: endBtn && window.getComputedStyle(endBtn).display !== 'none',
-                    startButtonEnabled: startBtn && !startBtn.disabled,
-                    endButtonEnabled: endBtn && !endBtn.disabled
+                    endButtonVisible: !!endBtn,
+                    startButtonEnabled: startBtn && !startBtn.disabled
                 };
             });
+
+            return result;
+        });
+
+        await framework.runTest('Timer Draft Prefill', async (page) => {
+            const result = await page.evaluate(() => {
+                const startBtn = document.getElementById('startFastBtn');
+                const draftBadge = document.querySelector('.draft-ready');
+
+                return {
+                    startButtonText: startBtn ? startBtn.textContent : '',
+                    draftApplied: !!draftBadge
+                };
+            });
+
+            if (!result.startButtonText.includes('36')) {
+                throw new Error(`Expected prefilled duration in start button, got "${result.startButtonText}"`);
+            }
+
+            if (!result.draftApplied) {
+                throw new Error('Draft styling not applied to timer pre-fast state');
+            }
 
             return result;
         });

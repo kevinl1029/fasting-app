@@ -266,14 +266,121 @@
             gap: 10px;
             margin-top: 15px;
         }
-        
+
         .btn-small {
             padding: 6px 12px;
             font-size: 0.8rem;
             border-radius: 6px;
         }
-        
-        
+
+        .draft-state {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 18px;
+            padding: 24px;
+            margin-bottom: 25px;
+            border: 2px dashed rgba(236, 72, 153, 0.3);
+            box-shadow: 0 18px 45px rgba(236, 72, 153, 0.12);
+        }
+
+        .draft-state.from-timer {
+            border-color: rgba(16, 185, 129, 0.5);
+            box-shadow: 0 24px 50px rgba(16, 185, 129, 0.18);
+        }
+
+        .draft-header {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            margin-bottom: 20px;
+        }
+
+        .draft-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            background: rgba(236, 72, 153, 0.1);
+            color: #ec4899;
+            border-radius: 999px;
+            padding: 6px 14px;
+            font-weight: 600;
+            font-size: 0.85rem;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+        }
+
+        .draft-protocol-label {
+            font-size: 1.3rem;
+            font-weight: 700;
+            color: #333;
+        }
+
+        .draft-blocks {
+            list-style: none;
+            padding: 0;
+            margin: 0 0 16px 0;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .draft-block {
+            background: linear-gradient(135deg, rgba(251, 146, 60, 0.08), rgba(236, 72, 153, 0.08));
+            border-left: 4px solid #fb923c;
+            border-radius: 12px;
+            padding: 12px 16px;
+        }
+
+        .draft-block-title {
+            font-weight: 600;
+            color: #fb923c;
+            margin-bottom: 4px;
+        }
+
+        .draft-block-time {
+            color: #555;
+            font-size: 0.95rem;
+        }
+
+        .draft-forecast-headline {
+            font-weight: 600;
+            color: #0f766e;
+            margin-bottom: 4px;
+        }
+
+        .draft-forecast-detail {
+            font-size: 0.9rem;
+            color: #0369a1;
+        }
+
+        .draft-reassurance {
+            margin: 12px 0 0 0;
+            font-size: 0.9rem;
+            color: #555;
+        }
+
+        .draft-actions {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+            margin-top: 18px;
+        }
+
+        .draft-actions .btn-primary {
+            flex: 1 1 180px;
+        }
+
+        .draft-actions .btn-secondary {
+            flex: 1 1 160px;
+        }
+
+        .draft-actions .btn-tertiary {
+            flex: 1 1 160px;
+            background: white;
+            border: 2px dashed rgba(236, 72, 153, 0.4);
+            color: #ec4899;
+        }
+
+
         /* Loading state */
         .loading {
             text-align: center;
@@ -561,6 +668,22 @@
                 <div class="spinner"></div>
                 <p>Loading your schedule...</p>
             </div>
+
+            <!-- Draft Schedule State -->
+            <div id="draft-state" class="draft-state" style="display: none;">
+                <div class="draft-header">
+                    <span class="draft-badge">Suggested Draft</span>
+                    <div class="draft-protocol-label" id="draft-protocol-label">Your protocol preview</div>
+                </div>
+                <ul class="draft-blocks" id="draft-blocks-list"></ul>
+                <div class="draft-forecast" id="draft-forecast-summary"></div>
+                <p class="draft-reassurance">You can confirm this plan now and fine-tune individual blocks anytime.</p>
+                <div class="draft-actions">
+                    <button class="btn btn-primary" id="draft-confirm-btn">Confirm My Plan</button>
+                    <button class="btn btn-tertiary" id="draft-customize-btn">Customize Blocks</button>
+                    <button class="btn btn-secondary" id="draft-dismiss-btn">Maybe Later</button>
+                </div>
+            </div>
             
             <!-- Main Content -->
             <div id="schedule-content" style="display: none;">
@@ -783,6 +906,8 @@
     <!-- Global Notification Manager -->
     <script src="/js/modules/hunger-coach.js"></script>
     <script src="/js/modules/global-notification-manager.js"></script>
+    <script src="/js/modules/draft-schedule-api.js"></script>
+    <script src="/js/modules/schedule-draft-controller.js"></script>
 
     <script>
         // Session management - moved to initializeSchedulePage()
@@ -794,8 +919,24 @@
         let scheduleData = {
             schedule: null,
             blocks: [],
-            nextInstances: []
+            nextInstances: [],
+            draft: null,
+            draftMetadata: null
         };
+
+        let scheduleDraftController = null;
+        try {
+            const draftApi = new window.FastingForecastDraftScheduleApi();
+            scheduleDraftController = new window.FastingForecastScheduleDraftController({
+                api: draftApi,
+                onConfirm: () => {
+                    loadSchedule();
+                }
+            });
+            window.scheduleDraftController = scheduleDraftController;
+        } catch (error) {
+            console.error('Failed to initialize ScheduleDraftController:', error);
+        }
         
         // DOM elements
         const loading = document.getElementById('loading');
@@ -829,6 +970,10 @@
                 console.error('No session ID available, redirecting to forecaster');
                 window.location.href = '/forecaster';
                 return;
+            }
+
+            if (scheduleDraftController) {
+                scheduleDraftController.setSessionId(sessionId);
             }
 
             loadSchedule();
@@ -917,7 +1062,17 @@
                     }));
                 }
 
-                scheduleData = data;
+                scheduleData = Object.assign({
+                    schedule: null,
+                    blocks: [],
+                    nextInstances: [],
+                    draft: null,
+                    draftMetadata: null
+                }, data);
+
+                if (scheduleDraftController) {
+                    scheduleDraftController.setDraft(scheduleData.draft, scheduleData.draftMetadata);
+                }
                 console.log('📅 Schedule data loaded successfully:', data);
                 renderSchedule();
                 console.log('📅 renderSchedule completed');
@@ -934,10 +1089,19 @@
             console.log('🔄 Loading spinner hidden');
             
             if (!scheduleData.schedule || scheduleData.blocks.length === 0) {
+                const handledByDraft = scheduleDraftController && scheduleDraftController.renderDraftIfNeeded(scheduleData);
+                if (handledByDraft) {
+                    scheduleContent.style.display = 'none';
+                    return;
+                }
+
                 showEmptyState();
                 return;
             }
-            
+
+            if (scheduleDraftController) {
+                scheduleDraftController.hideDraft();
+            }
             showScheduleContent();
             updateMetrics();
             renderListView();
@@ -945,6 +1109,11 @@
         }
         
         function showEmptyState() {
+            if (scheduleDraftController && scheduleDraftController.draft) {
+                emptyState.style.display = 'none';
+                return;
+            }
+
             emptyState.style.display = 'block';
             scheduleContent.style.display = 'none';
         }

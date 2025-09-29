@@ -202,6 +202,129 @@ class FastingForecastTestFramework {
         });
     }
 
+    async seedForecastProfile(overrides = {}) {
+        const sessionId = this.options.sessionId;
+        const weight = overrides.weight ?? 180;
+        const weightUnit = overrides.weightUnit ?? 'lb';
+        const bodyFat = overrides.bodyFat ?? 28;
+        const targetBodyFat = overrides.targetBodyFat ?? 18;
+        const activityLevel = overrides.activityLevel ?? 1.375;
+        const weeks = overrides.weeks ?? 8;
+        const startDate = overrides.startDate ?? new Date().toISOString().split('T')[0];
+        const goalDate = overrides.goalDate ?? this._addDaysAsIso(startDate, weeks * 7);
+        const protocol = Object.assign({ duration: 36, ketosis: false, frequency: 2 }, overrides.currentProtocol);
+
+        const weightKg = weightUnit === 'lb' ? weight * 0.453592 : weight;
+        const weeklyResults = this._generateWeeklyResults({ startDate, weeks, weightKg, bodyFat });
+        const summary = {
+            totalWeeks: weeks,
+            finalWeight: weeklyResults[weeklyResults.length - 1].weight,
+            finalBodyFat: weeklyResults[weeklyResults.length - 1].bodyFat,
+            totalFatLost: Number((weightKg * (bodyFat / 100) - (weeklyResults[weeklyResults.length - 1].fatMass)).toFixed(2)),
+            totalFFMLost: Number(((weightKg * (1 - bodyFat / 100)) - weeklyResults[weeklyResults.length - 1].fatFreeMass).toFixed(2)),
+            totalWeightLost: Number((weightKg - weeklyResults[weeklyResults.length - 1].weight).toFixed(2))
+        };
+
+        const forecastData = Object.assign({
+            weeks,
+            fastingBlocks: overrides.fastingBlocks || this._protocolToBlocks(protocol),
+            ketosisStates: overrides.ketosisStates || this._protocolToKetosisStates(protocol),
+            fastingExperience: overrides.fastingExperience || 'intermediate',
+            insulinSensitivity: overrides.insulinSensitivity || 'normal',
+            startDate,
+            currentProtocol: protocol,
+            results: {
+                weeklyResults,
+                summary
+            }
+        }, overrides.forecastData || {});
+
+        const profilePayload = {
+            sessionId,
+            weight,
+            weightUnit,
+            bodyFat,
+            targetBodyFat,
+            activityLevel,
+            goalDate,
+            forecastData
+        };
+
+        await this.page.evaluate(async (payload) => {
+            await fetch('/api/user/profile', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+        }, profilePayload);
+
+        await this.page.waitForTimeout(300);
+    }
+
+    _addDaysAsIso(baseDate, days) {
+        const [year, month, day] = baseDate.split('-').map(Number);
+        const date = new Date(year, month - 1, day + days);
+        const yyyy = date.getFullYear();
+        const mm = String(date.getMonth() + 1).padStart(2, '0');
+        const dd = String(date.getDate()).padStart(2, '0');
+        return `${yyyy}-${mm}-${dd}`;
+    }
+
+    _generateWeeklyResults({ startDate, weeks, weightKg, bodyFat }) {
+        const results = [];
+        let currentWeight = weightKg;
+        let currentBodyFat = bodyFat;
+        let currentFatMass = currentWeight * (currentBodyFat / 100);
+        let currentFFM = currentWeight - currentFatMass;
+
+        for (let week = 0; week <= weeks; week++) {
+            const date = this._addDaysAsIso(startDate, week * 7);
+            const totalWeightLoss = week === 0 ? 0 : Number((week * 0.53).toFixed(2));
+            const weeklyFatLoss = week === 0 ? 0 : Number(0.45.toFixed(2));
+            const weeklyFFMLoss = week === 0 ? 0 : Number(0.08.toFixed(2));
+
+            results.push({
+                week,
+                date,
+                weight: Number(currentWeight.toFixed(2)),
+                bodyFat: Number(currentBodyFat.toFixed(2)),
+                fatMass: Number(currentFatMass.toFixed(2)),
+                fatFreeMass: Number(currentFFM.toFixed(2)),
+                weeklyFatLoss,
+                weeklyFFMLoss,
+                totalWeightLoss,
+                ketosisPhase: 'optimalKetosis',
+                proteinMaintenance: 120,
+                ffmPreservation: 35
+            });
+
+            if (week < weeks) {
+                currentWeight -= 0.53;
+                currentFatMass -= 0.45;
+                currentFFM -= 0.08;
+                currentBodyFat = (currentFatMass / currentWeight) * 100;
+            }
+        }
+
+        return results;
+    }
+
+    _protocolToBlocks(protocol) {
+        const blocks = [0, 0, 0];
+        for (let i = 0; i < Math.min(protocol.frequency || 1, blocks.length); i++) {
+            blocks[i] = protocol.duration || 24;
+        }
+        return blocks;
+    }
+
+    _protocolToKetosisStates(protocol) {
+        const states = [false, false, false];
+        for (let i = 0; i < Math.min(protocol.frequency || 1, states.length); i++) {
+            states[i] = Boolean(protocol.ketosis);
+        }
+        return states;
+    }
+
     async testTabSwitching(tabs) {
         return await this.runTest('Tab Switching', async (page) => {
             const results = {};

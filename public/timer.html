@@ -460,6 +460,17 @@
             box-shadow: 0 12px 35px rgba(251, 146, 60, 0.5);
         }
         
+        .draft-ready {
+            border: 2px dashed rgba(236, 72, 153, 0.25);
+            border-radius: 18px;
+            padding: 16px;
+            margin-top: 10px;
+        }
+
+        .draft-ready .start-fast-btn {
+            margin-bottom: 12px;
+        }
+
         .sticky-start-btn {
             position: fixed;
             bottom: 90px; /* Space above bottom nav (75px) + extra margin */
@@ -1330,7 +1341,24 @@
             gap: 15px;
             margin-top: 25px;
         }
-        
+
+        .schedule-draft-btn {
+            background: linear-gradient(135deg, #10b981 0%, #22d3ee 100%);
+            color: white;
+            border: none;
+            padding: 16px 30px;
+            border-radius: 12px;
+            font-size: 1.05rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        .schedule-draft-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 12px 24px rgba(34, 211, 238, 0.3);
+        }
+
         .refeed-notes-btn {
             background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
             color: white;
@@ -1747,6 +1775,9 @@
                         <button class="refeed-notes-btn" onclick="openRefeedNotes()">
                             📝 Log Refeed Notes
                         </button>
+                        <button class="schedule-draft-btn" id="addToScheduleBtn">
+                            Add this to My Schedule
+                        </button>
                         <button class="new-fast-btn" onclick="startNewFast()">
                             Start New Fast
                         </button>
@@ -1773,6 +1804,8 @@
     <script src="/js/services/BenefitsDataService.js"></script>
     <script src="/js/managers/CardRotationManager.js"></script>
     <script src="/js/components/PhaseBanner.js"></script>
+    <script src="/js/modules/draft-schedule-api.js"></script>
+    <script src="/js/modules/timer-onboarding-controller.js"></script>
 
     <script>
         // Timer state
@@ -3136,7 +3169,12 @@
             document.getElementById('startFastBtn').style.display = 'block';
             
             // Update button text for new users
-            document.getElementById('startFastBtn').textContent = 'Start Your First Fast';
+            const draftDuration = timerOnboardingController?.draft?.protocol?.durationHours;
+            if (draftDuration) {
+                document.getElementById('startFastBtn').textContent = `Start ${draftDuration}h Fast`;
+            } else {
+                document.getElementById('startFastBtn').textContent = 'Start Your First Fast';
+            }
         }
         
         function showScheduleSetupState() {
@@ -3238,8 +3276,14 @@
                     if (userScheduleData.schedule && userScheduleData.blocks && userScheduleData.blocks.length > 0) {
                         // User has a schedule with fasting blocks
                         await showScheduledFastState();
+                    } else if (userScheduleData.draft) {
+                        // Draft available - show onboarding draft state
+                        showNewUserWelcome();
+                        if (timerOnboardingController) {
+                            timerOnboardingController.applyDraft(userScheduleData.draft);
+                        }
                     } else {
-                        // User has no schedule or no fasting blocks - encourage setup
+                        // User has no schedule or draft - encourage setup
                         showScheduleSetupState();
                     }
                 } else {
@@ -4219,6 +4263,22 @@
             }
         };
 
+        let timerOnboardingController = null;
+        try {
+            const draftApi = new window.FastingForecastDraftScheduleApi();
+            timerOnboardingController = new window.FastingForecastTimerOnboardingController({
+                api: draftApi,
+                navigation: {
+                    goToSchedule: () => {
+                        window.location.href = '/schedule.html';
+                    }
+                }
+            });
+            window.timerOnboardingController = timerOnboardingController;
+        } catch (error) {
+            console.error('Failed to initialize TimerOnboardingController:', error);
+        }
+
         // Initialize session management first
         let pageGuard;
         try {
@@ -4262,6 +4322,10 @@
             // Initialize user state after session is ready
             initializeUserState().then(() => {
                 console.log('✓ initializeUserState completed');
+
+                if (timerOnboardingController) {
+                    timerOnboardingController.init(sessionId);
+                }
             }).catch(error => {
                 console.error('✗ initializeUserState failed:', error);
             });

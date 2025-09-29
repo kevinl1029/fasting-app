@@ -2,6 +2,8 @@ const express = require('express');
 const cors = require('cors');
 const path = require('path');
 const db = require('./database/db');
+const DraftScheduleService = require('./services/DraftScheduleService');
+const draftScheduleService = new DraftScheduleService(db);
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -102,7 +104,7 @@ app.get('/api/debug/profiles', async (req, res) => {
 
 // Session validation endpoint
 app.get('/api/session/validate', async (req, res) => {
-    const sessionId = req.query.sessionId;
+    const sessionId = req.query.sessionId || req.sessionId;
 
     if (!validateSessionFormat(sessionId)) {
         return res.status(400).json({
@@ -369,12 +371,26 @@ app.post('/api/user/profile', async (req, res) => {
     // Try to update existing profile first
     const existingProfile = await db.getUserProfileBySessionId(sessionId);
     if (existingProfile) {
-      const result = await db.updateUserProfile(sessionId, profileData);
+      await db.updateUserProfile(sessionId, profileData);
       const updatedProfile = await db.getUserProfileBySessionId(sessionId);
+
+      try {
+        await draftScheduleService.seedFromForecast(updatedProfile);
+      } catch (seedError) {
+        console.error('Failed to seed draft schedule after profile update:', seedError);
+      }
+
       res.json(updatedProfile);
     } else {
       // Create new profile
       const newProfile = await db.createUserProfile(profileData);
+
+      try {
+        await draftScheduleService.seedFromForecast(newProfile);
+      } catch (seedError) {
+        console.error('Failed to seed draft schedule after profile creation:', seedError);
+      }
+
       res.status(201).json(newProfile);
     }
   } catch (error) {
@@ -428,7 +444,7 @@ app.post('/api/user/onboard/:sessionId', async (req, res) => {
 // Schedule API Endpoints
 app.get('/api/schedule', validateSessionMiddleware, async (req, res) => {
   try {
-    const sessionId = req.query.sessionId;
+    const sessionId = req.query.sessionId || req.sessionId;
     if (!sessionId) {
       return res.status(400).json({ error: 'sessionId is required' });
     }
@@ -444,23 +460,83 @@ app.get('/api/schedule', validateSessionMiddleware, async (req, res) => {
     // Get user's schedule
     const schedule = await db.getScheduleByUserProfile(profile.id);
     if (!schedule) {
-      return res.json({ schedule: null, blocks: [], nextInstances: [] });
+      const draft = await draftScheduleService.getDraftBySessionId(sessionId);
+      return res.json({
+        schedule: null,
+        blocks: [],
+        nextInstances: [],
+        draft: draft ? draft.payload : null,
+        draftMetadata: draft ? draft.metadata : null
+      });
     }
-    
+
     // Get fasting blocks for the schedule
     const blocks = await db.getFastingBlocksBySchedule(schedule.id);
-    
+
     // Generate next instances (4 weeks ahead)
     const nextInstances = await db.generatePlannedInstances(schedule.id, 4, { timeZone: clientTimeZone });
     
     res.json({
       schedule,
       blocks,
-      nextInstances
+      nextInstances,
+      draft: null,
+      draftMetadata: null
     });
   } catch (error) {
     console.error('Error fetching schedule:', error);
     res.status(500).json({ error: 'Failed to fetch schedule' });
+  }
+});
+
+app.get('/api/schedule/draft', validateSessionMiddleware, async (req, res) => {
+  try {
+    const draft = await draftScheduleService.getDraftBySessionId(req.sessionId);
+
+    if (!draft) {
+      return res.json({ draft: null, metadata: null });
+    }
+
+    return res.json({ draft: draft.payload, metadata: draft.metadata });
+  } catch (error) {
+    console.error('Error fetching schedule draft:', error);
+    return res.status(500).json({ error: 'Failed to fetch schedule draft' });
+  }
+});
+
+app.post('/api/schedule/draft/confirm', validateSessionMiddleware, async (req, res) => {
+  try {
+    const { blocks, weekAnchor } = req.body || {};
+    const result = await draftScheduleService.confirmDraft(req.sessionId, { blocks, weekAnchor });
+
+    return res.json(result);
+  } catch (error) {
+    console.error('Error confirming schedule draft:', error);
+
+    if (error.code === 'PROFILE_NOT_FOUND' || error.code === 'DRAFT_NOT_FOUND') {
+      return res.status(404).json({ error: error.code });
+    }
+
+    if (error.code === 'DRAFT_BLOCKS_EMPTY' || error.code === 'SESSION_ID_REQUIRED' || error.code === 'BLOCK_INVALID') {
+      return res.status(400).json({ error: error.code });
+    }
+
+    return res.status(500).json({ error: 'Failed to confirm schedule draft' });
+  }
+});
+
+app.post('/api/schedule/draft/dismiss', validateSessionMiddleware, async (req, res) => {
+  try {
+    const result = await draftScheduleService.dismissDraft(req.sessionId);
+    return res.json(result);
+  } catch (error) {
+    console.error('Error dismissing schedule draft:', error);
+
+    if (error.code === 'PROFILE_NOT_FOUND' || error.code === 'SESSION_ID_REQUIRED') {
+      return res.status(404).json({ error: error.code });
+    }
+
+    return res.status(500).json({ error: 'Failed to dismiss schedule draft' });
   }
 });
 

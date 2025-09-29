@@ -134,6 +134,18 @@ class Database {
         )
       `;
 
+      const createScheduleDraftsTable = `
+        CREATE TABLE IF NOT EXISTS schedule_drafts (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          user_profile_id INTEGER NOT NULL UNIQUE,
+          payload TEXT NOT NULL,
+          created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+          updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+          dismissed_at DATETIME,
+          FOREIGN KEY (user_profile_id) REFERENCES user_profiles (id) ON DELETE CASCADE
+        )
+      `;
+
       const createFastingBlocksTable = `
         CREATE TABLE IF NOT EXISTS fasting_blocks (
           id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -215,6 +227,15 @@ class Database {
             return;
           }
           console.log('Schedules table ready');
+        });
+
+        this.db.run(createScheduleDraftsTable, (err) => {
+          if (err) {
+            console.error('Error creating schedule_drafts table:', err);
+            reject(err);
+            return;
+          }
+          console.log('Schedule drafts table ready');
         });
 
         this.db.run(createFastingBlocksTable, (err) => {
@@ -615,6 +636,88 @@ class Database {
           reject(err);
         } else {
           resolve(row || null);
+        }
+      });
+    });
+  }
+
+  async getScheduleDraftByUserProfile(userProfileId, { includeDismissed = false } = {}) {
+    return new Promise((resolve, reject) => {
+      const query = includeDismissed
+        ? 'SELECT * FROM schedule_drafts WHERE user_profile_id = ?'
+        : 'SELECT * FROM schedule_drafts WHERE user_profile_id = ? AND dismissed_at IS NULL';
+
+      this.db.get(query, [userProfileId], (err, row) => {
+        if (err) {
+          reject(err);
+        } else {
+          if (!row) {
+            resolve(null);
+            return;
+          }
+
+          try {
+            const payload = JSON.parse(row.payload);
+            resolve({ ...row, payload });
+          } catch (parseError) {
+            console.error('Error parsing schedule draft payload:', parseError);
+            resolve({ ...row, payload: null, payloadParseError: true });
+          }
+        }
+      });
+    });
+  }
+
+  async upsertScheduleDraft(userProfileId, payload) {
+    return new Promise((resolve, reject) => {
+      const payloadJson = JSON.stringify(payload);
+      const query = `
+        INSERT INTO schedule_drafts (user_profile_id, payload, dismissed_at)
+        VALUES (?, ?, NULL)
+        ON CONFLICT(user_profile_id) DO UPDATE SET
+          payload = excluded.payload,
+          dismissed_at = NULL,
+          updated_at = CURRENT_TIMESTAMP
+      `;
+
+      this.db.run(query, [userProfileId, payloadJson], function(err) {
+        if (err) {
+          reject(err);
+        } else {
+          resolve({ id: this.lastID, user_profile_id: userProfileId });
+        }
+      });
+    });
+  }
+
+  async deleteScheduleDraft(userProfileId) {
+    return new Promise((resolve, reject) => {
+      const query = 'DELETE FROM schedule_drafts WHERE user_profile_id = ?';
+
+      this.db.run(query, [userProfileId], function(err) {
+        if (err) {
+          reject(err);
+        } else {
+          resolve({ deleted: this.changes > 0 });
+        }
+      });
+    });
+  }
+
+  async markScheduleDraftDismissed(userProfileId) {
+    return new Promise((resolve, reject) => {
+      const query = `
+        UPDATE schedule_drafts
+        SET dismissed_at = CURRENT_TIMESTAMP,
+            updated_at = CURRENT_TIMESTAMP
+        WHERE user_profile_id = ?
+      `;
+
+      this.db.run(query, [userProfileId], function(err) {
+        if (err) {
+          reject(err);
+        } else {
+          resolve({ dismissed: this.changes > 0 });
         }
       });
     });

@@ -28,6 +28,12 @@ async function runQuickTests() {
             console.log(`\n🔍 Testing ${page.name} page...`);
             await framework.navigateToPage(page.path);
 
+            if (page.path === '/timer.html' || page.path === '/schedule.html') {
+                await framework.seedForecastProfile();
+                await framework.page.reload({ waitUntil: 'networkidle0' });
+                await framework.page.waitForTimeout(framework.options.waitTime);
+            }
+
             // Run only core tests for speed
             await framework.testSessionManagement();
             await framework.testPageLoad();
