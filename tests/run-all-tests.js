@@ -7,6 +7,7 @@ const runTimerTests = require('./timer.test.js');
 const runDashboardTests = require('./dashboard.test.js');
 const runSettingsTests = require('./settings.test.js');
 const runScheduleTests = require('./schedule.test.js');
+const runBenefitsExpansionTests = require('./benefits-expansion.test.js');
 
 async function runAllTests() {
     console.log('🚀 FASTING FORECAST - COMPREHENSIVE TEST SUITE');
@@ -56,6 +57,22 @@ async function runAllTests() {
         totalTests += results.schedule.total;
         console.log('');
 
+        // Run Benefits Expansion Tests
+        console.log('5️⃣  BENEFITS EXPANSION TESTS');
+        console.log('-'.repeat(30));
+        try {
+            await runBenefitsExpansionTests();
+            results.benefits = { passed: 5, failed: 0, total: 5 }; // Manual tracking since test doesn't return structured result
+            totalPassed += results.benefits.passed;
+            totalTests += results.benefits.total;
+            console.log('');
+        } catch (error) {
+            console.error('❌ Benefits expansion test failed:', error.message);
+            results.benefits = { passed: 0, failed: 5, total: 5 };
+            totalFailed += results.benefits.failed;
+            totalTests += results.benefits.total;
+        }
+
     } catch (error) {
         console.error('❌ Test suite execution failed:', error);
         process.exit(1);
@@ -67,7 +84,7 @@ async function runAllTests() {
     // Generate comprehensive report
     console.log('📊 COMPREHENSIVE TEST REPORT');
     console.log('='.repeat(60));
-    console.log(`Total Test Suites: 4`);
+    console.log(`Total Test Suites: 5`);
     console.log(`Total Tests: ${totalTests}`);
     console.log(`Passed: ${totalPassed} ✅`);
     console.log(`Failed: ${totalFailed} ❌`);

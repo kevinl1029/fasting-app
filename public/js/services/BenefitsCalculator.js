@@ -140,6 +140,12 @@ class BenefitsCalculator {
             // Detect new milestones
             const newMilestones = this.detectMilestones(moneySaved, timeReclaimed, mealsSkipped);
 
+            // Calculate physiological benefits
+            const physiologicalBenefits = this.calculatePhysiologicalBenefits(fastDurationHours);
+
+            // Calculate lifestyle benefits
+            const lifestyleBenefits = this.calculateLifestyleBenefits(mealsSkipped, fastDurationHours);
+
             return {
                 fastStartTime: fastStart.toISOString(),
                 currentTime: now.toISOString(),
@@ -148,10 +154,12 @@ class BenefitsCalculator {
                 mealsSkipped,
                 moneySaved: Math.round(moneySaved * 100) / 100,
                 timeReclaimed, // in minutes
-                timeReclaimedFormatted: this.formatTimeReclaimed(timeReclaimed),
+                timeReclaimed_formatted: this.formatTimeReclaimed(timeReclaimed),
                 newMilestones,
                 nextMilestone: this.getNextMilestone(moneySaved, timeReclaimed, mealsSkipped),
-                preferences: this.userPreferences
+                preferences: this.userPreferences,
+                physiological: physiologicalBenefits,
+                lifestyle: lifestyleBenefits
             };
 
         } catch (error) {
@@ -318,7 +326,7 @@ class BenefitsCalculator {
             return {
                 totalMoneySaved: Math.round(totalMoneySaved * 100) / 100,
                 totalTimeReclaimed,
-                totalTimeReclaimedFormatted: this.formatTimeReclaimed(totalTimeReclaimed),
+                totalTimeReclaimed_formatted: this.formatTimeReclaimed(totalTimeReclaimed),
                 totalMealsSkipped,
                 totalFasts: filteredFasts.length,
                 averageFastDuration: filteredFasts.length > 0 ?
@@ -444,6 +452,164 @@ class BenefitsCalculator {
 
         // Return the closest milestone
         return nextMilestones.sort((a, b) => b.progress - a.progress)[0] || null;
+    }
+
+    /**
+     * Calculate physiological benefits based on fast duration
+     */
+    calculatePhysiologicalBenefits(fastDurationHours) {
+        const benefits = {
+            hormonalChanges: [],
+            cellularHealth: [],
+            brainBenefits: [],
+            metabolicBenefits: []
+        };
+
+        // Hormonal changes based on duration
+        if (fastDurationHours >= 4) {
+            benefits.hormonalChanges.push({
+                type: 'adrenaline',
+                level: 'active',
+                description: 'Natural adrenaline is giving you clean energy'
+            });
+        }
+
+        if (fastDurationHours >= 6) {
+            benefits.hormonalChanges.push({
+                type: 'insulin_sensitivity',
+                level: 'improving',
+                description: 'Your insulin sensitivity is improving with every hour'
+            });
+        }
+
+        if (fastDurationHours >= 12) {
+            benefits.hormonalChanges.push({
+                type: 'growth_hormone',
+                level: 'elevated',
+                description: 'Your growth hormone levels are surging!'
+            });
+        }
+
+        // Cellular health benefits
+        if (fastDurationHours >= 12) {
+            benefits.cellularHealth.push({
+                type: 'dna_repair',
+                level: 'active',
+                description: 'Your DNA repair mechanisms are activated'
+            });
+        }
+
+        if (fastDurationHours >= 16) {
+            benefits.cellularHealth.push({
+                type: 'autophagy',
+                level: 'active',
+                description: 'Your cells are cleaning house through autophagy'
+            });
+        }
+
+        if (fastDurationHours >= 24) {
+            benefits.cellularHealth.push({
+                type: 'stem_cell_regeneration',
+                level: 'active',
+                description: 'Stem cell production is ramping up'
+            });
+        }
+
+        // Brain benefits
+        if (fastDurationHours >= 8) {
+            benefits.brainBenefits.push({
+                type: 'mental_clarity',
+                level: 'enhanced',
+                description: 'Your brain is running on premium fuel (ketones)'
+            });
+        }
+
+        if (fastDurationHours >= 12) {
+            benefits.brainBenefits.push({
+                type: 'bdnf_production',
+                level: 'increased',
+                description: 'Brain-derived neurotrophic factor is increasing'
+            });
+        }
+
+        // Metabolic benefits
+        if (fastDurationHours >= 8) {
+            benefits.metabolicBenefits.push({
+                type: 'fat_burning',
+                level: 'optimized',
+                description: 'Your body is accessing stored energy efficiently'
+            });
+        }
+
+        if (fastDurationHours >= 12) {
+            benefits.metabolicBenefits.push({
+                type: 'inflammation_reduction',
+                level: 'active',
+                description: 'Inflammatory markers are decreasing'
+            });
+        }
+
+        return benefits;
+    }
+
+    /**
+     * Calculate lifestyle benefits
+     */
+    calculateLifestyleBenefits(mealsSkipped, fastDurationHours) {
+        const benefits = {
+            timeReclamation: [],
+            mentalBenefits: [],
+            environmentalImpact: [],
+            socialBenefits: []
+        };
+
+        // Time reclamation beyond just eating
+        if (mealsSkipped > 0) {
+            const mealPrepTimeSaved = mealsSkipped * 15; // 15 min prep per meal
+            const dishesTimeSaved = mealsSkipped * 10; // 10 min cleanup per meal
+            const shoppingTimeSaved = Math.floor(mealsSkipped / 7) * 60; // 1 hour shopping per week
+
+            benefits.timeReclamation.push({
+                type: 'meal_prep',
+                timeSaved: mealPrepTimeSaved,
+                description: 'No meal prep, no dishes, no food decisions'
+            });
+
+            benefits.timeReclamation.push({
+                type: 'mental_bandwidth',
+                description: 'Your brain power is freed from food decisions'
+            });
+
+            benefits.timeReclamation.push({
+                type: 'schedule_simplicity',
+                description: 'Your day flows without meal interruptions'
+            });
+        }
+
+        // Mental benefits
+        if (fastDurationHours >= 1) {
+            benefits.mentalBenefits.push({
+                type: 'stress_resilience',
+                description: 'You\'re building mental resilience with every hour'
+            });
+
+            benefits.mentalBenefits.push({
+                type: 'food_appreciation',
+                description: 'You\'re building gratitude for your next meal'
+            });
+        }
+
+        // Environmental impact
+        if (mealsSkipped > 0) {
+            const carbonReduction = mealsSkipped * 2.5; // kg CO2 per meal average
+            benefits.environmentalImpact.push({
+                type: 'carbon_footprint',
+                reduction: carbonReduction,
+                description: 'You\'re reducing your environmental impact today'
+            });
+        }
+
+        return benefits;
     }
 
     /**

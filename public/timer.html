@@ -1841,7 +1841,7 @@
 
         // Contextual Cards System
         let notificationService = null;
-        const CARD_ROTATION_INTERVAL = 12000; // 12 seconds
+        const CARD_ROTATION_INTERVAL = window.location.hostname === 'localhost' ? 2000 : 12000; // 2s for dev, 12s for production
 
         // Legacy hunger coach for backwards compatibility
 

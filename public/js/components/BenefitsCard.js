@@ -9,7 +9,7 @@ class BenefitsCard extends ContextualCard {
         const defaultOptions = {
             autoHide: false, // Managed by card rotation system
             tapToExpand: true,
-            rotationInterval: 15000, // 15 seconds
+            // rotationInterval removed - managed by CardRotationManager
             ...options
         };
 
@@ -143,9 +143,47 @@ class BenefitsCard extends ContextualCard {
     }
 
     /**
-     * Calculate current benefits based on fast progress
+     * Calculate current benefits based on fast progress using enhanced calculator
      */
     calculateCurrentBenefits() {
+        if (!this.fastStartTime) {
+            return null;
+        }
+
+        try {
+            // Use BenefitsCalculator if available for enhanced benefits
+            if (window.BenefitsCalculator) {
+                const calculator = new window.BenefitsCalculator();
+
+                // Initialize with user preferences
+                calculator.updatePreferences(this.userPreferences);
+                if (this.userMealtimes) {
+                    calculator.updateMealtimes(this.userMealtimes);
+                }
+
+                // Get full enhanced benefits
+                const enhancedBenefits = calculator.calculateCurrentFastBenefits(this.fastStartTime);
+
+                if (enhancedBenefits) {
+                    console.log('BenefitsCard: Using enhanced benefits with physiological/lifestyle data');
+                    return enhancedBenefits;
+                }
+            }
+
+            // Fallback to simple calculation if enhanced calculator not available
+            console.log('BenefitsCard: Falling back to simple benefits calculation');
+            return this.calculateSimpleBenefits();
+
+        } catch (error) {
+            console.error('Error calculating benefits:', error);
+            return this.calculateSimpleBenefits();
+        }
+    }
+
+    /**
+     * Fallback simple benefits calculation
+     */
+    calculateSimpleBenefits() {
         if (!this.fastStartTime) {
             return null;
         }
@@ -183,7 +221,7 @@ class BenefitsCard extends ContextualCard {
             };
 
         } catch (error) {
-            console.error('Error calculating benefits:', error);
+            console.error('Error calculating simple benefits:', error);
             return null;
         }
     }
@@ -262,8 +300,8 @@ class BenefitsCard extends ContextualCard {
         textElement.textContent = currentDisplay.text;
         iconElement.textContent = currentDisplay.icon;
 
-        // Update extended content
-        this.updateExtendedContent(benefits);
+        // Update extended content using the current display's extended info
+        this.updateExtendedContent(benefits, currentDisplay);
     }
 
     /**
@@ -272,99 +310,55 @@ class BenefitsCard extends ContextualCard {
     getBenefitDisplays(benefits) {
         const displays = [];
 
-        // Money saved display
+        // Traditional benefits (money/time/meals)
         if (benefits.moneySaved > 0) {
             displays.push({
                 text: `You've saved $${benefits.moneySaved.toFixed(2)} so far`,
                 icon: '💰',
-                type: 'money'
+                type: 'money',
+                extended: `That's ${this.getMoneyEquivalence(benefits.moneySaved)}`
             });
         }
 
-        // Time reclaimed display
         if (benefits.timeReclaimed > 0) {
             displays.push({
                 text: `You've reclaimed ${benefits.timeReclaimed_formatted}`,
                 icon: '⏰',
-                type: 'time'
+                type: 'time',
+                extended: `Perfect for ${this.getTimeActivity(benefits.timeReclaimed)}`
             });
         }
 
-        // Meals skipped display
         if (benefits.mealsSkipped > 0) {
             const mealText = benefits.mealsSkipped === 1 ? 'meal' : 'meals';
             displays.push({
                 text: `${benefits.mealsSkipped} ${mealText} skipped successfully`,
                 icon: '🎯',
-                type: 'meals'
+                type: 'meals',
+                extended: `Building discipline and metabolic flexibility with every meal skipped`
             });
         }
 
-        // Early stage fasting content (0-2 hours)
-        if (benefits.fastDurationHours >= 0.25 && benefits.fastDurationHours < 2) {
-            displays.push({
-                text: `${Math.round(benefits.fastDurationHours * 60)} minutes of mindful fasting`,
-                icon: '🕐',
-                type: 'progress'
-            });
-            displays.push({
-                text: 'Your body is starting to tap into stored energy',
-                icon: '⚡',
-                type: 'education'
-            });
+        // Physiological benefits from expanded calculator
+        if (benefits.physiological) {
+            this.addPhysiologicalDisplays(displays, benefits);
         }
 
-        // Short-term fasting content (2-6 hours)
-        if (benefits.fastDurationHours >= 2 && benefits.fastDurationHours < 6) {
-            displays.push({
-                text: `${Math.round(benefits.fastDurationHours * 10) / 10}h of focused fasting`,
-                icon: '⏱️',
-                type: 'progress'
-            });
-            displays.push({
-                text: 'Insulin levels are beginning to drop',
-                icon: '📉',
-                type: 'education'
-            });
+        // Lifestyle benefits from expanded calculator
+        if (benefits.lifestyle) {
+            this.addLifestyleDisplays(displays, benefits);
         }
 
-        // Medium-term fasting content (6-12 hours)
-        if (benefits.fastDurationHours >= 6 && benefits.fastDurationHours < 12) {
-            displays.push({
-                text: `${Math.round(benefits.fastDurationHours * 10) / 10}h into fat-burning mode`,
-                icon: '🔥',
-                type: 'progress'
-            });
-            displays.push({
-                text: 'Your body is efficiently using stored fat',
-                icon: '⚡',
-                type: 'education'
-            });
-        }
-
-        // Motivational displays
-        if (benefits.fastDurationHours > 12) {
-            displays.push({
-                text: `Time for a mindful walk or creative project`,
-                icon: '🚶',
-                type: 'motivation'
-            });
-        }
-
-        if (benefits.moneySaved > 20) {
-            displays.push({
-                text: 'Enough saved for a healthy grocery haul!',
-                icon: '🛒',
-                type: 'milestone'
-            });
-        }
+        // Duration-specific milestone content
+        this.addMilestoneDisplays(displays, benefits);
 
         // Fallback display
         if (displays.length === 0) {
             displays.push({
                 text: 'Building healthy habits, one fast at a time',
                 icon: '💪',
-                type: 'general'
+                type: 'general',
+                extended: 'Every fast strengthens your metabolic flexibility and mental resilience'
             });
         }
 
@@ -372,9 +366,220 @@ class BenefitsCard extends ContextualCard {
     }
 
     /**
+     * Add physiological benefit displays
+     */
+    addPhysiologicalDisplays(displays, benefits) {
+        const phys = benefits.physiological;
+
+        // Hormonal changes
+        phys.hormonalChanges.forEach(change => {
+            let icon;
+            switch (change.type) {
+                case 'adrenaline':
+                    icon = '⚡';
+                    break;
+                case 'insulin_sensitivity':
+                    icon = '📈';
+                    break;
+                case 'growth_hormone':
+                    icon = '💪';
+                    break;
+                default:
+                    icon = '🔬';
+            }
+            displays.push({
+                text: change.description,
+                icon: icon,
+                type: 'hormonal',
+                extended: this.getHormonalExtended(change.type)
+            });
+        });
+
+        // Cellular health
+        phys.cellularHealth.forEach(cellular => {
+            let icon;
+            switch (cellular.type) {
+                case 'autophagy':
+                    icon = '🧹';
+                    break;
+                case 'dna_repair':
+                    icon = '🔧';
+                    break;
+                case 'stem_cell_regeneration':
+                    icon = '🌱';
+                    break;
+                default:
+                    icon = '🔬';
+            }
+            displays.push({
+                text: cellular.description,
+                icon: icon,
+                type: 'cellular',
+                extended: this.getCellularExtended(cellular.type)
+            });
+        });
+
+        // Brain benefits
+        phys.brainBenefits.forEach(brain => {
+            let icon;
+            switch (brain.type) {
+                case 'mental_clarity':
+                    icon = '🧠';
+                    break;
+                case 'bdnf_production':
+                    icon = '🧬';
+                    break;
+                default:
+                    icon = '🧠';
+            }
+            displays.push({
+                text: brain.description,
+                icon: icon,
+                type: 'brain',
+                extended: this.getBrainExtended(brain.type)
+            });
+        });
+
+        // Metabolic benefits
+        phys.metabolicBenefits.forEach(metabolic => {
+            let icon;
+            switch (metabolic.type) {
+                case 'fat_burning':
+                    icon = '🔥';
+                    break;
+                case 'inflammation_reduction':
+                    icon = '🌿';
+                    break;
+                default:
+                    icon = '⚡';
+            }
+            displays.push({
+                text: metabolic.description,
+                icon: icon,
+                type: 'metabolic',
+                extended: this.getMetabolicExtended(metabolic.type)
+            });
+        });
+    }
+
+    /**
+     * Add lifestyle benefit displays
+     */
+    addLifestyleDisplays(displays, benefits) {
+        const lifestyle = benefits.lifestyle;
+
+        // Time reclamation beyond eating
+        lifestyle.timeReclamation.forEach(timeRec => {
+            let icon;
+            switch (timeRec.type) {
+                case 'meal_prep':
+                    icon = '🕐';
+                    break;
+                case 'mental_bandwidth':
+                    icon = '🧩';
+                    break;
+                case 'schedule_simplicity':
+                    icon = '📅';
+                    break;
+                default:
+                    icon = '⏰';
+            }
+            displays.push({
+                text: timeRec.description,
+                icon: icon,
+                type: 'lifestyle',
+                extended: this.getLifestyleExtended(timeRec.type)
+            });
+        });
+
+        // Mental benefits
+        lifestyle.mentalBenefits.forEach(mental => {
+            let icon;
+            switch (mental.type) {
+                case 'stress_resilience':
+                    icon = '🛡️';
+                    break;
+                case 'food_appreciation':
+                    icon = '🙏';
+                    break;
+                default:
+                    icon = '💭';
+            }
+            displays.push({
+                text: mental.description,
+                icon: icon,
+                type: 'mental',
+                extended: this.getMentalExtended(mental.type)
+            });
+        });
+
+        // Environmental impact
+        lifestyle.environmentalImpact.forEach(env => {
+            displays.push({
+                text: env.description,
+                icon: '🌍',
+                type: 'environmental',
+                extended: `Each skipped meal reduces your carbon footprint by approximately ${env.reduction.toFixed(1)} kg CO2`
+            });
+        });
+    }
+
+    /**
+     * Add milestone-based displays
+     */
+    addMilestoneDisplays(displays, benefits) {
+        const hours = benefits.fastDurationHours;
+
+        if (hours >= 4 && hours < 8) {
+            displays.push({
+                text: 'You\'ve officially entered the fasting zone',
+                icon: '🚀',
+                type: 'milestone',
+                extended: 'Your body is transitioning from fed to fasted state. Fat oxidation is beginning.'
+            });
+        }
+
+        if (hours >= 8 && hours < 12) {
+            displays.push({
+                text: 'Glycogen stores are depleting, fat burning increasing',
+                icon: '⚡',
+                type: 'milestone',
+                extended: 'Your body is shifting to fat as primary fuel. Growth hormone starts rising.'
+            });
+        }
+
+        if (hours >= 12 && hours < 16) {
+            displays.push({
+                text: 'You\'ve entered the metabolic sweet spot',
+                icon: '🎯',
+                type: 'milestone',
+                extended: 'Autophagy is beginning, growth hormone is elevated, and mental clarity often peaks.'
+            });
+        }
+
+        if (hours >= 16 && hours < 24) {
+            displays.push({
+                text: 'Autophagy is in full swing',
+                icon: '🧹',
+                type: 'milestone',
+                extended: 'Cellular cleanup is at peak efficiency. Your body is recycling old components.'
+            });
+        }
+
+        if (hours >= 24) {
+            displays.push({
+                text: 'You\'ve achieved metabolic flexibility mastery',
+                icon: '🏆',
+                type: 'milestone',
+                extended: 'Your body is highly efficient at using stored fat. Inflammation is reduced and cellular repair optimized.'
+            });
+        }
+    }
+
+    /**
      * Update extended content with detailed benefits
      */
-    updateExtendedContent(benefits) {
+    updateExtendedContent(benefits, currentDisplay = null) {
         const isDashboard = this.cardId.includes('dashboard');
         const extendedTextId = isDashboard ? '#dashboardBenefitsExtendedText' : '#benefitsExtendedText';
         const extendedTextElement = this.element.querySelector(extendedTextId);
@@ -382,29 +587,136 @@ class BenefitsCard extends ContextualCard {
 
         let extendedText = '';
 
-        if (benefits.moneySaved > 0 && benefits.timeReclaimed > 0) {
-            extendedText = `💰 $${benefits.moneySaved.toFixed(2)} saved • ⏰ ${benefits.timeReclaimed_formatted} reclaimed\n\n`;
-        }
+        // Use current display's extended content if available
+        if (currentDisplay && currentDisplay.extended) {
+            extendedText = currentDisplay.extended;
+        } else {
+            // Fallback to summary content
+            const summaryParts = [];
 
-        // Add motivational context based on savings
-        if (benefits.moneySaved >= 50) {
-            extendedText += 'That\'s enough for a nice dinner out when you break your fast! ';
-        } else if (benefits.moneySaved >= 20) {
-            extendedText += 'Perfect amount for some quality groceries or a coffee treat! ';
-        } else if (benefits.moneySaved >= 10) {
-            extendedText += 'A solid start toward your savings goals! ';
-        }
+            if (benefits.moneySaved > 0) {
+                summaryParts.push(`💰 $${benefits.moneySaved.toFixed(2)} saved`);
+            }
 
-        // Add time context
-        if (benefits.timeReclaimed >= 120) { // 2+ hours
-            extendedText += 'Use this time for a workout, meal prep, or creative project.';
-        } else if (benefits.timeReclaimed >= 60) { // 1+ hour
-            extendedText += 'Perfect for a walk, meditation, or catching up on reading.';
-        } else if (benefits.timeReclaimed >= 30) { // 30+ minutes
-            extendedText += 'Great for a quick meditation or planning session.';
+            if (benefits.timeReclaimed > 0) {
+                summaryParts.push(`⏰ ${benefits.timeReclaimed_formatted} reclaimed`);
+            }
+
+            if (benefits.mealsSkipped > 0) {
+                summaryParts.push(`🎯 ${benefits.mealsSkipped} meals skipped`);
+            }
+
+            if (summaryParts.length > 0) {
+                extendedText = summaryParts.join(' • ') + '\n\n';
+            }
+
+            // Add phase-specific context
+            if (benefits.fastDurationHours >= 24) {
+                extendedText += 'You\'re in the advanced fasting zone where the deepest benefits occur. Autophagy, growth hormone, and cellular repair are all optimized.';
+            } else if (benefits.fastDurationHours >= 16) {
+                extendedText += 'You\'ve entered the powerful autophagy phase. Your cells are cleaning house and your body is becoming metabolically flexible.';
+            } else if (benefits.fastDurationHours >= 12) {
+                extendedText += 'You\'re in the metabolic sweet spot where fat burning is optimized and growth hormone is elevated.';
+            } else if (benefits.fastDurationHours >= 6) {
+                extendedText += 'Your body is transitioning to fat-burning mode and insulin sensitivity is improving.';
+            } else {
+                extendedText += 'You\'re building momentum! Each hour of fasting strengthens your metabolic flexibility and mental resilience.';
+            }
         }
 
         extendedTextElement.textContent = extendedText || 'Keep going! Every hour builds more benefits.';
+    }
+
+    /**
+     * Get money equivalence description
+     */
+    getMoneyEquivalence(amount) {
+        if (amount >= 500) return 'enough for a weekend getaway!';
+        if (amount >= 200) return 'perfect for a nice dinner out!';
+        if (amount >= 100) return 'great for quality groceries!';
+        if (amount >= 50) return 'enough for a gym membership!';
+        if (amount >= 20) return 'perfect for a coffee date!';
+        return 'building up your savings!';
+    }
+
+    /**
+     * Get time activity suggestion
+     */
+    getTimeActivity(minutes) {
+        if (minutes >= 240) return 'a full movie marathon and popcorn making';
+        if (minutes >= 120) return 'a workout and relaxation session';
+        if (minutes >= 60) return 'a walk, meditation, or catching up on reading';
+        if (minutes >= 30) return 'a quick meditation or planning session';
+        return 'a mindful breathing exercise';
+    }
+
+    /**
+     * Get extended content for hormonal benefits
+     */
+    getHormonalExtended(type) {
+        const extensions = {
+            'adrenaline': 'Your body releases noradrenaline during fasting, increasing alertness and energy without the crash of caffeine.',
+            'insulin_sensitivity': 'Fasting gives your insulin receptors a break, making them more sensitive for better blood sugar control.',
+            'growth_hormone': 'Growth hormone can increase by 300-1300% during fasting, helping preserve muscle and burn fat efficiently.'
+        };
+        return extensions[type] || 'Fasting triggers beneficial hormonal changes throughout your body.';
+    }
+
+    /**
+     * Get extended content for cellular benefits
+     */
+    getCellularExtended(type) {
+        const extensions = {
+            'autophagy': 'Autophagy is your body\'s cellular recycling program, breaking down old proteins and organelles to prevent aging.',
+            'dna_repair': 'Fasting triggers cellular stress responses that enhance DNA repair and protect against oxidative damage.',
+            'stem_cell_regeneration': 'Extended fasting can trigger stem cell-based regeneration, producing fresh cells to replace old ones.'
+        };
+        return extensions[type] || 'Your cells are undergoing important repair and regeneration processes.';
+    }
+
+    /**
+     * Get extended content for brain benefits
+     */
+    getBrainExtended(type) {
+        const extensions = {
+            'mental_clarity': 'Ketones are a more efficient brain fuel than glucose, often leading to enhanced focus and cognitive performance.',
+            'bdnf_production': 'BDNF helps grow new brain cells and protect existing ones, supporting learning, memory, and mood.'
+        };
+        return extensions[type] || 'Fasting provides significant benefits for brain health and cognitive function.';
+    }
+
+    /**
+     * Get extended content for metabolic benefits
+     */
+    getMetabolicExtended(type) {
+        const extensions = {
+            'fat_burning': 'After glycogen depletion, your body becomes highly efficient at using stored fat for energy.',
+            'inflammation_reduction': 'Fasting reduces inflammatory cytokines and oxidative stress, promoting healing throughout your body.'
+        };
+        return extensions[type] || 'Your metabolism is becoming more flexible and efficient.';
+    }
+
+    /**
+     * Get extended content for lifestyle benefits
+     */
+    getLifestyleExtended(type) {
+        const extensions = {
+            'meal_prep': 'Beyond eating time, you\'re saving hours on planning, shopping, cooking, and cleaning.',
+            'mental_bandwidth': 'The average person makes 200+ food decisions daily. Fasting frees up cognitive resources for more important things.',
+            'schedule_simplicity': 'Your schedule becomes more flexible and productive when not anchored to meal times.'
+        };
+        return extensions[type] || 'Fasting simplifies your daily routine and mental load.';
+    }
+
+    /**
+     * Get extended content for mental benefits
+     */
+    getMentalExtended(type) {
+        const extensions = {
+            'stress_resilience': 'Fasting is hormetic stress—mild stress that makes you stronger and better able to handle life\'s challenges.',
+            'food_appreciation': 'Temporary restriction increases appreciation and can lead to more mindful eating habits.'
+        };
+        return extensions[type] || 'Fasting builds mental strength and improves your relationship with food.';
     }
 
     /**
@@ -473,46 +785,9 @@ class BenefitsCard extends ContextualCard {
         return isActiveFast && this.userPreferences.benefitsEnabled;
     }
 
-    /**
-     * Start benefits rotation
-     */
-    startBenefitsRotation() {
-        if (!this.isVisible) return;
+    // Individual rotation methods removed - now managed by CardRotationManager
 
-        this.startRotation(async () => {
-            try {
-                await this.getNextDisplay();
-            } catch (error) {
-                console.error('Error in benefits rotation:', error);
-            }
-        });
-    }
-
-    /**
-     * Stop benefits rotation
-     */
-    stopBenefitsRotation() {
-        this.stopRotation();
-    }
-
-    /**
-     * Override show to start benefits rotation
-     */
-    async show(content = null) {
-        await super.show(content);
-
-        if (this.isVisible) {
-            this.startBenefitsRotation();
-        }
-    }
-
-    /**
-     * Override hide to stop benefits rotation
-     */
-    async hide() {
-        this.stopBenefitsRotation();
-        await super.hide();
-    }
+    // Show/hide overrides removed - rotation now managed by CardRotationManager
 
     /**
      * Update fast context with new fast start time and meal times
@@ -547,7 +822,6 @@ class BenefitsCard extends ContextualCard {
      * Clean up benefits card
      */
     destroy() {
-        this.stopBenefitsRotation();
         super.destroy();
 
         this.fastStartTime = null;

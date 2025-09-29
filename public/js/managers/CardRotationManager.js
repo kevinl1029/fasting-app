@@ -10,7 +10,7 @@
 class CardRotationManager {
     constructor(options = {}) {
         this.options = {
-            rotationInterval: 12000, // 12 seconds for card rotation
+            rotationInterval: window.location.hostname === 'localhost' ? 2000 : 12000, // 2s for dev, 12s for production - unified timing
             mealTimeToleranceMinutes: 30,
             enableRotation: true,
             ...options
@@ -161,11 +161,11 @@ class CardRotationManager {
      * Determine if cards should rotate (meal time logic)
      */
     shouldRotateCards() {
-        if (!this.isActiveFast || !this.mealTimeDetector) return false;
+        // Rotate whenever there's an active fast - content rotation is always useful
+        if (!this.isActiveFast) return false;
 
-        // Check if currently in meal time window
-        const isCurrentlyMealTime = this.mealTimeDetector.isCurrentlyMealTime();
-        return isCurrentlyMealTime && this.hungerCoachCard && this.benefitsCard;
+        // Must have at least benefits card
+        return !!this.benefitsCard;
     }
 
     /**
@@ -268,7 +268,7 @@ class CardRotationManager {
     }
 
     /**
-     * Rotate between available cards
+     * Rotate between available cards AND rotate content within current card
      */
     async rotateCards() {
         if (!this.shouldRotateCards()) {
@@ -277,20 +277,67 @@ class CardRotationManager {
         }
 
         try {
-            // Determine which card to show next
             const availableCards = this.getAvailableCards();
-            if (availableCards.length < 2) return;
 
-            // Rotate index
-            this.rotationIndex = (this.rotationIndex + 1) % availableCards.length;
-            const nextCard = availableCards[this.rotationIndex];
+            if (availableCards.length === 0) {
+                return;
+            } else if (availableCards.length === 1) {
+                // Only one card available (benefits during non-meal time) - rotate its content
+                const singleCard = availableCards[0];
+                if (singleCard !== this.currentCard) {
+                    await this.showCard(singleCard);
+                } else {
+                    // Same card is showing - rotate its content
+                    await this.rotateCardContent(singleCard);
+                }
+            } else {
+                // Multiple cards available (meal time: hunger + benefits)
+                // 50/50 strategy: every other rotation switches cards, others rotate content
+                const shouldSwitchCards = this.rotationIndex % 2 === 0;
 
-            if (nextCard !== this.currentCard) {
-                await this.showCard(nextCard);
+                if (shouldSwitchCards) {
+                    // Switch to next card type (50/50 between hunger and benefits)
+                    const currentCardIndex = availableCards.indexOf(this.currentCard);
+                    const nextCardIndex = (currentCardIndex + 1) % availableCards.length;
+                    const nextCard = availableCards[nextCardIndex];
+
+                    if (nextCard !== this.currentCard) {
+                        await this.showCard(nextCard);
+                    }
+                } else {
+                    // Rotate content within current card
+                    if (this.currentCard) {
+                        await this.rotateCardContent(this.currentCard);
+                    }
+                }
+
+                this.rotationIndex++;
             }
 
         } catch (error) {
             console.error('Error rotating cards:', error);
+        }
+    }
+
+    /**
+     * Rotate content within a specific card
+     */
+    async rotateCardContent(card) {
+        if (!card) return;
+
+        try {
+            if (card === this.benefitsCard && card.getNextDisplay) {
+                // Benefits card content rotation
+                await card.getNextDisplay();
+            } else if (card === this.hungerCoachCard && card.getNextTip) {
+                // Hunger coach card content rotation
+                const nextTip = await card.getNextTip();
+                if (nextTip) {
+                    await card.setContent({ tip: nextTip });
+                }
+            }
+        } catch (error) {
+            console.error('Error rotating card content:', error);
         }
     }
 

@@ -9,7 +9,7 @@ class HungerCoachCard extends ContextualCard {
         const defaultOptions = {
             autoHide: false, // Managed by card rotation system
             tapToExpand: true,
-            rotationInterval: 18000, // 18 seconds
+            // rotationInterval removed - managed by CardRotationManager
             ...options
         };
 
@@ -240,49 +240,9 @@ class HungerCoachCard extends ContextualCard {
         return isActivefast && isMealTime;
     }
 
-    /**
-     * Start tip rotation
-     */
-    startTipRotation() {
-        if (!this.hungerCoach || !this.isVisible) return;
+    // Individual rotation methods removed - now managed by CardRotationManager
 
-        this.startRotation(async () => {
-            try {
-                const nextTip = await this.getNextTip();
-                if (nextTip) {
-                    await this.updateContent({ tip: nextTip });
-                }
-            } catch (error) {
-                console.error('Error in tip rotation:', error);
-            }
-        });
-    }
-
-    /**
-     * Stop tip rotation
-     */
-    stopTipRotation() {
-        this.stopRotation();
-    }
-
-    /**
-     * Override show to start tip rotation
-     */
-    async show(content = null) {
-        await super.show(content);
-
-        if (this.isVisible) {
-            this.startTipRotation();
-        }
-    }
-
-    /**
-     * Override hide to stop tip rotation
-     */
-    async hide() {
-        this.stopTipRotation();
-        await super.hide();
-    }
+    // Show/hide overrides removed - rotation now managed by CardRotationManager
 
     /**
      * Get hunger coach notification message
@@ -359,7 +319,6 @@ class HungerCoachCard extends ContextualCard {
      * Clean up hunger coach card
      */
     destroy() {
-        this.stopTipRotation();
         super.destroy();
 
         this.hungerCoach = null;
