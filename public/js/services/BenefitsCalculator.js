@@ -252,9 +252,12 @@ class BenefitsCalculator {
      */
     calculateCumulativeBenefits(fasts, timeframe = 'all') {
         if (!fasts || fasts.length === 0) {
+            const formattedZero = this.formatTimeReclaimed(0);
             return {
                 totalMoneySaved: 0,
                 totalTimeReclaimed: 0,
+                totalTimeReclaimed_formatted: formattedZero,
+                totalTimeReclaimedFormatted: formattedZero,
                 totalMealsSkipped: 0,
                 totalFasts: 0,
                 averageFastDuration: 0,
@@ -323,10 +326,13 @@ class BenefitsCalculator {
                 }
             });
 
+            const formattedTimeReclaimed = this.formatTimeReclaimed(totalTimeReclaimed);
+
             return {
                 totalMoneySaved: Math.round(totalMoneySaved * 100) / 100,
                 totalTimeReclaimed,
-                totalTimeReclaimed_formatted: this.formatTimeReclaimed(totalTimeReclaimed),
+                totalTimeReclaimed_formatted: formattedTimeReclaimed,
+                totalTimeReclaimedFormatted: formattedTimeReclaimed,
                 totalMealsSkipped,
                 totalFasts: filteredFasts.length,
                 averageFastDuration: filteredFasts.length > 0 ?
@@ -337,9 +343,12 @@ class BenefitsCalculator {
 
         } catch (error) {
             console.error('Error calculating cumulative benefits:', error);
+            const formattedZero = this.formatTimeReclaimed(0);
             return {
                 totalMoneySaved: 0,
                 totalTimeReclaimed: 0,
+                totalTimeReclaimed_formatted: formattedZero,
+                totalTimeReclaimedFormatted: formattedZero,
                 totalMealsSkipped: 0,
                 totalFasts: 0,
                 averageFastDuration: 0,
