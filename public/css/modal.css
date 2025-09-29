@@ -14,14 +14,23 @@
     background: rgba(0, 0, 0, 0.6);
     backdrop-filter: blur(4px);
     z-index: 2000;
-    align-items: center;
     justify-content: center;
     padding: 20px;
+    padding-bottom: 40px;
     box-sizing: border-box;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
 }
 
 .modal.active {
     display: flex;
+    align-items: flex-start;
+}
+
+@media (min-width: 768px) {
+    .modal.active {
+        align-items: center;
+    }
 }
 
 /* Modal Content Container */

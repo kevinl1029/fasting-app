@@ -446,13 +446,23 @@
             background: rgba(0, 0, 0, 0.5);
             z-index: 2000;
             padding: 20px;
+            padding-bottom: 40px;
             box-sizing: border-box;
+            justify-content: center;
+            overflow-y: auto;
+            -webkit-overflow-scrolling: touch;
         }
         
         .modal.active {
             display: flex;
-            align-items: center;
+            align-items: flex-start;
             justify-content: center;
+        }
+
+        @media (min-width: 768px) {
+            .modal.active {
+                align-items: center;
+            }
         }
         
         .modal-content {
@@ -1537,16 +1547,26 @@
                 const response = await fetch(`/api/schedule/blocks/${blockId}?sessionId=${sessionId}`, {
                     method: 'DELETE'
                 });
-                
-                const result = await response.json();
-                
-                if (!response.ok) {
-                    throw new Error(result.error || 'Failed to delete block');
+
+                const responseText = await response.text();
+                let result = null;
+
+                if (responseText) {
+                    try {
+                        result = JSON.parse(responseText);
+                    } catch (parseError) {
+                        console.warn('Received non-JSON response when deleting block:', parseError);
+                    }
                 }
-                
+
+                if (!response.ok) {
+                    const errorMessage = result?.error || 'Failed to delete block';
+                    throw new Error(errorMessage);
+                }
+
                 closeModal('edit-block-modal');
                 loadSchedule(); // Refresh the schedule
-                
+
             } catch (error) {
                 console.error('Error deleting block:', error);
                 showMessage('edit', 'error', error.message);
