@@ -394,7 +394,7 @@
         .benefits-hero {
             display: flex;
             gap: 16px;
-            padding: 20px 30px;
+            padding: 20px 20px;
             border-bottom: 1px solid #f0f0f0;
         }
 
@@ -406,6 +406,7 @@
             padding: 16px;
             background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
             border-radius: 12px;
+            min-width: 0;
         }
 
         .benefits-stat-icon {
@@ -423,13 +424,17 @@
         .benefits-stat-content {
             display: flex;
             flex-direction: column;
+            min-width: 0;
         }
 
         .benefits-stat-value {
-            font-size: 1.4rem;
+            font-size: clamp(1rem, 2vw + 0.8rem, 1.4rem);
             font-weight: 700;
             color: #1a202c;
             line-height: 1.2;
+            white-space: nowrap;
+            max-width: 100%;
+            display: block;
         }
 
         .benefits-stat-label {
@@ -440,7 +445,7 @@
 
         .timeframe-toggle {
             display: flex;
-            padding: 16px 30px;
+            padding: 16px 20px;
             gap: 8px;
             border-bottom: 1px solid #f0f0f0;
         }
@@ -471,7 +476,7 @@
         }
 
         .benefits-section {
-            padding: 20px 30px;
+            padding: 20px 20px;
             border-bottom: 1px solid #f8fafc;
         }
 
@@ -554,7 +559,7 @@
         }
 
         .benefits-actions {
-            padding: 20px 30px;
+            padding: 20px 20px;
             text-align: center;
         }
 
@@ -1094,12 +1099,75 @@
                     }
                 });
             });
+
+            window.addEventListener('resize', () => {
+                clearTimeout(benefitsResizeTimeout);
+                benefitsResizeTimeout = setTimeout(fitBenefitsHeroText, 150);
+            });
         });
 
         // Benefits Tab Functionality
         let benefitsDataService = null;
         let currentTimeframe = 'all';
         const BENEFITS_ONBOARDING_KEY = 'fastingForecast_benefitsOnboardingAcknowledged';
+        const fullCurrencyFormatter = new Intl.NumberFormat('en-US', {
+            style: 'currency',
+            currency: 'USD',
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2
+        });
+        const compactCurrencyFormatter = new Intl.NumberFormat('en-US', {
+            style: 'currency',
+            currency: 'USD',
+            notation: 'compact',
+            compactDisplay: 'short',
+            maximumFractionDigits: 1,
+            minimumFractionDigits: 0
+        });
+        const BENEFITS_HERO_FONT_MAX_REM = 1.4;
+        const BENEFITS_HERO_FONT_MIN_REM = 0.85;
+        const BENEFITS_HERO_FONT_STEP_REM = 0.05;
+        let benefitsResizeTimeout = null;
+
+        function formatCurrency(value) {
+            const numericValue = Number(value) || 0;
+
+            if (Math.abs(numericValue) >= 1000) {
+                return compactCurrencyFormatter.format(numericValue);
+            }
+
+            return fullCurrencyFormatter.format(numericValue);
+        }
+
+        function adjustHeroStatValue(element) {
+            if (!element) {
+                return;
+            }
+
+            element.style.removeProperty('font-size');
+
+            const computedFontPx = parseFloat(window.getComputedStyle(element).fontSize) || (BENEFITS_HERO_FONT_MAX_REM * 16);
+            let currentFontRem = Math.min(computedFontPx / 16, BENEFITS_HERO_FONT_MAX_REM);
+            element.style.fontSize = `${currentFontRem}rem`;
+
+            const availableWidth = element.clientWidth || element.parentElement?.clientWidth || 0;
+            if (!availableWidth) {
+                return;
+            }
+
+            let iterations = 0;
+            while (element.scrollWidth > availableWidth && currentFontRem > BENEFITS_HERO_FONT_MIN_REM && iterations < 20) {
+                currentFontRem = Math.max(currentFontRem - BENEFITS_HERO_FONT_STEP_REM, BENEFITS_HERO_FONT_MIN_REM);
+                element.style.fontSize = `${currentFontRem}rem`;
+                iterations++;
+            }
+        }
+
+        function fitBenefitsHeroText() {
+            window.requestAnimationFrame(() => {
+                document.querySelectorAll('.benefits-stat-value').forEach(adjustHeroStatValue);
+            });
+        }
 
         function hasAcknowledgedBenefitsOnboarding() {
             try {
@@ -1276,14 +1344,14 @@
 
         function displayBenefitsData(benefits) {
             // Update hero stats
-            document.getElementById('total-money-saved').textContent = `$${benefits.totalMoneySaved.toFixed(2)}`;
+            document.getElementById('total-money-saved').textContent = formatCurrency(benefits.totalMoneySaved);
             document.getElementById('total-time-reclaimed').textContent = benefits.totalTimeReclaimedFormatted || '0h';
 
             // Update quick stats
             document.getElementById('meals-skipped').textContent = benefits.totalMealsSkipped || 0;
             const avgSavings = benefits.totalFasts > 0 ?
-                (benefits.totalMoneySaved / benefits.totalFasts).toFixed(0) : 0;
-            document.getElementById('avg-savings-per-fast').textContent = `$${avgSavings}`;
+                (benefits.totalMoneySaved / benefits.totalFasts) : 0;
+            document.getElementById('avg-savings-per-fast').textContent = formatCurrency(avgSavings);
 
             // Update milestones
             displayMilestones(benefits);
@@ -1293,6 +1361,8 @@
 
             // Remove loading state
             hideBenefitsLoading();
+
+            fitBenefitsHeroText();
         }
 
         function displayMilestones(benefits) {
@@ -1375,10 +1445,10 @@
             const benefitsTab = document.getElementById('benefits-tab');
 
             // Add empty state to hero section
-            document.getElementById('total-money-saved').textContent = '$0.00';
+            document.getElementById('total-money-saved').textContent = formatCurrency(0);
             document.getElementById('total-time-reclaimed').textContent = '0h';
             document.getElementById('meals-skipped').textContent = '0';
-            document.getElementById('avg-savings-per-fast').textContent = '$0';
+            document.getElementById('avg-savings-per-fast').textContent = formatCurrency(0);
 
             // Show empty state message in milestones
             const milestonesGrid = document.getElementById('milestones-grid');
@@ -1391,6 +1461,8 @@
 
             // Clear equivalences
             displayEquivalences([]);
+
+            fitBenefitsHeroText();
         }
 
         function showBenefitsError(message) {
