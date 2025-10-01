@@ -205,27 +205,33 @@
         
         .log-stats {
             display: flex;
-            justify-content: space-between;
-            margin-bottom: 16px;
+            justify-content: center;
+            align-items: center;
+            gap: 32px;
+            margin-bottom: 12px;
         }
         
         .log-stat {
-            text-align: center;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 4px;
         }
-        
+
         .log-stat-value {
-            font-size: 1.5rem;
+            font-size: 1.4rem;
             font-weight: 700;
             color: #fb923c;
-            display: block;
         }
-        
+
         .log-stat-label {
-            font-size: 0.8rem;
+            font-size: 0.7rem;
             color: #666;
             font-weight: 500;
             text-transform: uppercase;
             letter-spacing: 0.5px;
+            text-align: center;
+            line-height: 1.2;
         }
         
         .add-fast-btn {
@@ -293,6 +299,8 @@
 
         .log-action {
             position: relative;
+            display: flex;
+            justify-content: center;
         }
 
         .log-action-btn {
@@ -300,7 +308,6 @@
             align-items: center;
             justify-content: center;
             gap: 8px;
-            width: 100%;
         }
 
         .log-action-btn svg {
@@ -315,7 +322,8 @@
         .log-action-menu {
             position: absolute;
             top: calc(100% + 6px);
-            right: 0;
+            left: 50%;
+            transform: translateX(-50%);
             background: white;
             border-radius: 12px;
             border: 1px solid rgba(148, 163, 184, 0.25);
@@ -575,21 +583,6 @@
             margin-top: 8px;
         }
         
-        
-        .fast-milestones {
-            display: flex;
-            gap: 4px;
-        }
-        
-        .milestone-badge {
-            background: rgba(40, 167, 69, 0.1);
-            color: #28a745;
-            padding: 2px 6px;
-            border-radius: 4px;
-            font-size: 0.7rem;
-            font-weight: 600;
-        }
-
         .body-log-day {
             margin: 16px 30px;
             background: white;
@@ -1061,32 +1054,435 @@
             color: #475569;
         }
 
+        /* ============= UNIFIED CARD STYLES ============= */
+
+        .unified-card {
+            margin: 16px 30px;
+            background: white;
+            border: 1px solid #e2e8f0;
+            border-radius: 16px;
+            box-shadow: 0 12px 30px rgba(15, 23, 42, 0.08);
+            overflow: visible;
+            transition: all 0.2s ease;
+        }
+
+        .unified-card.clickable {
+            cursor: pointer;
+        }
+
+        .unified-card.clickable:hover {
+            box-shadow: 0 16px 40px rgba(15, 23, 42, 0.12);
+            transform: translateY(-1px);
+        }
+
+        .unified-card-header {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 12px 20px;
+            position: relative;
+            width: 100%;
+        }
+
+        /* Remove gap when no icon */
+        .unified-card-header:not(:has(.card-icon)) {
+            gap: 0;
+        }
+
+        .unified-card.fast .unified-card-header {
+            background: linear-gradient(135deg, rgba(251, 146, 60, 0.08), rgba(236, 72, 153, 0.05));
+        }
+
+        .unified-card.body-log-container .unified-card-header {
+            background: linear-gradient(135deg, rgba(56, 189, 248, 0.08), rgba(14, 165, 233, 0.05));
+            cursor: pointer;
+        }
+
+        .unified-card.body-log-container .unified-card-header:hover {
+            background: linear-gradient(135deg, rgba(56, 189, 248, 0.12), rgba(14, 165, 233, 0.08));
+        }
+
+        .unified-card-header-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            min-width: 0;
+        }
+
+        .unified-card.body-log-container .unified-card-header-content {
+            flex-direction: row;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .unified-card-body {
+            padding: 12px 20px 20px 20px;
+        }
+
+        .unified-card.collapsed .unified-card-body {
+            display: none;
+        }
+
+        .unified-card.body-log-container .unified-card-body {
+            padding-top: 0;
+        }
+
+        .card-icon {
+            font-size: 1.3rem;
+            line-height: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+
+        .card-icon.accent-orange {
+            color: #fb923c;
+            filter: drop-shadow(0 2px 4px rgba(251, 146, 60, 0.3));
+        }
+
+        .card-icon.accent-blue {
+            color: #38bdf8;
+            filter: drop-shadow(0 2px 4px rgba(56, 189, 248, 0.3));
+        }
+
+        .card-chevron {
+            font-size: 0.9rem;
+            color: #64748b;
+            transition: transform 0.2s ease;
+            flex-shrink: 0;
+        }
+
+        /* Kebab Menu Styles */
+        .card-kebab {
+            position: relative;
+            margin-left: auto;
+        }
+
+        .card-kebab-button {
+            background: none;
+            border: none;
+            padding: 6px 10px;
+            cursor: pointer;
+            color: #64748b;
+            font-size: 1.2rem;
+            line-height: 1;
+            border-radius: 6px;
+            transition: all 0.2s ease;
+        }
+
+        .card-kebab-button:hover {
+            background: rgba(100, 116, 139, 0.1);
+            color: #475569;
+        }
+
+        .card-kebab-icon {
+            display: block;
+            font-weight: 700;
+            letter-spacing: 2px;
+        }
+
+        .card-kebab-menu {
+            display: none;
+            position: absolute;
+            top: 100%;
+            right: 0;
+            margin-top: 4px;
+            background: white;
+            border: 1px solid #e2e8f0;
+            border-radius: 12px;
+            box-shadow: 0 10px 30px rgba(15, 23, 42, 0.15);
+            min-width: 160px;
+            z-index: 1000;
+            overflow: hidden;
+        }
+
+        .card-kebab.active .card-kebab-menu {
+            display: block;
+        }
+
+        .card-kebab-menu-item {
+            width: 100%;
+            padding: 10px 16px;
+            border: none;
+            background: none;
+            text-align: left;
+            font-size: 0.9rem;
+            color: #1e293b;
+            cursor: pointer;
+            transition: background 0.15s ease;
+            border-bottom: 1px solid #f1f5f9;
+        }
+
+        .card-kebab-menu-item:last-child {
+            border-bottom: none;
+        }
+
+        .card-kebab-menu-item:hover {
+            background: #f8fafc;
+        }
+
+        .card-kebab-menu-item-danger {
+            color: #dc2626;
+        }
+
+        .card-kebab-menu-item-danger:hover {
+            background: #fef2f2;
+        }
+
+        /* Card type-specific styles */
+        .card-metric {
+            font-size: 1.3rem;
+            font-weight: 700;
+            color: #0f172a;
+        }
+
+        .card-date {
+            font-size: 0.9rem;
+            font-weight: 700;
+            color: #1f2937;
+            white-space: nowrap;
+        }
+
+        .card-summary {
+            margin-left: auto;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 0.9rem;
+            color: #475569;
+        }
+
+        .card-summary .summary-weight {
+            font-weight: 700;
+            color: #0f172a;
+        }
+
+        .card-summary .summary-bodyfat {
+            color: #334155;
+            font-weight: 600;
+        }
+
+        .fast-duration-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .card-milestones {
+            display: flex;
+            gap: 6px;
+            margin-left: auto;
+        }
+
+        /* Fast card milestone badges - make specific to override other rules */
+        .unified-card.fast .milestone-badge,
+        .card-milestones .milestone-badge {
+            background: rgba(251, 146, 60, 0.15);
+            color: #ea580c;
+            padding: 3px 9px;
+            border-radius: 6px;
+            font-size: 0.975rem;
+            font-weight: 500;
+            letter-spacing: 0.01em;
+            line-height: 1;
+            box-shadow: none;
+            text-align: center;
+        }
+
+        .card-entries {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            padding-top: 16px;
+        }
+
+        /* Fast card specific styles */
+        .unified-card.fast .fast-date-range {
+            font-size: 0.9rem;
+            color: #1e293b;
+            font-weight: 500;
+            line-height: 1.4;
+        }
+
+        .unified-card.fast .fast-status-inline {
+            color: #64748b;
+            font-size: 0.85rem;
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+            font-weight: 500;
+            margin-left: 4px;
+        }
+
+        .unified-card.fast .fast-notes {
+            margin-top: 12px;
+            font-size: 0.9rem;
+            color: #475569;
+            line-height: 1.5;
+            padding: 10px;
+            background: #f8fafc;
+            border-radius: 8px;
+            border-left: 3px solid #fb923c;
+        }
+
+        /* Body log entry specific styles */
+        .body-log-entry {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            padding: 12px 16px;
+            border-radius: 12px;
+            background: #f8fafc;
+            border: 1px solid rgba(226, 232, 240, 0.9);
+        }
+
+        .body-log-entry.canonical {
+            border-color: rgba(59, 130, 246, 0.45);
+            background: linear-gradient(135deg, rgba(59, 130, 246, 0.12), rgba(14, 116, 144, 0.08));
+        }
+
+        .body-log-entry-header {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            flex-wrap: wrap;
+            position: relative;
+        }
+
+        .body-log-entry-header .card-kebab {
+            margin-left: auto;
+        }
+
+        .body-log-canonical-badge {
+            display: flex;
+            align-items: center;
+        }
+
+        .body-log-canonical-pill {
+            display: inline-block;
+            padding: 4px 10px;
+            border-radius: 999px;
+            font-size: 0.7rem;
+            font-weight: 700;
+            letter-spacing: 0.5px;
+            text-transform: uppercase;
+            background: rgba(59, 130, 246, 0.15);
+            color: #1e40af;
+        }
+
+        .body-log-canonical-pill.manual {
+            background: rgba(139, 92, 246, 0.15);
+            color: #6b21a8;
+        }
+
+        .body-log-meta {
+            font-size: 0.8rem;
+            color: #64748b;
+        }
+
+        .body-log-notes {
+            margin-top: 4px;
+            font-size: 0.9rem;
+            color: #475569;
+            line-height: 1.5;
+            padding: 8px;
+            background: white;
+            border-radius: 6px;
+            border-left: 3px solid #38bdf8;
+        }
+
+        /* Make unified card header a button for body log containers */
+        .unified-card.body-log-container button.unified-card-header {
+            width: 100%;
+            border: none;
+            text-align: left;
+            font: inherit;
+        }
+
+        /* Timeline card specific styles */
+        .log-timeline-item .unified-card {
+            margin: 0;
+            flex: 1;
+        }
+
+        .unified-card.timeline-fast .unified-card-header,
+        .unified-card.timeline-body .unified-card-header {
+            padding: 10px 14px;
+        }
+
+        .unified-card.timeline-fast .log-timeline-title,
+        .unified-card.timeline-body .log-timeline-title {
+            font-size: 0.85rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: #64748b;
+        }
+
+        .unified-card.timeline-fast .log-timeline-date,
+        .unified-card.timeline-body .log-timeline-date {
+            font-size: 0.8rem;
+            color: #94a3b8;
+            margin-left: auto;
+        }
+
+        .unified-card.timeline-fast .unified-card-header-content,
+        .unified-card.timeline-body .unified-card-header-content {
+            flex-direction: row;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .unified-card.timeline-fast .unified-card-body,
+        .unified-card.timeline-body .unified-card-body {
+            padding: 0 14px 10px 14px;
+        }
+
+        .timeline-body-metrics {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .log-timeline-metric {
+            font-size: 1.2rem;
+            font-weight: 700;
+            color: #0f172a;
+        }
+
+        .log-timeline-submetric {
+            font-size: 0.95rem;
+            font-weight: 600;
+            color: #1e293b;
+        }
+
+        .log-timeline-notes {
+            margin-top: 8px;
+            font-size: 0.85rem;
+            color: #475569;
+            line-height: 1.4;
+        }
+
+        .log-timeline-date-only {
+            font-size: 0.9rem;
+            font-weight: 600;
+            color: #1e293b;
+        }
+
+        /* ============= END UNIFIED CARD STYLES ============= */
+
         .log-timeline {
             display: flex;
             flex-direction: column;
-            gap: 16px;
-            padding: 20px 20px 30px;
+            gap: 12px;
+            padding: 16px 16px 24px;
         }
 
         .log-timeline-item {
             display: flex;
-            gap: 14px;
-        }
-
-        .log-timeline-marker {
-            width: 12px;
-            height: 12px;
-            border-radius: 50%;
-            margin-top: 10px;
-            box-shadow: 0 0 0 4px rgba(148, 163, 184, 0.25);
-        }
-
-        .log-timeline-marker.fast {
-            background: linear-gradient(135deg, #fb923c, #ec4899);
-        }
-
-        .log-timeline-marker.body {
-            background: linear-gradient(135deg, #38bdf8, #0ea5e9);
         }
 
         .log-timeline-content {
@@ -1454,11 +1850,6 @@
         @media (max-width: 768px) {
             .container {
                 padding: 10px;
-            }
-            
-            .log-stats {
-                flex-direction: column;
-                gap: 16px;
             }
             
             .fast-header {
@@ -2852,7 +3243,7 @@
             return fasts.map(fast => {
                 const startDate = new Date(fast.start_time);
                 const endDate = fast.end_time ? new Date(fast.end_time) : null;
-                
+
                 // Calculate duration if not stored in database
                 let duration = fast.duration_hours;
                 if (!duration && fast.start_time) {
@@ -2866,16 +3257,18 @@
                     }
                 }
                 duration = duration || 0;
-                
-                const formatDate = (date) => {
-                    return date.toLocaleDateString('en-US', { 
-                        month: 'short', 
+
+                // Compact numeric date format with time
+                const formatDateTime = (date) => {
+                    return date.toLocaleString(undefined, {
+                        month: 'numeric',
                         day: 'numeric',
-                        hour: '2-digit',
+                        year: 'numeric',
+                        hour: 'numeric',
                         minute: '2-digit'
                     });
                 };
-                
+
                 const formatDuration = (hours) => {
                     if (hours < 24) {
                         return `${hours.toFixed(1)}h`;
@@ -2885,36 +3278,54 @@
                         return `${days}d ${remainingHours}h`;
                     }
                 };
-                
-                const dateRange = endDate 
-                    ? `${formatDate(startDate)} → ${formatDate(endDate)}`
-                    : `Started ${formatDate(startDate)}`;
-                
+
+                // Build date range with inline status
+                const statusLabel = fast.is_manual ? 'Manual' : 'Tracked';
+                const dateRange = endDate
+                    ? `${formatDateTime(startDate)} → ${formatDateTime(endDate)}`
+                    : `Started ${formatDateTime(startDate)}`;
+
                 const milestones = [];
                 if (duration >= 16) milestones.push('16h');
                 if (duration >= 24) milestones.push('24h');
                 if (duration >= 48) milestones.push('48h');
                 if (duration >= 72) milestones.push('72h');
-                
-                return `
-                    <div class="fast-item" onclick="editFast(${fast.id})">
-                        <div class="fast-header">
-                            <div class="fast-dates">
-                                <div class="fast-date-range">${dateRange}</div>
-                                <div class="fast-duration">${formatDuration(duration)}</div>
-                            </div>
-                            <div class="fast-indicator">
-                                <div class="indicator-dot ${fast.is_manual ? 'manual' : 'live'}"></div>
-                                ${fast.is_manual ? 'Manual' : 'Tracked'}
-                            </div>
-                        </div>
-                        <div class="fast-details">
-                            <div class="fast-milestones">
-                                ${milestones.map(m => `<span class="milestone-badge">${m}</span>`).join('')}
-                            </div>
-                        </div>
+
+                // Don't show icon in Fasts filter view (only in All filter)
+                const icon = '';
+
+                const header = `
+                    <div class="fast-date-range">
+                        ${dateRange}
+                        <span class="fast-status-inline">• ${statusLabel}</span>
                     </div>
                 `;
+
+                const body = `
+                    <div class="fast-duration-row">
+                        <div class="card-metric">${formatDuration(duration)}</div>
+                        ${milestones.length > 0 ? `
+                            <div class="card-milestones">
+                                ${milestones.map(m => `<span class="milestone-badge">${m}</span>`).join('')}
+                            </div>
+                        ` : ''}
+                    </div>
+                    ${fast.notes ? `<div class="fast-notes">${escapeHtml(fast.notes)}</div>` : ''}
+                `;
+
+                const actions = renderKebabMenu([
+                    { label: 'Edit', action: 'edit-fast', dataAttrs: `data-fast-id="${fast.id}"` },
+                    { label: 'Delete', action: 'delete-fast', variant: 'danger', dataAttrs: `data-fast-id="${fast.id}"` }
+                ]);
+
+                return renderUnifiedCard({
+                    type: 'fast',
+                    icon,
+                    header,
+                    body,
+                    actions,
+                    dataAttrs: `data-fast-id="${fast.id}"`
+                });
             }).join('');
         }
 
@@ -3052,22 +3463,47 @@
                 : null;
             const canonicalClass = canonicalEntry ? (canonicalEntry.canonicalReason || canonicalEntry.entryTag || '').replace(/\s+/g, '_') : '';
 
-            return `
-                <section class="body-log-day ${expanded ? '' : 'collapsed'}" data-body-day="${dateKey}">
-                    <button type="button" class="body-log-day-header" data-log-action="toggle-body-day" data-body-day="${dateKey}">
-                        <div class="body-log-day-header-date">${formatBodyEntryDateDisplay(dateKey)}</div>
-                        <div class="body-log-day-summary">
-                            <span class="summary-weight">${summaryWeight}</span>
-                            <span class="summary-bodyfat">${summaryBodyFat}</span>
-                            ${canonicalTag ? `<span class="body-log-tag ${canonicalClass}">${canonicalTag}</span>` : ''}
-                        </div>
-                        <span class="body-log-day-toggle-icon" aria-hidden="true">${expanded ? '▾' : '▸'}</span>
-                    </button>
-                    <div class="body-log-entries">
-                        ${sortedEntries.map((entry) => renderBodyEntry(entry)).join('')}
-                    </div>
-                </section>
+            // Don't show icon in Body filter view (only in All filter)
+            const icon = '';
+
+            const header = `
+                <div class="card-date">${formatBodyEntryDateDisplay(dateKey)}</div>
+                <div class="card-summary">
+                    <span class="summary-weight">${summaryWeight}</span>
+                    <span class="summary-bodyfat">${summaryBodyFat}</span>
+                    ${canonicalTag ? `<span class="body-log-tag ${canonicalClass}">${canonicalTag}</span>` : ''}
+                </div>
+                ${renderChevron(expanded)}
             `;
+
+            const body = `
+                <div class="card-entries">
+                    ${sortedEntries.map((entry) => renderBodyEntry(entry)).join('')}
+                </div>
+            `;
+
+            // Wrap in button for toggle behavior
+            const cardHtml = renderUnifiedCard({
+                type: 'body-log-container',
+                icon,
+                header,
+                body,
+                expandable: true,
+                expanded,
+                dataAttrs: `data-body-day="${dateKey}"`
+            });
+
+            // Replace the header div with a button for accessibility
+            return cardHtml.replace(
+                '<div class="unified-card-header">',
+                '<button type="button" class="unified-card-header" data-log-action="toggle-body-day" data-body-day="' + dateKey + '">'
+            ).replace(
+                '</div>\n                    <div class="unified-card-body">',
+                '</button>\n                    <div class="unified-card-body">'
+            ).replace(
+                '</div>\n                </div>',
+                '</div>\n                </button>'
+            );
         }
 
         function renderBodyEntry(entry) {
@@ -3084,19 +3520,15 @@
                 ? formatBodyEntryTag(entry.canonicalReason || entry.entryTag)
                 : null;
 
-            const actions = [];
-
-            if (entry.isCanonical) {
-                actions.push(`<span class="body-log-canonical-pill ${entry.canonicalStatus === 'manual' ? 'manual' : ''}">${canonicalLabel}${canonicalReasonLabel ? ` • ${canonicalReasonLabel}` : ''}</span>`);
-                if (entry.canonicalStatus === 'manual') {
-                    actions.push(`<button type="button" class="body-log-action-btn" data-log-action="clear-body-canonical" data-entry-id="${entry.id}">Clear Override</button>`);
-                }
-            } else {
-                actions.push(`<button type="button" class="body-log-action-btn" data-log-action="set-body-canonical" data-entry-id="${entry.id}">Set Canonical</button>`);
+            // Build kebab menu actions
+            const kebabActions = [];
+            if (entry.isCanonical && entry.canonicalStatus === 'manual') {
+                kebabActions.push({ label: 'Clear Override', action: 'clear-body-canonical' });
+            } else if (!entry.isCanonical) {
+                kebabActions.push({ label: 'Set Canonical', action: 'set-body-canonical' });
             }
-
-            actions.push(`<button type="button" class="body-log-action-btn" data-log-action="edit-body-entry" data-entry-id="${entry.id}">Edit</button>`);
-            actions.push(`<button type="button" class="body-log-action-btn danger" data-log-action="delete-body-entry" data-entry-id="${entry.id}">Delete</button>`);
+            kebabActions.push({ label: 'Edit', action: 'edit-body-entry' });
+            kebabActions.push({ label: 'Delete', action: 'delete-body-entry', variant: 'danger' });
 
             const metaParts = [timeDisplay];
             if (entry.source && entry.source !== 'manual') {
@@ -3111,11 +3543,16 @@
                     <div class="body-log-entry-header">
                         <span class="body-log-metric">${formatWeightValue(entry.weight)}</span>
                         <span class="body-log-bodyfat">${entry.bodyFat !== null && entry.bodyFat !== undefined ? formatBodyFatValue(entry.bodyFat) : '—'}</span>
-                        <span class="body-log-tag ${tagClass}">${tagLabel}</span>
+                        ${!entry.isCanonical ? `<span class="body-log-tag ${tagClass}">${tagLabel}</span>` : ''}
+                        ${renderKebabMenu(kebabActions, `data-entry-id="${entry.id}"`)}
                     </div>
+                    ${entry.isCanonical ? `
+                        <div class="body-log-canonical-badge">
+                            <span class="body-log-canonical-pill ${entry.canonicalStatus === 'manual' ? 'manual' : ''}">${canonicalLabel}${canonicalReasonLabel ? ` • ${canonicalReasonLabel}` : ''}</span>
+                        </div>
+                    ` : ''}
                     <div class="body-log-meta">${metaParts.join(' • ')}</div>
                     ${entry.notes ? `<div class="body-log-notes">${escapeHtml(entry.notes)}</div>` : ''}
-                    <div class="body-log-actions">${actions.join('')}</div>
                 </article>
             `;
         }
@@ -3138,9 +3575,10 @@
             if (Number.isNaN(date.getTime())) {
                 return dateKey;
             }
+            // Compact numeric format: "10/1/2025" (US) or "1/10/2025" (EU), etc.
+            // Automatically adapts to user's locale
             return date.toLocaleDateString(undefined, {
-                weekday: 'short',
-                month: 'short',
+                month: 'numeric',
                 day: 'numeric',
                 year: 'numeric'
             });
@@ -3226,6 +3664,80 @@
                 .replace(/'/g, '&#39;');
         }
 
+        // ============= UNIFIED CARD HELPERS =============
+
+        function renderCardIcon(icon, accentClass) {
+            return `<span class="card-icon ${accentClass}">${icon}</span>`;
+        }
+
+        function renderChevron(expanded) {
+            return `<span class="card-chevron" aria-hidden="true">${expanded ? '▾' : '▸'}</span>`;
+        }
+
+        function renderKebabMenu(actions, baseDataAttrs = '') {
+            if (!actions || actions.length === 0) {
+                return '';
+            }
+
+            const menuItems = actions.map(action => {
+                const variant = action.variant ? `card-kebab-menu-item-${action.variant}` : '';
+                const dataAttrs = action.dataAttrs || baseDataAttrs;
+                return `
+                    <button
+                        type="button"
+                        class="card-kebab-menu-item ${variant}"
+                        data-card-action="${action.action}"
+                        ${dataAttrs}>
+                        ${action.label}
+                    </button>
+                `;
+            }).join('');
+
+            return `
+                <div class="card-kebab">
+                    <button type="button" class="card-kebab-button" aria-label="More actions">
+                        <span class="card-kebab-icon">⋮</span>
+                    </button>
+                    <div class="card-kebab-menu">
+                        ${menuItems}
+                    </div>
+                </div>
+            `;
+        }
+
+        function renderUnifiedCard(config) {
+            const {
+                type = '',
+                icon = '',
+                header = '',
+                body = '',
+                actions = '',
+                expandable = false,
+                expanded = false,
+                dataAttrs = '',
+                clickable = false
+            } = config;
+
+            const classes = ['unified-card', type];
+            if (expandable && !expanded) classes.push('collapsed');
+            if (clickable) classes.push('clickable');
+
+            return `
+                <div class="${classes.join(' ')}" ${dataAttrs}>
+                    <div class="unified-card-header">
+                        ${icon}
+                        <div class="unified-card-header-content">
+                            ${header}
+                        </div>
+                        ${actions}
+                    </div>
+                    ${body ? `<div class="unified-card-body">${body}</div>` : ''}
+                </div>
+            `;
+        }
+
+        // ============= END UNIFIED CARD HELPERS =============
+
         function renderCombinedLogEntries() {
             const combinedItems = [];
 
@@ -3266,31 +3778,55 @@
         function renderFastTimelineItem(fast) {
             const startDate = fast.start_time ? new Date(fast.start_time) : null;
             const endDate = fast.end_time ? new Date(fast.end_time) : null;
-            const durationHours = fast.duration_hours
+            const isActive = !endDate && startDate;
+
+            let durationHours = fast.duration_hours
                 ? Number(fast.duration_hours)
                 : startDate && endDate
                     ? (endDate - startDate) / (1000 * 60 * 60)
                     : null;
-            const durationLabel = durationHours ? formatFastDuration(durationHours) : '—';
+
+            // For active fasts, calculate current duration
+            if (isActive && startDate) {
+                const now = new Date();
+                durationHours = (now - startDate) / (1000 * 60 * 60);
+            }
+
+            const durationLabel = isActive
+                ? `Active (${durationHours ? formatFastDuration(durationHours) : '0h'})`
+                : durationHours ? formatFastDuration(durationHours) : '—';
             const anchorDate = endDate || startDate;
             const timestampLabel = anchorDate ? formatTimelineDate(anchorDate) : '';
 
+            const icon = renderCardIcon('⏱️', 'accent-orange');
+
+            // Just show the date, no title
+            const header = `
+                <span class="log-timeline-date-only">${timestampLabel}</span>
+            `;
+
+            const body = `
+                <div class="log-timeline-metric">${durationLabel}</div>
+                ${fast.notes ? `<div class="log-timeline-notes">${escapeHtml(fast.notes)}</div>` : ''}
+            `;
+
+            const actions = renderKebabMenu([
+                { label: 'Edit', action: 'edit-fast', dataAttrs: `data-fast-id="${fast.id}"` },
+                { label: 'Delete', action: 'delete-fast', variant: 'danger', dataAttrs: `data-fast-id="${fast.id}"` }
+            ]);
+
+            const cardContent = renderUnifiedCard({
+                type: 'timeline-fast',
+                icon,
+                header,
+                body,
+                actions,
+                dataAttrs: `data-fast-id="${fast.id}"`
+            });
+
             return `
-                <div class="log-timeline-item log-timeline-item-fast" data-fast-id="${fast.id}">
-                    <div class="log-timeline-marker fast"></div>
-                    <div class="log-timeline-content">
-                        <div class="log-timeline-header">
-                            <span class="log-timeline-title">Fast</span>
-                            <span class="log-timeline-date">${timestampLabel}</span>
-                        </div>
-                        <div class="log-timeline-body">
-                            <div class="log-timeline-metric">${durationLabel}</div>
-                            ${fast.notes ? `<div class="log-timeline-notes">${escapeHtml(fast.notes)}</div>` : ''}
-                        </div>
-                        <div class="log-timeline-actions">
-                            <button type="button" class="log-timeline-action-btn" data-log-action="edit-fast" data-fast-id="${fast.id}">View / Edit</button>
-                        </div>
-                    </div>
+                <div class="log-timeline-item log-timeline-item-fast">
+                    ${cardContent}
                 </div>
             `;
         }
@@ -3301,33 +3837,49 @@
             const tagLabel = formatBodyEntryTag(entry.entryTag);
             const tagClass = (entry.entryTag || '').replace(/\s+/g, '_');
 
+            const icon = renderCardIcon('⚖️', 'accent-blue');
+
+            // Just show the date, no title
+            const header = `
+                <span class="log-timeline-date-only">${timestampLabel}</span>
+            `;
+
+            const body = `
+                <div class="timeline-body-metrics">
+                    <span class="log-timeline-metric">${formatWeightValue(entry.weight)}</span>
+                    <span class="log-timeline-submetric">${entry.bodyFat !== null && entry.bodyFat !== undefined ? formatBodyFatValue(entry.bodyFat) : '—'}</span>
+                    <span class="body-log-tag ${tagClass}">${tagLabel}</span>
+                </div>
+                ${entry.notes ? `<div class="log-timeline-notes">${escapeHtml(entry.notes)}</div>` : ''}
+            `;
+
+            const actions = renderKebabMenu([
+                { label: 'Edit', action: 'edit-body-entry', dataAttrs: `data-entry-id="${entry.id}"` },
+                { label: 'Delete', action: 'delete-body-entry', variant: 'danger', dataAttrs: `data-entry-id="${entry.id}"` }
+            ]);
+
+            const cardContent = renderUnifiedCard({
+                type: 'timeline-body',
+                icon,
+                header,
+                body,
+                actions,
+                dataAttrs: `data-entry-id="${entry.id}"`
+            });
+
             return `
-                <div class="log-timeline-item log-timeline-item-body" data-entry-id="${entry.id}">
-                    <div class="log-timeline-marker body"></div>
-                    <div class="log-timeline-content">
-                        <div class="log-timeline-header">
-                            <span class="log-timeline-title">Body Entry</span>
-                            <span class="log-timeline-date">${timestampLabel}</span>
-                        </div>
-                        <div class="log-timeline-body">
-                            <div class="log-timeline-metric">${formatWeightValue(entry.weight)}</div>
-                            <div class="log-timeline-submetric">${entry.bodyFat !== null && entry.bodyFat !== undefined ? formatBodyFatValue(entry.bodyFat) : '—'}</div>
-                            <span class="body-log-tag ${tagClass}">${tagLabel}</span>
-                            ${entry.notes ? `<div class="log-timeline-notes">${escapeHtml(entry.notes)}</div>` : ''}
-                        </div>
-                        <div class="log-timeline-actions">
-                            <button type="button" class="log-timeline-action-btn" data-log-action="edit-body-entry" data-entry-id="${entry.id}">Edit</button>
-                            <button type="button" class="log-timeline-action-btn danger" data-log-action="delete-body-entry" data-entry-id="${entry.id}">Delete</button>
-                        </div>
-                    </div>
+                <div class="log-timeline-item log-timeline-item-body">
+                    ${cardContent}
                 </div>
             `;
         }
 
         function formatTimelineDate(date) {
+            // Compact numeric format: "10/1/2025, 8:15 PM"
             return date.toLocaleString(undefined, {
-                month: 'short',
+                month: 'numeric',
                 day: 'numeric',
+                year: 'numeric',
                 hour: 'numeric',
                 minute: '2-digit'
             });
@@ -4180,6 +4732,65 @@
         }
 
         function handleLogListClick(event) {
+            // Handle kebab menu toggle
+            const kebabButton = event.target.closest('.card-kebab-button');
+            if (kebabButton) {
+                event.preventDefault();
+                event.stopPropagation();
+                toggleKebabMenu(kebabButton);
+                return;
+            }
+
+            // Handle card actions (from kebab menu or other buttons)
+            const cardActionElement = event.target.closest('[data-card-action]');
+            if (cardActionElement) {
+                const action = cardActionElement.getAttribute('data-card-action');
+                const entryId = cardActionElement.getAttribute('data-entry-id');
+                const fastId = cardActionElement.getAttribute('data-fast-id');
+
+                event.preventDefault();
+
+                // Close any open kebab menus
+                closeAllKebabMenus();
+
+                switch (action) {
+                    case 'edit-fast':
+                        if (fastId) {
+                            editFast(Number(fastId));
+                        }
+                        break;
+                    case 'delete-fast':
+                        if (fastId) {
+                            confirmDeleteFast(Number(fastId));
+                        }
+                        break;
+                    case 'set-body-canonical':
+                        if (entryId) {
+                            setBodyEntryCanonical(Number(entryId));
+                        }
+                        break;
+                    case 'clear-body-canonical':
+                        if (entryId) {
+                            clearBodyEntryCanonical(Number(entryId));
+                        }
+                        break;
+                    case 'edit-body-entry':
+                        if (entryId) {
+                            showBodyEntryModal({ mode: 'edit', entryId: Number(entryId) });
+                        }
+                        break;
+                    case 'delete-body-entry':
+                        if (entryId) {
+                            confirmDeleteBodyEntry(Number(entryId));
+                        }
+                        break;
+                    default:
+                        break;
+                }
+                return;
+            }
+
+            // Handle legacy data-log-action for backwards compatibility
             const actionElement = event.target.closest('[data-log-action]');
             if (!actionElement) {
                 return;
@@ -4227,6 +4838,36 @@
                     break;
             }
         }
+
+        function toggleKebabMenu(button) {
+            const kebab = button.closest('.card-kebab');
+            if (!kebab) {
+                return;
+            }
+
+            const isActive = kebab.classList.contains('active');
+
+            // Close all other kebab menus first
+            closeAllKebabMenus();
+
+            // Toggle this one
+            if (!isActive) {
+                kebab.classList.add('active');
+            }
+        }
+
+        function closeAllKebabMenus() {
+            document.querySelectorAll('.card-kebab.active').forEach(kebab => {
+                kebab.classList.remove('active');
+            });
+        }
+
+        // Add global click handler to close kebab menus when clicking outside
+        document.addEventListener('click', (event) => {
+            if (!event.target.closest('.card-kebab')) {
+                closeAllKebabMenus();
+            }
+        });
 
         function toggleBodyDay(dateKey) {
             if (expandedBodyDates.has(dateKey)) {
@@ -4282,6 +4923,33 @@
             }
         }
 
+        async function confirmDeleteFast(fastId) {
+            if (!fastId) {
+                return;
+            }
+            const confirmed = window.confirm('Delete this fast? This action cannot be undone.');
+            if (!confirmed) {
+                return;
+            }
+            try {
+                const response = await fetch(`/api/fasts/${fastId}`, {
+                    method: 'DELETE',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                });
+
+                if (!response.ok) {
+                    throw new Error('Failed to delete fast');
+                }
+
+                await loadFasts();
+                renderLogEntries();
+            } catch (error) {
+                console.error('Failed to delete fast:', error);
+                alert('Failed to delete fast. Please try again.');
+            }
+        }
 
         function calculateCurrentStreak(fasts) {
             if (!fasts || fasts.length === 0) {
