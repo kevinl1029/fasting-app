@@ -198,30 +198,34 @@
         
         /* Log tab styles */
         .log-header {
-            padding: 24px 30px;
+            padding: 16px 30px 24px 30px;
             background: linear-gradient(135deg, rgba(252, 211, 77, 0.1) 0%, rgba(251, 146, 60, 0.05) 100%);
             border-bottom: 1px solid #f0f0f0;
         }
-        
+
         .log-stats {
             display: flex;
             justify-content: center;
             align-items: center;
-            gap: 32px;
+            gap: 20px 48px;
             margin-bottom: 12px;
+            margin-top: 20px;
+            flex-wrap: nowrap;
         }
-        
+
         .log-stat {
             display: flex;
             flex-direction: column;
             align-items: center;
             gap: 4px;
+            min-width: 0;
         }
 
         .log-stat-value {
             font-size: 1.4rem;
             font-weight: 700;
             color: #fb923c;
+            white-space: nowrap;
         }
 
         .log-stat-label {
@@ -232,6 +236,7 @@
             letter-spacing: 0.5px;
             text-align: center;
             line-height: 1.2;
+            white-space: nowrap;
         }
         
         .add-fast-btn {
@@ -1995,26 +2000,42 @@
                 <!-- Log Tab -->
                 <div id="log-tab" class="tab-content active">
                     <div class="log-header">
-                        <div class="log-stats">
-                            <div class="log-stat">
-                                <span class="log-stat-value" id="total-fasts">-</span>
-                                <span class="log-stat-label">Total Fasts</span>
-                            </div>
-                            <div class="log-stat">
-                                <span class="log-stat-value" id="current-streak">-</span>
-                                <span class="log-stat-label">Current Streak</span>
-                            </div>
-                            <div class="log-stat">
-                                <span class="log-stat-value" id="total-hours">-</span>
-                                <span class="log-stat-label">Total Hours</span>
-                            </div>
-                        </div>
                         <div class="log-controls">
                             <div class="log-filters" role="tablist">
                                 <button type="button" class="log-filter-btn active" data-log-filter="fasts">Fasts</button>
                                 <button type="button" class="log-filter-btn" data-log-filter="body">Body</button>
                                 <button type="button" class="log-filter-btn" data-log-filter="all">All</button>
                             </div>
+                        </div>
+                        <div class="log-stats">
+                            <!-- Fasting Stats (shown when filter is 'fasts' or 'all') -->
+                            <div class="log-stat log-stat-fasting">
+                                <span class="log-stat-value" id="total-fasts">-</span>
+                                <span class="log-stat-label">Total Fasts</span>
+                            </div>
+                            <div class="log-stat log-stat-fasting">
+                                <span class="log-stat-value" id="current-streak">-</span>
+                                <span class="log-stat-label">Current Streak</span>
+                            </div>
+                            <div class="log-stat log-stat-fasting">
+                                <span class="log-stat-value" id="total-hours">-</span>
+                                <span class="log-stat-label">Total Hours</span>
+                            </div>
+                            <!-- Body Stats (shown when filter is 'body') -->
+                            <div class="log-stat log-stat-body" style="display: none;">
+                                <span class="log-stat-value" id="weight-delta">-</span>
+                                <span class="log-stat-label">Weight Δ</span>
+                            </div>
+                            <div class="log-stat log-stat-body" style="display: none;">
+                                <span class="log-stat-value" id="body-fat-delta">-</span>
+                                <span class="log-stat-label">Body Fat Δ</span>
+                            </div>
+                            <div class="log-stat log-stat-body" style="display: none;">
+                                <span class="log-stat-value" id="weight-percent-change">-</span>
+                                <span class="log-stat-label">Weight % Δ</span>
+                            </div>
+                        </div>
+                        <div class="log-controls">
                             <div class="log-action">
                                 <button type="button" class="add-fast-btn log-action-btn" id="log-primary-action">
                                     <span class="log-action-icon" aria-hidden="true">
@@ -4016,12 +4037,14 @@
                 chartsLoading = false;
                 chartsError = null;
                 renderCharts();
+                updateLogStatsDisplay();
             } catch (error) {
                 console.error('Error loading body analytics:', error);
                 bodyAnalytics = null;
                 chartsLoading = false;
                 chartsError = 'Unable to load charts right now.';
                 renderCharts();
+                updateLogStatsDisplay();
             }
         }
 
@@ -4603,8 +4626,42 @@
                 button.classList.toggle('active', button.getAttribute('data-log-filter') === currentLogFilter);
             });
 
+            updateLogStatsDisplay();
             updateLogActionState();
             renderLogEntries();
+        }
+
+        function updateLogStatsDisplay() {
+            const fastingStats = document.querySelectorAll('.log-stat-fasting');
+            const bodyStats = document.querySelectorAll('.log-stat-body');
+            const logStatsContainer = document.querySelector('.log-stats');
+
+            if (currentLogFilter === 'body') {
+                fastingStats.forEach(stat => stat.style.display = 'none');
+                bodyStats.forEach(stat => stat.style.display = 'flex');
+                if (logStatsContainer) {
+                    logStatsContainer.style.display = 'flex';
+                    logStatsContainer.style.flexWrap = 'nowrap';
+                }
+                updateBodyStats();
+            } else if (currentLogFilter === 'all') {
+                fastingStats.forEach(stat => stat.style.display = 'flex');
+                bodyStats.forEach(stat => stat.style.display = 'flex');
+                if (logStatsContainer) {
+                    logStatsContainer.style.display = 'grid';
+                    logStatsContainer.style.gridTemplateColumns = 'repeat(3, 1fr)';
+                }
+                updateStats();
+                updateBodyStats();
+            } else {
+                fastingStats.forEach(stat => stat.style.display = 'flex');
+                bodyStats.forEach(stat => stat.style.display = 'none');
+                if (logStatsContainer) {
+                    logStatsContainer.style.display = 'flex';
+                    logStatsContainer.style.flexWrap = 'nowrap';
+                }
+                updateStats();
+            }
         }
 
         function updateLogActionState() {
@@ -5027,23 +5084,67 @@
             const totalFasts = fasts.length;
             const totalHours = fasts.reduce((sum, fast) => {
                 let duration = fast.duration_hours;
-                
+
                 // Calculate duration if not stored in database
                 if (!duration && fast.start_time && fast.end_time) {
                     const startTime = new Date(fast.start_time);
                     const endTime = new Date(fast.end_time);
                     duration = (endTime - startTime) / (1000 * 60 * 60); // Convert to hours
                 }
-                
+
                 return sum + (duration || 0);
             }, 0);
-            
+
             // Calculate current streak
             const currentStreak = calculateCurrentStreak(fasts);
-            
+
             document.getElementById('total-fasts').textContent = totalFasts;
             document.getElementById('total-hours').textContent = Math.round(totalHours) + 'h';
             document.getElementById('current-streak').textContent = currentStreak;
+        }
+
+        function updateBodyStats() {
+            const weightDeltaEl = document.getElementById('weight-delta');
+            const bodyFatDeltaEl = document.getElementById('body-fat-delta');
+            const weightPercentChangeEl = document.getElementById('weight-percent-change');
+
+            // Default values
+            weightDeltaEl.textContent = '—';
+            bodyFatDeltaEl.textContent = '—';
+            weightPercentChangeEl.textContent = '—';
+
+            if (!bodyAnalytics || !Array.isArray(bodyAnalytics.canonicalEntries) || bodyAnalytics.canonicalEntries.length < 2) {
+                return;
+            }
+
+            const entries = bodyAnalytics.canonicalEntries
+                .filter(entry => entry && entry.weight !== null && entry.loggedAt)
+                .sort((a, b) => new Date(a.loggedAt) - new Date(b.loggedAt));
+
+            if (entries.length < 2) {
+                return;
+            }
+
+            const firstEntry = entries[0];
+            const lastEntry = entries[entries.length - 1];
+
+            // Weight delta
+            const weightDelta = lastEntry.weight - firstEntry.weight;
+            const weightDeltaStr = weightDelta >= 0 ? `+${weightDelta.toFixed(1)}` : weightDelta.toFixed(1);
+            weightDeltaEl.textContent = `${weightDeltaStr} lbs`;
+
+            // Body fat delta
+            if (firstEntry.bodyFat !== null && firstEntry.bodyFat !== undefined &&
+                lastEntry.bodyFat !== null && lastEntry.bodyFat !== undefined) {
+                const bodyFatDelta = lastEntry.bodyFat - firstEntry.bodyFat;
+                const bodyFatDeltaStr = bodyFatDelta >= 0 ? `+${bodyFatDelta.toFixed(1)}` : bodyFatDelta.toFixed(1);
+                bodyFatDeltaEl.textContent = `${bodyFatDeltaStr}%`;
+            }
+
+            // Weight percent change
+            const weightPercentChange = ((lastEntry.weight - firstEntry.weight) / firstEntry.weight) * 100;
+            const weightPercentChangeStr = weightPercentChange >= 0 ? `+${weightPercentChange.toFixed(1)}` : weightPercentChange.toFixed(1);
+            weightPercentChangeEl.textContent = `${weightPercentChangeStr}%`;
         }
         
         function showAddFastModal() {
@@ -5267,6 +5368,7 @@
                 }
 
                 await loadBodyLogEntries();
+                await loadBodyAnalytics();
                 hideBodyEntryModal();
             } catch (error) {
                 console.error('Failed to save body entry:', error);
@@ -5287,6 +5389,7 @@
             try {
                 await bodyLogApi.deleteEntry(bodyEntryEditingId);
                 await loadBodyLogEntries();
+                await loadBodyAnalytics();
                 hideBodyEntryModal();
             } catch (error) {
                 console.error('Failed to delete body entry:', error);
