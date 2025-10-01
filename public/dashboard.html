@@ -249,7 +249,232 @@
             transform: translateY(-2px);
             box-shadow: 0 6px 20px rgba(251, 146, 60, 0.3);
         }
-        
+
+        .log-controls {
+            margin-top: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .log-filters {
+            display: flex;
+            gap: 8px;
+            background: white;
+            padding: 4px;
+            border-radius: 12px;
+            border: 1px solid #f0f0f0;
+            box-shadow: 0 8px 18px rgba(15, 23, 42, 0.08);
+        }
+
+        .log-filter-btn {
+            flex: 1;
+            border: none;
+            background: transparent;
+            padding: 10px 12px;
+            border-radius: 8px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: #666;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .log-filter-btn:hover:not(.active) {
+            background: rgba(251, 146, 60, 0.1);
+            color: #fb923c;
+        }
+
+        .log-filter-btn.active {
+            background: linear-gradient(135deg, #f97316 0%, #ec4899 100%);
+            color: white;
+            box-shadow: 0 8px 18px rgba(236, 72, 153, 0.3);
+        }
+
+        .log-action {
+            position: relative;
+        }
+
+        .log-action-btn {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            width: 100%;
+        }
+
+        .log-action-btn svg {
+            display: block;
+        }
+
+        .log-action-chevron {
+            font-size: 0.8rem;
+            margin-left: auto;
+        }
+
+        .log-action-menu {
+            position: absolute;
+            top: calc(100% + 6px);
+            right: 0;
+            background: white;
+            border-radius: 12px;
+            border: 1px solid rgba(148, 163, 184, 0.25);
+            box-shadow: 0 24px 40px rgba(15, 23, 42, 0.22);
+            padding: 6px;
+            min-width: 200px;
+            z-index: 30;
+        }
+
+        .log-action-menu-item {
+            width: 100%;
+            background: transparent;
+            border: none;
+            text-align: left;
+            padding: 10px 12px;
+            border-radius: 8px;
+            font-size: 0.95rem;
+            font-weight: 500;
+            color: #1f2937;
+            cursor: pointer;
+            transition: background 0.2s ease;
+        }
+
+        .log-action-menu-item:hover {
+            background: rgba(251, 146, 60, 0.14);
+            color: #fb923c;
+        }
+
+        .chart-card {
+            margin: 20px 30px;
+            background: white;
+            border-radius: 18px;
+            border: 1px solid #e2e8f0;
+            box-shadow: 0 18px 40px rgba(15, 23, 42, 0.08);
+            padding: 20px 24px;
+        }
+
+        .chart-card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            gap: 16px;
+            margin-bottom: 16px;
+        }
+
+        .insight-info {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 26px;
+            height: 26px;
+            min-width: 26px;
+            border-radius: 999px;
+            background: #eff6ff;
+            color: #2563eb;
+            font-size: 0.85rem;
+            font-weight: 700;
+            cursor: help;
+            user-select: none;
+        }
+
+        .insight-info:hover {
+            background: #dbeafe;
+        }
+
+        .chart-card-header h3 {
+            font-size: 1.2rem;
+            font-weight: 700;
+            color: #0f172a;
+        }
+
+        .chart-subtitle {
+            font-size: 0.9rem;
+            color: #64748b;
+            margin-top: 4px;
+        }
+
+        .chart-controls {
+            display: flex;
+            gap: 12px;
+            align-items: center;
+        }
+
+        .chart-toggle {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.85rem;
+            color: #475569;
+            font-weight: 600;
+        }
+
+        .chart-toggle input[type="checkbox"] {
+            width: 18px;
+            height: 18px;
+        }
+
+        .chart-container {
+            position: relative;
+            width: 100%;
+            overflow: hidden;
+            border-radius: 12px;
+            border: 1px solid #e2e8f0;
+            background: linear-gradient(180deg, rgba(248, 250, 252, 0.9), rgba(255, 255, 255, 0.7));
+        }
+
+        .chart-svg {
+            width: 100%;
+            height: 320px;
+        }
+
+        .chart-legend {
+            margin-top: 12px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 16px;
+            font-size: 0.85rem;
+            color: #475569;
+        }
+
+        .legend-item {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .legend-dot {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+        }
+
+        .legend-dot.solid {
+            background: #fb923c;
+        }
+
+        .legend-dot.hollow {
+            border: 2px solid #38bdf8;
+            border-radius: 50%;
+            width: 12px;
+            height: 12px;
+        }
+
+        .legend-fast-band {
+            display: inline-block;
+            width: 20px;
+            height: 10px;
+            border-radius: 4px;
+            background: rgba(56, 189, 248, 0.2);
+            border: 1px solid rgba(56, 189, 248, 0.6);
+        }
+
+        .chart-footnote {
+            margin-top: 12px;
+            font-size: 0.8rem;
+            color: #94a3b8;
+        }
+
         /* Fasting log list */
         .fasting-log {
             padding: 0;
@@ -364,7 +589,601 @@
             font-size: 0.7rem;
             font-weight: 600;
         }
-        
+
+        .body-log-day {
+            margin: 16px 30px;
+            background: white;
+            border: 1px solid #e2e8f0;
+            border-radius: 16px;
+            box-shadow: 0 12px 30px rgba(15, 23, 42, 0.08);
+            overflow: hidden;
+        }
+
+        .body-log-day-header {
+            width: 100%;
+            padding: 16px 20px;
+            background: linear-gradient(135deg, rgba(226, 232, 240, 0.55), rgba(226, 232, 240, 0.25));
+            border: none;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            cursor: pointer;
+            transition: background 0.2s ease;
+        }
+
+        .body-log-day-header:hover {
+            background: linear-gradient(135deg, rgba(226, 232, 240, 0.7), rgba(226, 232, 240, 0.32));
+        }
+
+        .body-log-day-header-date {
+            font-size: 1rem;
+            font-weight: 700;
+            color: #1f2937;
+        }
+
+        .body-log-day-summary {
+            margin-left: auto;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-size: 0.9rem;
+            color: #475569;
+        }
+
+        .body-log-day-summary .summary-weight {
+            font-weight: 700;
+            color: #0f172a;
+        }
+
+        .body-log-day-summary .summary-bodyfat {
+            color: #334155;
+            font-weight: 600;
+        }
+
+        .body-log-day-toggle-icon {
+            font-size: 0.8rem;
+            color: #64748b;
+        }
+
+        .body-log-entries {
+            padding: 12px 20px 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .body-log-day.collapsed .body-log-entries {
+            display: none;
+        }
+
+        .body-log-entry {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            padding: 12px 16px;
+            border-radius: 12px;
+            background: #f8fafc;
+            border: 1px solid rgba(226, 232, 240, 0.9);
+        }
+
+        .body-log-entry.canonical {
+            border-color: rgba(59, 130, 246, 0.45);
+            background: linear-gradient(135deg, rgba(59, 130, 246, 0.12), rgba(14, 116, 144, 0.08));
+        }
+
+        .body-log-entry-header {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+
+        .body-log-metric {
+            font-size: 1.4rem;
+            font-weight: 700;
+            color: #111827;
+        }
+
+        .body-log-bodyfat {
+            font-size: 1rem;
+            font-weight: 600;
+            color: #1e293b;
+        }
+
+        .body-log-tag {
+            padding: 4px 10px;
+            border-radius: 999px;
+            font-size: 0.7rem;
+            font-weight: 700;
+            letter-spacing: 0.5px;
+            text-transform: uppercase;
+            background: rgba(148, 163, 184, 0.2);
+            color: #475569;
+        }
+
+        .body-log-tag.morning {
+            background: rgba(59, 130, 246, 0.2);
+            color: #1d4ed8;
+        }
+
+        .body-log-tag.post_fast {
+            background: rgba(34, 197, 94, 0.2);
+            color: #047857;
+        }
+
+        .body-log-tag.ad_hoc {
+            background: rgba(248, 113, 113, 0.2);
+            color: #b91c1c;
+        }
+
+        .body-log-meta {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+            font-size: 0.85rem;
+            color: #64748b;
+        }
+
+        .body-log-notes {
+            font-size: 0.9rem;
+            color: #475569;
+        }
+
+        .body-log-actions {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+
+        .body-log-action-btn {
+            border: 1px solid #e2e8f0;
+            background: white;
+            border-radius: 8px;
+            padding: 6px 12px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            color: #475569;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .body-log-action-btn:hover {
+            border-color: #94a3b8;
+            color: #1f2937;
+        }
+
+        .body-log-action-btn.danger {
+            border-color: rgba(248, 113, 113, 0.4);
+            color: #b91c1c;
+        }
+
+        .body-log-canonical-pill {
+            padding: 5px 12px;
+            border-radius: 999px;
+            font-size: 0.75rem;
+            font-weight: 700;
+            background: rgba(59, 130, 246, 0.2);
+            color: #1d4ed8;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .body-log-canonical-pill.manual {
+            background: rgba(14, 116, 144, 0.22);
+            color: #0f172a;
+        }
+
+        .weekly-list {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .weekly-empty {
+            padding: 14px 16px;
+            background: #f8fafc;
+            border-radius: 12px;
+            border: 1px dashed #cbd5e1;
+            color: #64748b;
+            text-align: center;
+        }
+
+        .weekly-row {
+            display: grid;
+            grid-template-columns: repeat(4, minmax(0, 1fr));
+            gap: 12px;
+            background: #f8fafc;
+            border-radius: 12px;
+            border: 1px solid rgba(226, 232, 240, 0.9);
+            padding: 12px 16px;
+        }
+
+        .weekly-row.header {
+            background: none;
+            border: none;
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            color: #64748b;
+        }
+
+        .weekly-col {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .weekly-label {
+            font-size: 0.8rem;
+            color: #64748b;
+        }
+
+        .weekly-value {
+            font-size: 1rem;
+            font-weight: 600;
+            color: #0f172a;
+        }
+
+        .weekly-delta {
+            font-size: 0.85rem;
+            font-weight: 600;
+        }
+
+        .weekly-delta.positive {
+            color: #16a34a;
+        }
+
+        .weekly-delta.negative {
+            color: #dc2626;
+        }
+
+        .retention-content {
+            background: #f8fafc;
+            border-radius: 14px;
+            border: 1px solid rgba(226, 232, 240, 0.9);
+            padding: 18px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .insight-placeholder {
+            padding: 24px;
+            text-align: center;
+            color: #64748b;
+            font-size: 0.95rem;
+        }
+
+        .effectiveness-content {
+            border-top: 1px solid #e2e8f0;
+            padding-top: 18px;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .effectiveness-columns {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 16px;
+        }
+
+        .effectiveness-metric {
+            flex: 1;
+            min-width: 160px;
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 14px;
+            padding: 14px 16px;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .effectiveness-label {
+            font-size: 0.78rem;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            color: #64748b;
+        }
+
+        .effectiveness-value {
+            font-size: 1.6rem;
+            font-weight: 700;
+            color: #0f172a;
+        }
+
+        .effectiveness-detail {
+            font-size: 0.85rem;
+            color: #475569;
+        }
+
+        .effectiveness-caption {
+            font-size: 0.8rem;
+            color: #64748b;
+        }
+
+        .effectiveness-message {
+            font-size: 0.95rem;
+            color: #334155;
+            line-height: 1.5;
+        }
+
+        .effectiveness-tags {
+            display: inline-flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+
+        .effectiveness-tag {
+            display: inline-flex;
+            align-items: center;
+            padding: 4px 10px;
+            border-radius: 999px;
+            background: #e0f2fe;
+            color: #0369a1;
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .effectiveness-meta {
+            font-size: 0.82rem;
+            color: #64748b;
+        }
+
+        .rolling-content {
+            border-top: 1px solid #e2e8f0;
+            padding-top: 18px;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .rolling-overview {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 16px;
+        }
+
+        .rolling-metric {
+            flex: 1;
+            min-width: 140px;
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 14px;
+            padding: 14px 16px;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .rolling-label {
+            font-size: 0.78rem;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            color: #64748b;
+        }
+
+        .rolling-value {
+            font-size: 1.4rem;
+            font-weight: 700;
+            color: #0f172a;
+        }
+
+        .rolling-protocol-list {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .rolling-protocol {
+            border: 1px solid #e2e8f0;
+            border-radius: 14px;
+            background: #ffffff;
+            padding: 14px 16px;
+            box-shadow: 0 8px 20px rgba(15, 23, 42, 0.06);
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .rolling-protocol-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: baseline;
+            gap: 8px;
+        }
+
+        .rolling-protocol-name {
+            font-weight: 600;
+            color: #0f172a;
+            font-size: 1rem;
+        }
+
+        .rolling-protocol-count {
+            font-size: 0.8rem;
+            color: #64748b;
+        }
+
+        .rolling-protocol-metrics {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+            font-size: 0.85rem;
+            color: #475569;
+        }
+
+        .rolling-footnote {
+            font-size: 0.8rem;
+            color: #64748b;
+        }
+
+        .retention-highlight {
+            font-size: 2rem;
+            font-weight: 700;
+            color: #0f172a;
+        }
+
+        .retention-details {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+            gap: 12px;
+        }
+
+        .retention-detail {
+            background: white;
+            border-radius: 10px;
+            border: 1px solid rgba(226, 232, 240, 0.9);
+            padding: 10px 12px;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .retention-detail-label {
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            color: #94a3b8;
+            letter-spacing: 0.08em;
+        }
+
+        .retention-detail-value {
+            font-size: 0.95rem;
+            font-weight: 600;
+            color: #0f172a;
+        }
+
+        .retention-message {
+            font-size: 0.9rem;
+            color: #475569;
+        }
+
+        .log-timeline {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+            padding: 20px 20px 30px;
+        }
+
+        .log-timeline-item {
+            display: flex;
+            gap: 14px;
+        }
+
+        .log-timeline-marker {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            margin-top: 10px;
+            box-shadow: 0 0 0 4px rgba(148, 163, 184, 0.25);
+        }
+
+        .log-timeline-marker.fast {
+            background: linear-gradient(135deg, #fb923c, #ec4899);
+        }
+
+        .log-timeline-marker.body {
+            background: linear-gradient(135deg, #38bdf8, #0ea5e9);
+        }
+
+        .log-timeline-content {
+            flex: 1;
+            background: white;
+            border-radius: 16px;
+            border: 1px solid #e2e8f0;
+            box-shadow: 0 12px 30px rgba(15, 23, 42, 0.08);
+            padding: 16px 18px;
+        }
+
+        .log-timeline-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: baseline;
+            margin-bottom: 10px;
+        }
+
+        .log-timeline-title {
+            font-size: 0.9rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: #64748b;
+        }
+
+        .log-timeline-date {
+            font-size: 0.85rem;
+            color: #94a3b8;
+        }
+
+        .log-timeline-body {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            flex-wrap: wrap;
+            margin-bottom: 12px;
+        }
+
+        .log-timeline-metric {
+            font-size: 1.3rem;
+            font-weight: 700;
+            color: #0f172a;
+        }
+
+        .log-timeline-submetric {
+            font-size: 0.95rem;
+            font-weight: 600;
+            color: #1e293b;
+        }
+
+        .log-timeline-notes {
+            flex-basis: 100%;
+            font-size: 0.9rem;
+            color: #475569;
+        }
+
+        .log-timeline-actions {
+            display: flex;
+            gap: 8px;
+        }
+
+        .log-timeline-action-btn {
+            border: 1px solid #e2e8f0;
+            background: white;
+            border-radius: 8px;
+            padding: 6px 12px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            color: #475569;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .log-timeline-action-btn:hover {
+            border-color: #94a3b8;
+            color: #1f2937;
+        }
+
+        .log-timeline-action-btn.danger {
+            border-color: rgba(248, 113, 113, 0.4);
+            color: #b91c1c;
+        }
+
+        .modal-checkbox-group .modal-checkbox {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-weight: 500;
+            cursor: pointer;
+        }
+
+        .modal-checkbox-group input[type="checkbox"] {
+            width: 18px;
+            height: 18px;
+        }
+
         /* Placeholder content for disabled tabs */
         .placeholder-content {
             padding: 60px 30px;
@@ -648,6 +1467,11 @@
                 gap: 8px;
             }
 
+            .effectiveness-columns,
+            .rolling-overview {
+                flex-direction: column;
+            }
+
         }
     </style>
 
@@ -702,11 +1526,81 @@
             <div class="sub-nav">
                 <button class="sub-nav-item active" data-tab="log">Log</button>
                 <button class="sub-nav-item" data-tab="benefits">Benefits</button>
+                <button class="sub-nav-item" data-tab="charts">Charts</button>
                 <button class="sub-nav-item disabled" data-tab="photos">Photos</button>
             </div>
             
             <!-- Content Area -->
             <div class="content">
+                <!-- Charts Tab -->
+                <div id="charts-tab" class="tab-content">
+                    <div class="chart-card">
+                        <div class="chart-card-header">
+                            <div>
+                                <h3>Weight Trend</h3>
+                                <p class="chart-subtitle" id="chart-weight-summary">Log a few weigh-ins to see your trend.</p>
+                            </div>
+                            <div class="chart-controls">
+                                <label class="chart-toggle">
+                                    <input type="checkbox" id="toggle-post-fast" checked>
+                                    <span>Show Post-Fast Points</span>
+                                </label>
+                            </div>
+                        </div>
+                        <div class="chart-container">
+                            <svg id="weight-trend-chart" class="chart-svg" viewBox="0 0 760 320" preserveAspectRatio="none" role="img" aria-labelledby="weight-trend-title"></svg>
+                        </div>
+                        <div class="chart-legend">
+                            <span class="legend-item"><span class="legend-dot solid"></span> Canonical</span>
+                            <span class="legend-item"><span class="legend-dot hollow"></span> Post-Fast</span>
+                            <span class="legend-item"><span class="legend-fast-band"></span> Fast duration</span>
+                        </div>
+                        <div class="chart-footnote" id="chart-footnote"></div>
+                    </div>
+
+                    <div class="chart-card" id="fast-effectiveness-card">
+                        <div class="chart-card-header">
+                            <div>
+                                <h3>Fast Effectiveness</h3>
+                                <p class="chart-subtitle" id="fast-effectiveness-subtitle">Log start and post-fast weights to size up your most recent fast.</p>
+                            </div>
+                            <span class="insight-info" title="We break down your most recent fast using the start and post-fast weigh-ins you logged." aria-label="How fast effectiveness is calculated">i</span>
+                        </div>
+                        <div id="fast-effectiveness-content" class="effectiveness-content"></div>
+                    </div>
+
+                    <div class="chart-card" id="rolling-insights-card">
+                        <div class="chart-card-header">
+                            <div>
+                                <h3>Rolling Protocol Insights</h3>
+                                <p class="chart-subtitle" id="rolling-insights-subtitle">Compare how each protocol performs when you log weigh-ins.</p>
+                            </div>
+                            <span class="insight-info" title="We average fasts with start and post-fast weigh-ins logged in this window. Retention checks the next canonical weigh-in within 48 hours." aria-label="How rolling insights are calculated">i</span>
+                        </div>
+                        <div id="rolling-insights-content" class="rolling-content"></div>
+                    </div>
+
+                    <div class="chart-card" id="weekly-composition-card">
+                        <div class="chart-card-header">
+                            <div>
+                                <h3>Weekly Fat vs. Lean Trends</h3>
+                                <p class="chart-subtitle" id="weekly-composition-summary">Log morning weigh-ins with body fat % to unlock fat/lean tracking.</p>
+                            </div>
+                        </div>
+                        <div id="weekly-composition-list" class="weekly-list"></div>
+                    </div>
+
+                    <div class="chart-card" id="retention-card">
+                        <div class="chart-card-header">
+                            <div>
+                                <h3>Post-Fast Retention</h3>
+                                <p class="chart-subtitle" id="retention-subtitle">Complete a fast with weigh-ins to see how much stuck.</p>
+                            </div>
+                        </div>
+                        <div id="retention-content" class="retention-content"></div>
+                    </div>
+                </div>
+
                 <!-- Log Tab -->
                 <div id="log-tab" class="tab-content active">
                     <div class="log-header">
@@ -724,13 +1618,29 @@
                                 <span class="log-stat-label">Total Hours</span>
                             </div>
                         </div>
-                        <button class="add-fast-btn" onclick="showAddFastModal()">
-                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <line x1="12" y1="5" x2="12" y2="19"></line>
-                                <line x1="5" y1="12" x2="19" y2="12"></line>
-                            </svg>
-                            Add Fast
-                        </button>
+                        <div class="log-controls">
+                            <div class="log-filters" role="tablist">
+                                <button type="button" class="log-filter-btn active" data-log-filter="fasts">Fasts</button>
+                                <button type="button" class="log-filter-btn" data-log-filter="body">Body</button>
+                                <button type="button" class="log-filter-btn" data-log-filter="all">All</button>
+                            </div>
+                            <div class="log-action">
+                                <button type="button" class="add-fast-btn log-action-btn" id="log-primary-action">
+                                    <span class="log-action-icon" aria-hidden="true">
+                                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                            <line x1="12" y1="5" x2="12" y2="19"></line>
+                                            <line x1="5" y1="12" x2="19" y2="12"></line>
+                                        </svg>
+                                    </span>
+                                    <span id="log-action-label">Add Fast</span>
+                                    <span class="log-action-chevron hidden" id="log-action-chevron" aria-hidden="true">▾</span>
+                                </button>
+                                <div class="log-action-menu hidden" id="log-action-menu" role="menu">
+                                    <button type="button" class="log-action-menu-item" data-action="add-fast">Add Fast</button>
+                                    <button type="button" class="log-action-menu-item" data-action="add-body-entry">Add Body Entry</button>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                     
                     <div class="fasting-log">
@@ -747,12 +1657,12 @@
                                 <line x1="16" y1="17" x2="8" y2="17"/>
                                 <polyline points="10,9 9,9 8,9"/>
                             </svg>
-                            <h3>No fasts recorded yet</h3>
-                            <p>Start your first fast or add a previous fast manually to begin tracking your journey.</p>
+                            <h3 id="log-empty-title">No fasts recorded yet</h3>
+                            <p id="log-empty-description">Start your first fast or add a previous fast manually to begin tracking your journey.</p>
                         </div>
-                        
-                        <div id="fasts-list">
-                            <!-- Fasts will be populated here by JavaScript -->
+
+                        <div id="log-list">
+                            <!-- Log entries will be populated here by JavaScript -->
                         </div>
                     </div>
                 </div>
@@ -955,6 +1865,65 @@
         </div>
     </div>
 
+    <!-- Body Entry Modal -->
+    <div id="body-entry-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="body-entry-modal-title">Add Body Entry</h2>
+                <button type="button" class="modal-close" onclick="hideBodyEntryModal()">×</button>
+            </div>
+            <div class="modal-body">
+                <form id="body-entry-form" class="modal-form" onsubmit="submitBodyEntry(event)">
+                    <input type="hidden" id="body-entry-id" name="entry-id">
+                    <input type="hidden" id="body-entry-fast-id" name="fast-id">
+
+                    <div class="modal-form-group">
+                        <label for="body-entry-date">Entry Date</label>
+                        <div class="modal-form-row">
+                            <div class="modal-form-group">
+                                <input type="date" id="body-entry-date" name="entry-date" required>
+                            </div>
+                            <div class="modal-form-group">
+                                <input type="time" id="body-entry-time" name="entry-time" required>
+                            </div>
+                        </div>
+                        <div class="modal-form-hint">Morning fasted readings (4am–11:59am) are preferred.</div>
+                    </div>
+
+                    <div class="modal-form-group">
+                        <label for="body-entry-weight">Weight</label>
+                        <input type="number" id="body-entry-weight" name="weight" step="0.1" min="0" required placeholder="Enter weight">
+                    </div>
+
+                    <div class="modal-form-group">
+                        <label for="body-entry-bodyfat">Body Fat % (Optional)</label>
+                        <input type="number" id="body-entry-bodyfat" name="body-fat" step="0.1" min="0" max="100" placeholder="Enter body fat %">
+                    </div>
+
+                    <div class="modal-form-group">
+                        <label for="body-entry-notes">Notes (Optional)</label>
+                        <textarea id="body-entry-notes" name="notes" placeholder="Add context like scale type or measurement conditions..."></textarea>
+                    </div>
+
+                    <div class="modal-form-group modal-checkbox-group">
+                        <label class="modal-checkbox">
+                            <input type="checkbox" id="body-entry-make-canonical" name="make-canonical">
+                            <span>Mark as canonical for this day</span>
+                        </label>
+                        <div class="modal-form-hint">Use this to override the automatic selection for trend calculations.</div>
+                    </div>
+
+                    <div class="modal-actions-special" id="body-entry-modal-actions">
+                        <button type="button" class="modal-btn modal-btn-danger" id="body-entry-delete-btn" onclick="deleteBodyEntryFromModal()">Delete</button>
+                        <div class="modal-actions-spacer"></div>
+                        <button type="button" class="modal-btn modal-btn-secondary" onclick="hideBodyEntryModal()">Cancel</button>
+                        <button type="submit" class="modal-btn modal-btn-primary" id="body-entry-submit-btn">Save Entry</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
     <!-- Benefits Onboarding Modal -->
     <div id="benefits-onboarding-modal" class="modal">
         <div class="modal-content">
@@ -1005,6 +1974,7 @@
     <!-- Benefits Tracking -->
     <script src="/js/services/BenefitsCalculator.js"></script>
     <script src="/js/services/BenefitsDataService.js"></script>
+    <script src="/js/services/BodyLogApi.js"></script>
 
     <!-- Card System Components -->
     <script src="/js/components/ContextualCard.js"></script>
@@ -1015,6 +1985,23 @@
 
     <script>
         let fasts = [];
+        let bodyLogEntries = [];
+        const bodyLogApi = new BodyLogApi();
+        let currentLogFilter = 'fasts';
+        let fastsLoaded = false;
+        let bodyEntriesLoaded = false;
+        const expandedBodyDates = new Set();
+        let bodyEntryModalMode = 'create';
+        let bodyEntryEditingId = null;
+        let pendingScrollTarget = null;
+        let logControlsInitialized = false;
+        let logListInteractionInitialized = false;
+        let logActionMenuOpen = false;
+        let chartControlsInitialized = false;
+        let bodyAnalytics = null;
+        let chartsLoading = false;
+        let chartsError = null;
+        let showPostFastPoints = true;
         
         // Initialize dashboard page function that waits for session
         async function initializeDashboardPage() {
@@ -1041,8 +2028,16 @@
                 });
             });
 
-            // Load fasting data
+            setupLogControls();
+            setupLogListInteractions();
+            setupChartInteractions();
+            renderLogEntries();
+            renderCharts();
+
+            // Load fasting and body log data
             await loadFasts();
+            await loadBodyLogEntries();
+            await loadBodyAnalytics();
 
             // Initialize Benefits tab functionality
             await initializeBenefitsTab();
@@ -1816,50 +2811,45 @@
 
         // Load fasting data from API
         async function loadFasts() {
+            fastsLoaded = false;
+            renderLogEntries();
+
             try {
-                // Get session ID for user-specific data
                 const sessionId = window.getSessionId();
                 const url = sessionId ? `/api/fasts?sessionId=${sessionId}` : '/api/fasts';
 
                 const response = await fetch(url);
                 if (response.ok) {
                     fasts = await response.json();
-                    displayFasts();
+                    fastsLoaded = true;
                     updateStats();
+                    renderLogEntries();
                 } else if (response.status === 404 && sessionId) {
-                    // If user profile not found (database was reset), clear localStorage and redirect to onboarding
                     console.log('User profile missing after server restart - redirecting to onboarding');
-                    // Session removal handled by refreshSession which creates a new one
                     if (window.pageGuard) window.pageGuard.refreshSession();
                     localStorage.removeItem('fastingForecast_profileSaved');
                     window.location.href = '/forecaster';
                     return;
                 } else {
                     console.error('Failed to load fasts');
-                    showEmptyState();
+                    fasts = [];
+                    fastsLoaded = true;
+                    renderLogEntries();
                 }
             } catch (error) {
                 console.error('Error loading fasts:', error);
-                showEmptyState();
+                fasts = [];
+                fastsLoaded = true;
+                renderLogEntries();
             }
         }
-        
-        function displayFasts() {
-            const loadingState = document.getElementById('loading-state');
-            const emptyState = document.getElementById('empty-state');
-            const fastsList = document.getElementById('fasts-list');
-            
-            loadingState.style.display = 'none';
-            
-            if (fasts.length === 0) {
-                emptyState.style.display = 'block';
-                fastsList.innerHTML = '';
-                return;
+
+        function renderFastEntries() {
+            if (!fasts || fasts.length === 0) {
+                return '';
             }
-            
-            emptyState.style.display = 'none';
-            
-            fastsList.innerHTML = fasts.map(fast => {
+
+            return fasts.map(fast => {
                 const startDate = new Date(fast.start_time);
                 const endDate = fast.end_time ? new Date(fast.end_time) : null;
                 
@@ -1927,13 +2917,1368 @@
                 `;
             }).join('');
         }
-        
-        function showEmptyState() {
-            document.getElementById('loading-state').style.display = 'none';
-            document.getElementById('empty-state').style.display = 'block';
-            document.getElementById('fasts-list').innerHTML = '';
+
+        function renderLogEntries() {
+            const loadingState = document.getElementById('loading-state');
+            const emptyState = document.getElementById('empty-state');
+            const emptyTitle = document.getElementById('log-empty-title');
+            const emptyDescription = document.getElementById('log-empty-description');
+            const logList = document.getElementById('log-list');
+
+            if (!loadingState || !emptyState || !logList) {
+                return;
+            }
+
+            if (!isLogDataReadyForFilter(currentLogFilter)) {
+                loadingState.style.display = 'block';
+                emptyState.style.display = 'none';
+                logList.innerHTML = '';
+                return;
+            }
+
+            loadingState.style.display = 'none';
+
+            let content = '';
+
+            switch (currentLogFilter) {
+                case 'body':
+                    setEmptyStateCopy(
+                        emptyTitle,
+                        emptyDescription,
+                        'No body entries yet',
+                        'Log a weigh-in to start tracking weight trends alongside your fasts.'
+                    );
+                    content = renderBodyLogEntries();
+                    break;
+                case 'all':
+                    setEmptyStateCopy(
+                        emptyTitle,
+                        emptyDescription,
+                        'No activity logged yet',
+                        'Add a fast or log a body entry to see your history here.'
+                    );
+                    content = renderCombinedLogEntries();
+                    break;
+                case 'fasts':
+                default:
+                    setEmptyStateCopy(
+                        emptyTitle,
+                        emptyDescription,
+                        'No fasts recorded yet',
+                        'Start your first fast or add a previous fast manually to begin tracking your journey.'
+                    );
+                    content = renderFastEntries();
+                    break;
+            }
+
+            if (currentLogFilter === 'all') {
+                logList.classList.add('log-timeline');
+            } else {
+                logList.classList.remove('log-timeline');
+            }
+
+            if (!content) {
+                emptyState.style.display = 'block';
+                logList.innerHTML = '';
+            } else {
+                emptyState.style.display = 'none';
+                logList.innerHTML = content;
+                if (pendingScrollTarget) {
+                    requestAnimationFrame(() => {
+                        const target = document.querySelector(`[data-entry-id="${pendingScrollTarget}"]`);
+                        if (target) {
+                            target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                        }
+                        pendingScrollTarget = null;
+                    });
+                }
+            }
         }
-        
+
+        function isLogDataReadyForFilter(filter) {
+            switch (filter) {
+                case 'body':
+                    return bodyEntriesLoaded;
+                case 'all':
+                    return fastsLoaded && bodyEntriesLoaded;
+                case 'fasts':
+                default:
+                    return fastsLoaded;
+            }
+        }
+
+        function setEmptyStateCopy(titleElement, descriptionElement, title, description) {
+            if (titleElement) {
+                titleElement.textContent = title;
+            }
+            if (descriptionElement) {
+                descriptionElement.textContent = description;
+            }
+        }
+
+        function renderBodyLogEntries() {
+            if (!bodyLogEntries || bodyLogEntries.length === 0) {
+                return '';
+            }
+
+            const grouped = new Map();
+
+            bodyLogEntries.forEach((entry) => {
+                const dateKey = getBodyEntryDateKey(entry);
+                if (!grouped.has(dateKey)) {
+                    grouped.set(dateKey, []);
+                }
+                grouped.get(dateKey).push(entry);
+            });
+
+            const sortedDates = Array.from(grouped.keys()).sort((a, b) => new Date(b) - new Date(a));
+
+            return sortedDates
+                .map((dateKey) => renderBodyDaySection(dateKey, grouped.get(dateKey)))
+                .join('');
+        }
+
+        function renderBodyDaySection(dateKey, entries) {
+            const sortedEntries = [...entries].sort((a, b) => new Date(a.loggedAt) - new Date(b.loggedAt));
+            const canonicalEntry = sortedEntries.find((entry) => entry.isCanonical);
+            const expanded = expandedBodyDates.has(dateKey);
+
+            const summaryWeight = canonicalEntry ? formatWeightValue(canonicalEntry.weight) : '—';
+            const summaryBodyFat = canonicalEntry && canonicalEntry.bodyFat !== undefined && canonicalEntry.bodyFat !== null
+                ? formatBodyFatValue(canonicalEntry.bodyFat)
+                : '—';
+            const canonicalTag = canonicalEntry
+                ? formatBodyEntryTag(canonicalEntry.canonicalReason || canonicalEntry.entryTag)
+                : null;
+            const canonicalClass = canonicalEntry ? (canonicalEntry.canonicalReason || canonicalEntry.entryTag || '').replace(/\s+/g, '_') : '';
+
+            return `
+                <section class="body-log-day ${expanded ? '' : 'collapsed'}" data-body-day="${dateKey}">
+                    <button type="button" class="body-log-day-header" data-log-action="toggle-body-day" data-body-day="${dateKey}">
+                        <div class="body-log-day-header-date">${formatBodyEntryDateDisplay(dateKey)}</div>
+                        <div class="body-log-day-summary">
+                            <span class="summary-weight">${summaryWeight}</span>
+                            <span class="summary-bodyfat">${summaryBodyFat}</span>
+                            ${canonicalTag ? `<span class="body-log-tag ${canonicalClass}">${canonicalTag}</span>` : ''}
+                        </div>
+                        <span class="body-log-day-toggle-icon" aria-hidden="true">${expanded ? '▾' : '▸'}</span>
+                    </button>
+                    <div class="body-log-entries">
+                        ${sortedEntries.map((entry) => renderBodyEntry(entry)).join('')}
+                    </div>
+                </section>
+            `;
+        }
+
+        function renderBodyEntry(entry) {
+            const dateTime = getEntryLocalDateTime(entry);
+            const timeDisplay = dateTime
+                ? dateTime.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' })
+                : '--:--';
+            const tagLabel = formatBodyEntryTag(entry.entryTag);
+            const tagClass = (entry.entryTag || '').replace(/\s+/g, '_');
+            const canonicalLabel = entry.isCanonical
+                ? `Canonical${entry.canonicalStatus === 'manual' ? ' • Manual' : ''}`
+                : null;
+            const canonicalReasonLabel = entry.isCanonical && (entry.canonicalReason || entry.entryTag)
+                ? formatBodyEntryTag(entry.canonicalReason || entry.entryTag)
+                : null;
+
+            const actions = [];
+
+            if (entry.isCanonical) {
+                actions.push(`<span class="body-log-canonical-pill ${entry.canonicalStatus === 'manual' ? 'manual' : ''}">${canonicalLabel}${canonicalReasonLabel ? ` • ${canonicalReasonLabel}` : ''}</span>`);
+                if (entry.canonicalStatus === 'manual') {
+                    actions.push(`<button type="button" class="body-log-action-btn" data-log-action="clear-body-canonical" data-entry-id="${entry.id}">Clear Override</button>`);
+                }
+            } else {
+                actions.push(`<button type="button" class="body-log-action-btn" data-log-action="set-body-canonical" data-entry-id="${entry.id}">Set Canonical</button>`);
+            }
+
+            actions.push(`<button type="button" class="body-log-action-btn" data-log-action="edit-body-entry" data-entry-id="${entry.id}">Edit</button>`);
+            actions.push(`<button type="button" class="body-log-action-btn danger" data-log-action="delete-body-entry" data-entry-id="${entry.id}">Delete</button>`);
+
+            const metaParts = [timeDisplay];
+            if (entry.source && entry.source !== 'manual') {
+                metaParts.push(formatBodyEntrySource(entry));
+            }
+            if (entry.fastId) {
+                metaParts.push(`Linked to fast #${entry.fastId}`);
+            }
+
+            return `
+                <article class="body-log-entry${entry.isCanonical ? ' canonical' : ''}" data-entry-id="${entry.id}">
+                    <div class="body-log-entry-header">
+                        <span class="body-log-metric">${formatWeightValue(entry.weight)}</span>
+                        <span class="body-log-bodyfat">${entry.bodyFat !== null && entry.bodyFat !== undefined ? formatBodyFatValue(entry.bodyFat) : '—'}</span>
+                        <span class="body-log-tag ${tagClass}">${tagLabel}</span>
+                    </div>
+                    <div class="body-log-meta">${metaParts.join(' • ')}</div>
+                    ${entry.notes ? `<div class="body-log-notes">${escapeHtml(entry.notes)}</div>` : ''}
+                    <div class="body-log-actions">${actions.join('')}</div>
+                </article>
+            `;
+        }
+
+        function getBodyEntryDateKey(entry) {
+            if (!entry) {
+                return 'unknown';
+            }
+            if (entry.localDate) {
+                return entry.localDate;
+            }
+            if (entry.loggedAt) {
+                return entry.loggedAt.slice(0, 10);
+            }
+            return 'unknown';
+        }
+
+        function formatBodyEntryDateDisplay(dateKey) {
+            const date = new Date(dateKey + 'T00:00:00');
+            if (Number.isNaN(date.getTime())) {
+                return dateKey;
+            }
+            return date.toLocaleDateString(undefined, {
+                weekday: 'short',
+                month: 'short',
+                day: 'numeric',
+                year: 'numeric'
+            });
+        }
+
+        function formatBodyEntryTag(tag) {
+            switch (tag) {
+                case 'morning':
+                    return 'Morning';
+                case 'post_fast':
+                    return 'Post-Fast';
+                case 'ad_hoc':
+                    return 'Ad Hoc';
+                case 'fast_start':
+                    return 'Fast Start';
+                case 'fast_end':
+                    return 'Fast End';
+                default:
+                    return (tag || 'Entry').replace(/_/g, ' ').replace(/\b\w/g, (l) => l.toUpperCase());
+            }
+        }
+
+        function formatBodyEntrySource(entry) {
+            switch (entry.source) {
+                case 'fast_start':
+                    return 'Captured at fast start';
+                case 'fast_end':
+                case 'fast_completion':
+                    return 'Captured at fast completion';
+                case 'post_fast_prompt':
+                    return 'Post-fast prompt';
+                default:
+                    return 'Manual entry';
+            }
+        }
+
+        function formatWeightValue(weight) {
+            if (weight === undefined || weight === null || Number.isNaN(Number(weight))) {
+                return '—';
+            }
+            const numeric = Number(weight);
+            return `${numeric.toFixed(1)} lb`;
+        }
+
+        function formatBodyFatValue(bodyFat) {
+            if (bodyFat === undefined || bodyFat === null || Number.isNaN(Number(bodyFat))) {
+                return '—';
+            }
+            const numeric = Number(bodyFat);
+            return `${numeric.toFixed(1)}%`;
+        }
+
+        function getEntryLocalDateTime(entry) {
+            if (!entry || !entry.loggedAt) {
+                return null;
+            }
+
+            const timestamp = new Date(entry.loggedAt);
+            if (Number.isNaN(timestamp.getTime())) {
+                return null;
+            }
+
+            if (typeof entry.timezoneOffsetMinutes === 'number' && !Number.isNaN(entry.timezoneOffsetMinutes)) {
+                return new Date(timestamp.getTime() + entry.timezoneOffsetMinutes * 60 * 1000);
+            }
+
+            return timestamp;
+        }
+
+        function escapeHtml(value) {
+            if (value === null || value === undefined) {
+                return '';
+            }
+            return String(value)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#39;');
+        }
+
+        function renderCombinedLogEntries() {
+            const combinedItems = [];
+
+            if (Array.isArray(fasts)) {
+                fasts.forEach((fast) => {
+                    const timestamp = fast.end_time || fast.start_time;
+                    if (!timestamp) {
+                        return;
+                    }
+                    combinedItems.push({ type: 'fast', timestamp, fast });
+                });
+            }
+
+            if (Array.isArray(bodyLogEntries)) {
+                bodyLogEntries.forEach((entry) => {
+                    if (!entry.loggedAt) {
+                        return;
+                    }
+                    combinedItems.push({ type: 'body', timestamp: entry.loggedAt, entry });
+                });
+            }
+
+            if (!combinedItems.length) {
+                return '';
+            }
+
+            combinedItems.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+
+            return `
+                <div class="log-timeline">
+                    ${combinedItems.map((item) => item.type === 'fast'
+                        ? renderFastTimelineItem(item.fast)
+                        : renderBodyTimelineItem(item.entry)).join('')}
+                </div>
+            `;
+        }
+
+        function renderFastTimelineItem(fast) {
+            const startDate = fast.start_time ? new Date(fast.start_time) : null;
+            const endDate = fast.end_time ? new Date(fast.end_time) : null;
+            const durationHours = fast.duration_hours
+                ? Number(fast.duration_hours)
+                : startDate && endDate
+                    ? (endDate - startDate) / (1000 * 60 * 60)
+                    : null;
+            const durationLabel = durationHours ? formatFastDuration(durationHours) : '—';
+            const anchorDate = endDate || startDate;
+            const timestampLabel = anchorDate ? formatTimelineDate(anchorDate) : '';
+
+            return `
+                <div class="log-timeline-item log-timeline-item-fast" data-fast-id="${fast.id}">
+                    <div class="log-timeline-marker fast"></div>
+                    <div class="log-timeline-content">
+                        <div class="log-timeline-header">
+                            <span class="log-timeline-title">Fast</span>
+                            <span class="log-timeline-date">${timestampLabel}</span>
+                        </div>
+                        <div class="log-timeline-body">
+                            <div class="log-timeline-metric">${durationLabel}</div>
+                            ${fast.notes ? `<div class="log-timeline-notes">${escapeHtml(fast.notes)}</div>` : ''}
+                        </div>
+                        <div class="log-timeline-actions">
+                            <button type="button" class="log-timeline-action-btn" data-log-action="edit-fast" data-fast-id="${fast.id}">View / Edit</button>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        function renderBodyTimelineItem(entry) {
+            const dateTime = getEntryLocalDateTime(entry);
+            const timestampLabel = dateTime ? formatTimelineDate(dateTime) : '';
+            const tagLabel = formatBodyEntryTag(entry.entryTag);
+            const tagClass = (entry.entryTag || '').replace(/\s+/g, '_');
+
+            return `
+                <div class="log-timeline-item log-timeline-item-body" data-entry-id="${entry.id}">
+                    <div class="log-timeline-marker body"></div>
+                    <div class="log-timeline-content">
+                        <div class="log-timeline-header">
+                            <span class="log-timeline-title">Body Entry</span>
+                            <span class="log-timeline-date">${timestampLabel}</span>
+                        </div>
+                        <div class="log-timeline-body">
+                            <div class="log-timeline-metric">${formatWeightValue(entry.weight)}</div>
+                            <div class="log-timeline-submetric">${entry.bodyFat !== null && entry.bodyFat !== undefined ? formatBodyFatValue(entry.bodyFat) : '—'}</div>
+                            <span class="body-log-tag ${tagClass}">${tagLabel}</span>
+                            ${entry.notes ? `<div class="log-timeline-notes">${escapeHtml(entry.notes)}</div>` : ''}
+                        </div>
+                        <div class="log-timeline-actions">
+                            <button type="button" class="log-timeline-action-btn" data-log-action="edit-body-entry" data-entry-id="${entry.id}">Edit</button>
+                            <button type="button" class="log-timeline-action-btn danger" data-log-action="delete-body-entry" data-entry-id="${entry.id}">Delete</button>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        function formatTimelineDate(date) {
+            return date.toLocaleString(undefined, {
+                month: 'short',
+                day: 'numeric',
+                hour: 'numeric',
+                minute: '2-digit'
+            });
+        }
+
+        function formatFastDuration(hours) {
+            if (!hours && hours !== 0) {
+                return '—';
+            }
+
+            if (hours < 24) {
+                return `${hours.toFixed(1)}h`;
+            }
+
+            const wholeHours = Math.floor(hours);
+            const days = Math.floor(wholeHours / 24);
+            const remainingHours = wholeHours % 24;
+            return `${days}d ${remainingHours}h`;
+        }
+
+        function setupLogControls() {
+            if (logControlsInitialized) {
+                updateLogActionState();
+                return;
+            }
+
+            const filterButtons = document.querySelectorAll('.log-filter-btn');
+            filterButtons.forEach((button) => {
+                button.addEventListener('click', () => {
+                    const targetFilter = button.getAttribute('data-log-filter');
+                    if (targetFilter) {
+                        setLogFilter(targetFilter);
+                    }
+                });
+            });
+
+            const primaryActionButton = document.getElementById('log-primary-action');
+            if (primaryActionButton) {
+                primaryActionButton.addEventListener('click', handlePrimaryLogAction);
+            }
+
+            const actionMenu = document.getElementById('log-action-menu');
+            if (actionMenu) {
+                actionMenu.addEventListener('click', (event) => {
+                    const menuItem = event.target.closest('.log-action-menu-item');
+                    if (!menuItem) {
+                        return;
+                    }
+                    event.preventDefault();
+                    handleLogMenuSelection(menuItem.getAttribute('data-action'));
+                });
+            }
+
+            document.addEventListener('click', handleDocumentClickForLogActionMenu);
+
+            logControlsInitialized = true;
+            updateLogActionState();
+        }
+
+        function setupLogListInteractions() {
+            if (logListInteractionInitialized) {
+                return;
+            }
+
+            const logList = document.getElementById('log-list');
+            if (logList) {
+                logList.addEventListener('click', handleLogListClick);
+            }
+
+            logListInteractionInitialized = true;
+        }
+
+        function setupChartInteractions() {
+            if (chartControlsInitialized) {
+                return;
+            }
+
+            const toggle = document.getElementById('toggle-post-fast');
+            if (toggle) {
+                toggle.addEventListener('change', (event) => {
+                    showPostFastPoints = !!event.target.checked;
+                    renderWeightChart();
+                });
+            }
+
+            chartControlsInitialized = true;
+        }
+
+        async function loadBodyAnalytics() {
+            chartsLoading = true;
+            chartsError = null;
+            renderCharts();
+
+            try {
+                const sessionId = window.getSessionId();
+                const url = sessionId ? `/api/body-log/analytics?sessionId=${sessionId}` : '/api/body-log/analytics';
+                const response = await fetch(url);
+                if (!response.ok) {
+                    throw new Error(`Analytics fetch failed with status ${response.status}`);
+                }
+                bodyAnalytics = await response.json();
+                chartsLoading = false;
+                chartsError = null;
+                renderCharts();
+            } catch (error) {
+                console.error('Error loading body analytics:', error);
+                bodyAnalytics = null;
+                chartsLoading = false;
+                chartsError = 'Unable to load charts right now.';
+                renderCharts();
+            }
+        }
+
+        function renderCharts() {
+            renderWeightChart();
+            renderWeeklyComposition();
+            renderFastEffectivenessCard();
+            renderRollingInsightsCard();
+            renderRetentionCard();
+        }
+
+        function renderWeightChart() {
+            const svg = document.getElementById('weight-trend-chart');
+            const summaryEl = document.getElementById('chart-weight-summary');
+            const footnoteEl = document.getElementById('chart-footnote');
+            const toggle = document.getElementById('toggle-post-fast');
+
+            if (!svg || !summaryEl || !footnoteEl) {
+                return;
+            }
+
+            if (chartsLoading) {
+                svg.innerHTML = '';
+                summaryEl.textContent = 'Loading your weight trend…';
+                footnoteEl.textContent = '';
+                if (toggle) {
+                    toggle.disabled = true;
+                }
+                return;
+            }
+
+            if (chartsError) {
+                svg.innerHTML = '';
+                summaryEl.textContent = chartsError;
+                footnoteEl.textContent = '';
+                if (toggle) {
+                    toggle.disabled = true;
+                }
+                return;
+            }
+
+            if (!bodyAnalytics || !Array.isArray(bodyAnalytics.canonicalEntries) || bodyAnalytics.canonicalEntries.length === 0) {
+                svg.innerHTML = '';
+                summaryEl.textContent = 'Log a few morning weigh-ins to see your trend.';
+                footnoteEl.textContent = '';
+                if (toggle) {
+                    toggle.disabled = true;
+                }
+                return;
+            }
+
+            if (toggle) {
+                toggle.disabled = false;
+                toggle.checked = showPostFastPoints;
+            }
+
+            const canonical = bodyAnalytics.canonicalEntries
+                .filter((entry) => entry && entry.weight !== null && entry.loggedAt)
+                .map((entry) => ({
+                    ...entry,
+                    date: new Date(entry.loggedAt)
+                }))
+                .sort((a, b) => a.date.getTime() - b.date.getTime());
+
+            if (canonical.length === 0) {
+                svg.innerHTML = '';
+                summaryEl.textContent = 'Log a few morning weigh-ins to see your trend.';
+                footnoteEl.textContent = '';
+                return;
+            }
+
+            const allDates = [...canonical.map((entry) => entry.date)];
+            if (showPostFastPoints && Array.isArray(bodyAnalytics.postFastEntries)) {
+                bodyAnalytics.postFastEntries.forEach((entry) => {
+                    if (entry.loggedAt) {
+                        allDates.push(new Date(entry.loggedAt));
+                    }
+                });
+            }
+
+            const dateMin = new Date(Math.min(...allDates.map((date) => date.getTime())));
+            const dateMax = new Date(Math.max(...allDates.map((date) => date.getTime())));
+            if (dateMin.getTime() === dateMax.getTime()) {
+                dateMax.setDate(dateMax.getDate() + 1);
+            }
+
+            const weightValues = canonical.map((entry) => entry.weight);
+            const weightMin = Math.min(...weightValues) - 1;
+            const weightMax = Math.max(...weightValues) + 1;
+
+            const width = 760;
+            const height = 320;
+            const margin = { top: 30, right: 40, bottom: 45, left: 60 };
+            const chartWidth = width - margin.left - margin.right;
+            const chartHeight = height - margin.top - margin.bottom;
+
+            const xScale = (date) => {
+                const ratio = (date.getTime() - dateMin.getTime()) / (dateMax.getTime() - dateMin.getTime());
+                return margin.left + ratio * chartWidth;
+            };
+
+            const yScale = (weight) => {
+                const ratio = (weight - weightMin) / (weightMax - weightMin || 1);
+                return margin.top + (1 - ratio) * chartHeight;
+            };
+
+            const linePath = canonical
+                .map((entry, index) => {
+                    const x = xScale(entry.date);
+                    const y = yScale(entry.weight);
+                    const command = index === 0 ? 'M' : 'L';
+                    return `${command}${x},${y}`;
+                })
+                .join(' ');
+
+            const canonicalCircles = canonical.map((entry) => {
+                const x = xScale(entry.date);
+                const y = yScale(entry.weight);
+                const title = `${formatShortDate(entry.date)} • ${formatWeight(entry.weight)}`;
+                return `<circle cx="${x}" cy="${y}" r="4.5" fill="#fb923c" stroke="#fff" stroke-width="1"><title>${title}</title></circle>`;
+            }).join('');
+
+            const postFastPoints = showPostFastPoints && Array.isArray(bodyAnalytics.postFastEntries)
+                ? bodyAnalytics.postFastEntries
+                    .filter((entry) => entry.weight !== null && entry.loggedAt)
+                    .map((entry) => {
+                        const date = new Date(entry.loggedAt);
+                        const x = xScale(date);
+                        const y = yScale(entry.weight);
+                        const title = `${formatShortDateTime(date)} • ${formatWeight(entry.weight)} (Post-Fast)`;
+                        return `<circle cx="${x}" cy="${y}" r="5" fill="#fff" stroke="#38bdf8" stroke-width="2"><title>${title}</title></circle>`;
+                    })
+                    .join('')
+                : '';
+
+            const fastBands = Array.isArray(bodyAnalytics.fasts)
+                ? bodyAnalytics.fasts
+                    .filter((fast) => fast.startTime)
+                    .map((fast) => {
+                        const start = new Date(fast.startTime);
+                        const end = fast.endTime ? new Date(fast.endTime) : new Date();
+
+                        if (end.getTime() < dateMin.getTime() || start.getTime() > dateMax.getTime()) {
+                            return null;
+                        }
+
+                        const clampedStart = start.getTime() < dateMin.getTime() ? dateMin : start;
+                        const clampedEnd = end.getTime() > dateMax.getTime() ? dateMax : end;
+
+                        const x = xScale(clampedStart);
+                        const widthRect = Math.max(2, xScale(clampedEnd) - x);
+                        return `<rect x="${x}" y="${margin.top}" width="${widthRect}" height="${chartHeight}" fill="rgba(56,189,248,0.16)" stroke="rgba(14,165,233,0.3)" stroke-width="1" />`;
+                    })
+                    .filter(Boolean)
+                    .join('')
+                : '';
+
+            const axes = `
+                <line x1="${margin.left}" y1="${height - margin.bottom}" x2="${width - margin.right}" y2="${height - margin.bottom}" stroke="#cbd5f5" stroke-width="1" />
+                <line x1="${margin.left}" y1="${margin.top}" x2="${margin.left}" y2="${height - margin.bottom}" stroke="#cbd5f5" stroke-width="1" />
+            `;
+
+            const yTicks = 4;
+            const yTickElements = [];
+            for (let i = 0; i <= yTicks; i += 1) {
+                const weight = weightMin + ((weightMax - weightMin) / yTicks) * i;
+                const y = yScale(weight);
+                yTickElements.push(`
+                    <line x1="${margin.left - 6}" y1="${y}" x2="${margin.left}" y2="${y}" stroke="#94a3b8" stroke-width="1" />
+                    <text x="${margin.left - 10}" y="${y + 4}" text-anchor="end" font-size="12" fill="#94a3b8">${weight.toFixed(0)}</text>
+                `);
+            }
+
+            const xTickDates = buildXTicks(dateMin, dateMax);
+            const xTickElements = xTickDates.map((tickDate) => {
+                const x = xScale(tickDate);
+                return `
+                    <line x1="${x}" y1="${height - margin.bottom}" x2="${x}" y2="${height - margin.bottom + 6}" stroke="#94a3b8" stroke-width="1" />
+                    <text x="${x}" y="${height - margin.bottom + 22}" text-anchor="middle" font-size="12" fill="#94a3b8">${formatShortDate(tickDate)}</text>
+                `;
+            }).join('');
+
+            svg.innerHTML = `
+                ${fastBands || ''}
+                ${axes}
+                ${yTickElements.join('')}
+                ${xTickElements}
+                <path d="${linePath}" fill="none" stroke="#fb923c" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path>
+                ${canonicalCircles}
+                ${postFastPoints || ''}
+            `;
+
+            const latestEntry = canonical[canonical.length - 1];
+            const previousEntry = canonical[canonical.length - 2] || null;
+            if (latestEntry) {
+                let summary = `${formatWeight(latestEntry.weight)} • ${formatShortDate(latestEntry.date)}`;
+                if (previousEntry) {
+                    const delta = latestEntry.weight - previousEntry.weight;
+                    if (Math.abs(delta) >= 0.1) {
+                        summary += ` (${formatDelta(delta)})`;
+                    }
+                }
+                summaryEl.textContent = summary;
+            }
+
+            footnoteEl.textContent = 'Solid markers show canonical daily weigh-ins. Hollow markers show post-fast readings logged within two hours of ending a fast.';
+        }
+
+        function buildXTicks(startDate, endDate) {
+            const ticks = [];
+            const totalMs = endDate.getTime() - startDate.getTime();
+            if (totalMs <= 0) {
+                return [startDate];
+            }
+            const intervals = 4;
+            ticks.push(new Date(startDate));
+            for (let i = 1; i < intervals; i += 1) {
+                const ratio = i / intervals;
+                ticks.push(new Date(startDate.getTime() + totalMs * ratio));
+            }
+            ticks.push(new Date(endDate));
+            return ticks;
+        }
+
+        function renderWeeklyComposition() {
+            const list = document.getElementById('weekly-composition-list');
+            const summaryEl = document.getElementById('weekly-composition-summary');
+            if (!list || !summaryEl) {
+                return;
+            }
+
+            if (chartsLoading) {
+                list.innerHTML = '<div class="weekly-empty">Loading weekly insights…</div>';
+                summaryEl.textContent = 'Loading weekly fat vs lean breakdown…';
+                return;
+            }
+
+            if (chartsError) {
+                list.innerHTML = `<div class="weekly-empty">${chartsError}</div>`;
+                summaryEl.textContent = chartsError;
+                return;
+            }
+
+            if (!bodyAnalytics || !Array.isArray(bodyAnalytics.weeklyComposition) || bodyAnalytics.weeklyComposition.length === 0) {
+                list.innerHTML = '<div class="weekly-empty">Add a few body fat % readings to unlock weekly fat vs. lean tracking.</div>';
+                summaryEl.textContent = 'Log morning weigh-ins with body fat % to unlock fat/lean tracking.';
+                return;
+            }
+
+            const rows = bodyAnalytics.weeklyComposition.map((week) => {
+                const label = `Week of ${formatWeekLabel(week.weekStart)}`;
+                return `
+                    <div class="weekly-row">
+                        <div class="weekly-col">
+                            <span class="weekly-label">Week</span>
+                            <span class="weekly-value">${label}</span>
+                        </div>
+                        <div class="weekly-col">
+                            <span class="weekly-label">Avg Weight</span>
+                            <span class="weekly-value">${formatWeight(week.averageWeight)}</span>
+                            <span class="weekly-delta ${week.deltaWeight > 0 ? 'positive' : week.deltaWeight < 0 ? 'negative' : ''}">${formatDelta(week.deltaWeight)}</span>
+                        </div>
+                        <div class="weekly-col">
+                            <span class="weekly-label">Avg Fat Mass</span>
+                            <span class="weekly-value">${formatWeight(week.averageFatMass)}</span>
+                            <span class="weekly-delta ${week.deltaFatMass > 0 ? 'positive' : week.deltaFatMass < 0 ? 'negative' : ''}">${formatDelta(week.deltaFatMass)}</span>
+                        </div>
+                        <div class="weekly-col">
+                            <span class="weekly-label">Avg Lean Mass</span>
+                            <span class="weekly-value">${formatWeight(week.averageLeanMass)}</span>
+                            <span class="weekly-delta ${week.deltaLeanMass > 0 ? 'positive' : week.deltaLeanMass < 0 ? 'negative' : ''}">${formatDelta(week.deltaLeanMass)}</span>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+
+            list.innerHTML = rows;
+
+            const latest = bodyAnalytics.weeklyComposition[bodyAnalytics.weeklyComposition.length - 1];
+            if (latest) {
+                const fatDelta = formatDelta(latest.deltaFatMass);
+                const leanDelta = formatDelta(latest.deltaLeanMass);
+                summaryEl.textContent = `Latest week: ${fatDelta.replace('+', '')} fat, ${leanDelta.replace('+', '')} lean.`;
+            }
+        }
+
+        function renderRetentionCard() {
+            const container = document.getElementById('retention-content');
+            const subtitle = document.getElementById('retention-subtitle');
+            if (!container || !subtitle) {
+                return;
+            }
+
+            if (chartsLoading) {
+                container.innerHTML = '<div class="retention-message">Loading retention insight…</div>';
+                subtitle.textContent = 'Loading your latest retention insight…';
+                return;
+            }
+
+            if (chartsError) {
+                container.innerHTML = `<div class="retention-message">${chartsError}</div>`;
+                subtitle.textContent = chartsError;
+                return;
+            }
+
+            if (!bodyAnalytics || !bodyAnalytics.retention) {
+                container.innerHTML = '<div class="retention-message">Complete a fast with start and post-fast weights to see retention insights.</div>';
+                subtitle.textContent = 'Complete a fast with weigh-ins to see how much stuck.';
+                return;
+            }
+
+            const retention = bodyAnalytics.retention;
+
+            if (retention.status === 'waiting') {
+                container.innerHTML = `<div class="retention-message">${retention.message}</div>`;
+                subtitle.textContent = 'We’re watching for your next canonical weigh-in after the fast.';
+                return;
+            }
+
+            if (retention.status !== 'ok') {
+                container.innerHTML = `<div class="retention-message">${retention.message}</div>`;
+                subtitle.textContent = 'Complete a fast with start and post-fast weights to see retention insights.';
+                return;
+            }
+
+            subtitle.textContent = 'Compared to your next canonical weigh-in within 48 hours.';
+
+            container.innerHTML = `
+                <div class="retention-highlight">${retention.retentionPercent != null ? `${retention.retentionPercent}%` : '—'}</div>
+                <div class="retention-message">of your post-fast drop stayed off by the next weigh-in.</div>
+                <div class="retention-details">
+                    <div class="retention-detail">
+                        <span class="retention-detail-label">Post-Fast Weight</span>
+                        <span class="retention-detail-value">${formatWeight(retention.postFastWeight)}</span>
+                        <span class="retention-detail-label">Logged</span>
+                        <span class="retention-detail-value">${formatShortDateTime(retention.postFastLoggedAt)}</span>
+                    </div>
+                    <div class="retention-detail">
+                        <span class="retention-detail-label">Next Canonical</span>
+                        <span class="retention-detail-value">${formatWeight(retention.nextCanonicalWeight)}</span>
+                        <span class="retention-detail-label">Logged</span>
+                        <span class="retention-detail-value">${formatShortDateTime(retention.nextCanonicalLoggedAt)}</span>
+                    </div>
+                    <div class="retention-detail">
+                        <span class="retention-detail-label">Lost During Fast</span>
+                        <span class="retention-detail-value">${formatWeight(retention.weightLostDuringFast)}</span>
+                        <span class="retention-detail-label">Regained</span>
+                        <span class="retention-detail-value">${formatWeight(retention.weightRegained)}</span>
+                    </div>
+                </div>
+            `;
+        }
+
+        function renderFastEffectivenessCard() {
+            const container = document.getElementById('fast-effectiveness-content');
+            const subtitle = document.getElementById('fast-effectiveness-subtitle');
+            if (!container || !subtitle) {
+                return;
+            }
+
+            if (chartsLoading) {
+                container.innerHTML = '<div class="insight-placeholder">Loading fast effectiveness…</div>';
+                subtitle.textContent = 'Sizing up your most recent fast…';
+                return;
+            }
+
+            if (chartsError) {
+                container.innerHTML = `<div class="insight-placeholder">${chartsError}</div>`;
+                subtitle.textContent = chartsError;
+                return;
+            }
+
+            const effectiveness = bodyAnalytics && bodyAnalytics.fastEffectiveness;
+
+            if (!effectiveness || !effectiveness.status || effectiveness.status === 'no-data') {
+                container.innerHTML = '<div class="insight-placeholder">Complete a fast with start and post-fast weights to size up effectiveness.</div>';
+                subtitle.textContent = 'Log start and post-fast weights to see the breakdown.';
+                return;
+            }
+
+            if (effectiveness.status !== 'ok') {
+                container.innerHTML = `<div class="insight-placeholder">${effectiveness.message}</div>`;
+                subtitle.textContent = 'Log start and post-fast weights to see the breakdown.';
+                return;
+            }
+
+            subtitle.textContent = 'Based on your most recent completed fast with start & post weigh-ins.';
+
+            const startWeightLabel = formatWeight(effectiveness.startWeight);
+            const postWeightLabel = formatWeight(effectiveness.postWeight);
+            const weightDeltaLabel = formatDelta(effectiveness.weightDelta);
+            const fatLossLabel = formatWeight(effectiveness.fatLoss);
+            const fluidLabel = formatWeight(effectiveness.waterLoss);
+            const breakdownLabel = effectiveness.breakdownSource === 'measured'
+                ? 'Measured from body fat %'
+                : 'Estimated from typical fast responses';
+
+            const postLogged = effectiveness.postFastLoggedAt ? formatShortDateTime(effectiveness.postFastLoggedAt) : '';
+            const bodyFatCopy = (effectiveness.startBodyFat !== null && effectiveness.startBodyFat !== undefined
+                && effectiveness.postBodyFat !== null && effectiveness.postBodyFat !== undefined)
+                ? `Body fat ${formatBodyFatValue(effectiveness.startBodyFat)} → ${formatBodyFatValue(effectiveness.postBodyFat)}`
+                : '';
+
+            let durationCopy = '';
+            if (Array.isArray(bodyAnalytics?.fasts)) {
+                const matchedFast = bodyAnalytics.fasts.find((fast) => fast && Number(fast.id) === Number(effectiveness.fastId));
+                if (matchedFast) {
+                    const duration = matchedFast.durationHours ? Number(matchedFast.durationHours) : null;
+                    if (duration) {
+                        durationCopy = `Fast length ${formatFastDuration(duration)}`;
+                    }
+                }
+            }
+
+            const tags = [];
+            tags.push(effectiveness.breakdownSource === 'measured' ? 'Measured' : 'Estimated');
+            if (effectiveness.bodyFatChange !== null && effectiveness.bodyFatChange !== undefined && !Number.isNaN(effectiveness.bodyFatChange)) {
+                const bfTag = formatPercentDelta(effectiveness.bodyFatChange);
+                if (bfTag !== '—') {
+                    tags.push(`${bfTag} BF`);
+                }
+            }
+            const tagsHtml = tags.length
+                ? `<div class="effectiveness-tags">${tags.map((tag) => `<span class="effectiveness-tag">${tag}</span>`).join('')}</div>`
+                : '';
+
+            const metaParts = [];
+            if (durationCopy) {
+                metaParts.push(durationCopy);
+            }
+            if (postLogged) {
+                metaParts.push(`Post-fast weigh-in ${postLogged}`);
+            }
+            if (bodyFatCopy) {
+                metaParts.push(bodyFatCopy);
+            }
+            const metaText = metaParts.length ? metaParts.join(' • ') : 'Keep logging morning weigh-ins to refine this breakdown.';
+
+            container.innerHTML = `
+                <div class="effectiveness-columns">
+                    <div class="effectiveness-metric">
+                        <span class="effectiveness-label">Scale Change</span>
+                        <span class="effectiveness-value">${weightDeltaLabel}</span>
+                        <span class="effectiveness-detail">${startWeightLabel} → ${postWeightLabel}</span>
+                    </div>
+                    <div class="effectiveness-metric">
+                        <span class="effectiveness-label">Likely Fat</span>
+                        <span class="effectiveness-value">${fatLossLabel}</span>
+                        <span class="effectiveness-caption">${breakdownLabel}</span>
+                    </div>
+                    <div class="effectiveness-metric">
+                        <span class="effectiveness-label">Fluid Swing</span>
+                        <span class="effectiveness-value">${fluidLabel}</span>
+                    </div>
+                </div>
+                ${tagsHtml}
+                <div class="effectiveness-message">${effectiveness.message}</div>
+                <div class="effectiveness-meta">${metaText}</div>
+            `;
+        }
+
+        function renderRollingInsightsCard() {
+            const container = document.getElementById('rolling-insights-content');
+            const subtitle = document.getElementById('rolling-insights-subtitle');
+            if (!container || !subtitle) {
+                return;
+            }
+
+            if (chartsLoading) {
+                container.innerHTML = '<div class="insight-placeholder">Loading rolling insights…</div>';
+                subtitle.textContent = 'Crunching your recent fasts…';
+                return;
+            }
+
+            if (chartsError) {
+                container.innerHTML = `<div class="insight-placeholder">${chartsError}</div>`;
+                subtitle.textContent = chartsError;
+                return;
+            }
+
+            const insights = bodyAnalytics && bodyAnalytics.rollingInsights;
+
+            if (!insights || !insights.status || insights.status === 'no-data') {
+                container.innerHTML = '<div class="insight-placeholder">Log start and post-fast weights to unlock rolling insights.</div>';
+                subtitle.textContent = 'We need start and post-fast weigh-ins to compare protocols.';
+                return;
+            }
+
+            if (insights.status !== 'ok') {
+                const fallbackMessage = insights.message || 'We need more data to show rolling insights.';
+                container.innerHTML = `<div class="insight-placeholder">${fallbackMessage}</div>`;
+                subtitle.textContent = 'We need start and post-fast weigh-ins to compare protocols.';
+                return;
+            }
+
+            subtitle.textContent = insights.education && insights.education.description
+                ? insights.education.description
+                : 'Based on fasts logged in this window.';
+
+            const overviewMetrics = [
+                { label: 'Avg Change', value: formatDelta(insights.averageWeightDelta) },
+                { label: 'Avg Retention', value: formatPercent(insights.averageRetentionPercent) }
+            ];
+            if (insights.averageFatLoss !== null && insights.averageFatLoss !== undefined && !Number.isNaN(insights.averageFatLoss)) {
+                overviewMetrics.push({ label: 'Likely Fat', value: formatWeight(insights.averageFatLoss) });
+            }
+
+            const overviewHtml = overviewMetrics.map((metric) => `
+                <div class="rolling-metric">
+                    <span class="rolling-label">${metric.label}</span>
+                    <span class="rolling-value">${metric.value}</span>
+                </div>
+            `).join('');
+
+            const protocolHtml = (insights.protocols || []).map((protocol) => {
+                const changeLabel = formatDelta(protocol.averageWeightDelta);
+                const dropLabel = protocol.averageWeightDrop !== null && protocol.averageWeightDrop !== undefined
+                    ? formatWeight(protocol.averageWeightDrop)
+                    : null;
+                const retentionLabel = formatPercent(protocol.averageRetentionPercent);
+                const fatLabel = protocol.averageFatLoss !== null && protocol.averageFatLoss !== undefined
+                    ? formatWeight(protocol.averageFatLoss)
+                    : null;
+
+                const metricParts = [`Δ ${changeLabel}`];
+                if (dropLabel && dropLabel !== '—') {
+                    metricParts.push(`Drop ${dropLabel}`);
+                }
+                if (fatLabel && fatLabel !== '—') {
+                    metricParts.push(`Likely fat ${fatLabel}`);
+                }
+                if (retentionLabel !== '—') {
+                    metricParts.push(`Retention ${retentionLabel}`);
+                }
+
+                const metricsHtml = metricParts.length
+                    ? metricParts.map((text) => `<span>${text}</span>`).join('')
+                    : '<span>Need more weigh-ins for this protocol.</span>';
+
+                const countLabel = protocol.count === 1 ? '1 fast' : `${protocol.count} fasts`;
+
+                return `
+                    <div class="rolling-protocol">
+                        <div class="rolling-protocol-header">
+                            <span class="rolling-protocol-name">${protocol.label}</span>
+                            <span class="rolling-protocol-count">${countLabel}</span>
+                        </div>
+                        <div class="rolling-protocol-metrics">${metricsHtml}</div>
+                    </div>
+                `;
+            }).join('');
+
+            const protocolListHtml = protocolHtml || '<div class="insight-placeholder">We need more weigh-ins per protocol to show insights.</div>';
+
+            const sampleSummary = `Sampling ${insights.sampleSize} fast${insights.sampleSize === 1 ? '' : 's'}${insights.protocols && insights.protocols.length ? ` • ${insights.protocols.length} protocol${insights.protocols.length === 1 ? '' : 's'}` : ''}`;
+            const retentionTip = insights.education && insights.education.retention ? insights.education.retention : '';
+            const extraProtocols = insights.remainingProtocols && insights.remainingProtocols.length > 0
+                ? `+${insights.remainingProtocols.length} more protocol${insights.remainingProtocols.length === 1 ? '' : 's'} tracked with fewer weigh-ins.`
+                : '';
+            const footnoteParts = [sampleSummary, retentionTip, extraProtocols].filter((part) => part && part.length);
+            const footnoteText = footnoteParts.length ? footnoteParts.join(' • ') : 'Keep logging strategic weigh-ins to compare protocols.';
+
+            container.innerHTML = `
+                <div class="rolling-overview">${overviewHtml}</div>
+                <div class="rolling-protocol-list">${protocolListHtml}</div>
+                <div class="rolling-footnote">${footnoteText}</div>
+            `;
+        }
+
+
+        function setLogFilter(filter) {
+            if (currentLogFilter === filter) {
+                return;
+            }
+
+            currentLogFilter = filter;
+            const filterButtons = document.querySelectorAll('.log-filter-btn');
+            filterButtons.forEach((button) => {
+                button.classList.toggle('active', button.getAttribute('data-log-filter') === currentLogFilter);
+            });
+
+            updateLogActionState();
+            renderLogEntries();
+        }
+
+        function updateLogActionState() {
+            const label = document.getElementById('log-action-label');
+            const chevron = document.getElementById('log-action-chevron');
+            const menu = document.getElementById('log-action-menu');
+
+            if (!label || !chevron || !menu) {
+                return;
+            }
+
+            if (currentLogFilter === 'body') {
+                label.textContent = 'Add Body Entry';
+                chevron.classList.add('hidden');
+                closeLogActionMenu();
+            } else if (currentLogFilter === 'all') {
+                label.textContent = 'Add Fast';
+                chevron.classList.remove('hidden');
+                closeLogActionMenu();
+            } else {
+                label.textContent = 'Add Fast';
+                chevron.classList.add('hidden');
+                closeLogActionMenu();
+            }
+        }
+
+        function formatWeight(value) {
+            if (value === null || value === undefined || Number.isNaN(value)) {
+                return '—';
+            }
+            return `${Number(value).toFixed(1)} lb`;
+        }
+
+        function formatDelta(value) {
+            if (value === null || value === undefined || Number.isNaN(value)) {
+                return '—';
+            }
+            const numeric = Number(value);
+            if (Math.abs(numeric) < 0.05) {
+                return '0.0 lb';
+            }
+            const sign = numeric > 0 ? '+' : '';
+            return `${sign}${numeric.toFixed(1)} lb`;
+        }
+
+        function formatPercent(value, decimals = 0) {
+            if (value === null || value === undefined || Number.isNaN(value)) {
+                return '—';
+            }
+            return `${Number(value).toFixed(decimals)}%`;
+        }
+
+        function formatPercentDelta(value) {
+            if (value === null || value === undefined || Number.isNaN(value)) {
+                return '—';
+            }
+            const numeric = Number(value);
+            if (Math.abs(numeric) < 0.05) {
+                return '0.0%';
+            }
+            const sign = numeric > 0 ? '+' : '';
+            return `${sign}${numeric.toFixed(1)}%`;
+        }
+
+        function formatShortDate(value) {
+            const date = value instanceof Date ? value : (value ? new Date(value) : null);
+            if (!date || Number.isNaN(date.getTime())) {
+                return '';
+            }
+            return date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+        }
+
+        function formatShortDateTime(value) {
+            const date = value instanceof Date ? value : (value ? new Date(value) : null);
+            if (!date || Number.isNaN(date.getTime())) {
+                return '';
+            }
+            return date.toLocaleString(undefined, { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
+        }
+
+        function formatWeekLabel(isoDate) {
+            if (!isoDate) {
+                return '';
+            }
+            const date = new Date(`${isoDate}T00:00:00Z`);
+            if (Number.isNaN(date.getTime())) {
+                return isoDate;
+            }
+            return date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+        }
+
+        function handlePrimaryLogAction() {
+            if (currentLogFilter === 'all') {
+                toggleLogActionMenu();
+                return;
+            }
+
+            if (currentLogFilter === 'body') {
+                showBodyEntryModal({ mode: 'create' });
+            } else {
+                showAddFastModal();
+            }
+        }
+
+        function handleLogMenuSelection(action) {
+            closeLogActionMenu();
+
+            if (action === 'add-fast') {
+                showAddFastModal();
+            } else if (action === 'add-body-entry') {
+                showBodyEntryModal({ mode: 'create' });
+            }
+        }
+
+        function toggleLogActionMenu() {
+            if (logActionMenuOpen) {
+                closeLogActionMenu();
+            } else {
+                openLogActionMenu();
+            }
+        }
+
+        function openLogActionMenu() {
+            const menu = document.getElementById('log-action-menu');
+            if (!menu) {
+                return;
+            }
+            menu.classList.remove('hidden');
+            logActionMenuOpen = true;
+        }
+
+        function closeLogActionMenu() {
+            const menu = document.getElementById('log-action-menu');
+            if (!menu) {
+                return;
+            }
+            if (!menu.classList.contains('hidden')) {
+                menu.classList.add('hidden');
+            }
+            logActionMenuOpen = false;
+        }
+
+        function handleDocumentClickForLogActionMenu(event) {
+            if (!logActionMenuOpen) {
+                return;
+            }
+
+            const actionButton = document.getElementById('log-primary-action');
+            const menu = document.getElementById('log-action-menu');
+
+            const clickedInsideButton = actionButton && actionButton.contains(event.target);
+            const clickedInsideMenu = menu && menu.contains(event.target);
+
+            if (!clickedInsideButton && !clickedInsideMenu) {
+                closeLogActionMenu();
+            }
+        }
+
+        function handleLogListClick(event) {
+            const actionElement = event.target.closest('[data-log-action]');
+            if (!actionElement) {
+                return;
+            }
+
+            const action = actionElement.getAttribute('data-log-action');
+            const entryId = actionElement.getAttribute('data-entry-id');
+            const bodyDay = actionElement.getAttribute('data-body-day');
+            const fastId = actionElement.getAttribute('data-fast-id');
+
+            event.preventDefault();
+
+            switch (action) {
+                case 'toggle-body-day':
+                    if (bodyDay) {
+                        toggleBodyDay(bodyDay);
+                    }
+                    break;
+                case 'set-body-canonical':
+                    if (entryId) {
+                        setBodyEntryCanonical(Number(entryId));
+                    }
+                    break;
+                case 'clear-body-canonical':
+                    if (entryId) {
+                        clearBodyEntryCanonical(Number(entryId));
+                    }
+                    break;
+                case 'edit-body-entry':
+                    if (entryId) {
+                        showBodyEntryModal({ mode: 'edit', entryId: Number(entryId) });
+                    }
+                    break;
+                case 'delete-body-entry':
+                    if (entryId) {
+                        confirmDeleteBodyEntry(Number(entryId));
+                    }
+                    break;
+                case 'edit-fast':
+                    if (fastId) {
+                        editFast(Number(fastId));
+                    }
+                    break;
+                default:
+                    break;
+            }
+        }
+
+        function toggleBodyDay(dateKey) {
+            if (expandedBodyDates.has(dateKey)) {
+                expandedBodyDates.delete(dateKey);
+            } else {
+                expandedBodyDates.add(dateKey);
+            }
+            renderLogEntries();
+        }
+
+        async function setBodyEntryCanonical(entryId) {
+            if (!entryId) {
+                return;
+            }
+            try {
+                pendingScrollTarget = entryId;
+                await bodyLogApi.setCanonical(entryId);
+                await loadBodyLogEntries();
+            } catch (error) {
+                console.error('Failed to set canonical body entry:', error);
+                alert(error.payload?.error || 'Failed to set canonical entry.');
+            }
+        }
+
+        async function clearBodyEntryCanonical(entryId) {
+            if (!entryId) {
+                return;
+            }
+            try {
+                pendingScrollTarget = entryId;
+                await bodyLogApi.clearCanonical(entryId);
+                await loadBodyLogEntries();
+            } catch (error) {
+                console.error('Failed to clear canonical body entry:', error);
+                alert(error.payload?.error || 'Failed to clear canonical entry.');
+            }
+        }
+
+        async function confirmDeleteBodyEntry(entryId) {
+            if (!entryId) {
+                return;
+            }
+            const confirmed = window.confirm('Delete this body entry? This action cannot be undone.');
+            if (!confirmed) {
+                return;
+            }
+            try {
+                await bodyLogApi.deleteEntry(entryId);
+                await loadBodyLogEntries();
+            } catch (error) {
+                console.error('Failed to delete body entry:', error);
+                alert(error.payload?.error || 'Failed to delete body entry.');
+            }
+        }
+
+
         function calculateCurrentStreak(fasts) {
             if (!fasts || fasts.length === 0) {
                 return 0;
@@ -1979,6 +4324,29 @@
             return streak;
         }
 
+        async function loadBodyLogEntries(options = {}) {
+            bodyEntriesLoaded = false;
+            renderLogEntries();
+
+            try {
+                bodyLogEntries = await bodyLogApi.listEntries(options);
+                if (bodyLogEntries.length && expandedBodyDates.size === 0) {
+                    const first = bodyLogEntries[0];
+                    const dateKey = getBodyEntryDateKey(first);
+                    if (dateKey) {
+                        expandedBodyDates.add(dateKey);
+                    }
+                }
+                bodyEntriesLoaded = true;
+                renderLogEntries();
+            } catch (error) {
+                console.error('Error loading body log entries:', error);
+                bodyLogEntries = [];
+                bodyEntriesLoaded = true;
+                renderLogEntries();
+            }
+        }
+
         function updateStats() {
             const totalFasts = fasts.length;
             const totalHours = fasts.reduce((sum, fast) => {
@@ -2010,6 +4378,268 @@
             document.getElementById('add-fast-modal').classList.remove('active');
             document.getElementById('add-fast-form').reset();
         }
+
+        function showBodyEntryModal({ mode = 'create', entryId = null, fastId = null } = {}) {
+            const modal = document.getElementById('body-entry-modal');
+            if (!modal) {
+                return;
+            }
+
+            bodyEntryModalMode = mode;
+            bodyEntryEditingId = entryId;
+
+            const titleEl = document.getElementById('body-entry-modal-title');
+            const submitBtn = document.getElementById('body-entry-submit-btn');
+            const deleteBtn = document.getElementById('body-entry-delete-btn');
+            const canonicalCheckbox = document.getElementById('body-entry-make-canonical');
+
+            resetBodyEntryForm();
+
+            if (mode === 'edit' && entryId) {
+                const entry = bodyLogEntries.find((item) => item.id === entryId);
+                if (!entry) {
+                    alert('Body entry not found.');
+                    return;
+                }
+
+                if (titleEl) {
+                    titleEl.textContent = 'Edit Body Entry';
+                }
+                if (submitBtn) {
+                    submitBtn.textContent = 'Save Changes';
+                }
+                if (deleteBtn) {
+                    deleteBtn.style.display = 'inline-flex';
+                }
+
+                populateBodyEntryForm(entry);
+
+                if (canonicalCheckbox) {
+                    canonicalCheckbox.checked = entry.isCanonical && entry.canonicalStatus === 'manual';
+                }
+
+                const dateKey = getBodyEntryDateKey(entry);
+                if (dateKey) {
+                    expandedBodyDates.add(dateKey);
+                }
+            } else {
+                if (titleEl) {
+                    titleEl.textContent = 'Add Body Entry';
+                }
+                if (submitBtn) {
+                    submitBtn.textContent = 'Save Entry';
+                }
+                if (deleteBtn) {
+                    deleteBtn.style.display = 'none';
+                }
+                if (fastId) {
+                    const fastField = document.getElementById('body-entry-fast-id');
+                    if (fastField) {
+                        fastField.value = fastId;
+                    }
+                }
+                if (canonicalCheckbox) {
+                    canonicalCheckbox.checked = false;
+                }
+            }
+
+            modal.classList.add('active');
+        }
+
+        function hideBodyEntryModal() {
+            const modal = document.getElementById('body-entry-modal');
+            if (modal) {
+                modal.classList.remove('active');
+            }
+            resetBodyEntryForm();
+            bodyEntryModalMode = 'create';
+            bodyEntryEditingId = null;
+        }
+
+        function resetBodyEntryForm() {
+            const form = document.getElementById('body-entry-form');
+            if (!form) {
+                return;
+            }
+
+            form.reset();
+
+            const now = new Date();
+            const dateField = document.getElementById('body-entry-date');
+            const timeField = document.getElementById('body-entry-time');
+            if (dateField) {
+                dateField.value = now.toISOString().slice(0, 10);
+            }
+            if (timeField) {
+                timeField.value = now.toTimeString().slice(0, 5);
+            }
+
+            const deleteBtn = document.getElementById('body-entry-delete-btn');
+            if (deleteBtn) {
+                deleteBtn.style.display = 'none';
+            }
+
+            const fastField = document.getElementById('body-entry-fast-id');
+            if (fastField) {
+                fastField.value = '';
+            }
+
+            const canonicalCheckbox = document.getElementById('body-entry-make-canonical');
+            if (canonicalCheckbox) {
+                canonicalCheckbox.checked = false;
+            }
+        }
+
+        function populateBodyEntryForm(entry) {
+            const dateField = document.getElementById('body-entry-date');
+            const timeField = document.getElementById('body-entry-time');
+            const weightField = document.getElementById('body-entry-weight');
+            const bodyFatField = document.getElementById('body-entry-bodyfat');
+            const notesField = document.getElementById('body-entry-notes');
+            const fastField = document.getElementById('body-entry-fast-id');
+
+            const localDateTime = getEntryLocalDateTime(entry) || new Date(entry.loggedAt);
+
+            if (dateField && localDateTime) {
+                dateField.value = localDateTime.toISOString().slice(0, 10);
+            }
+            if (timeField && localDateTime) {
+                timeField.value = localDateTime.toTimeString().slice(0, 5);
+            }
+            if (weightField) {
+                weightField.value = entry.weight ?? '';
+            }
+            if (bodyFatField) {
+                bodyFatField.value = entry.bodyFat ?? '';
+            }
+            if (notesField) {
+                notesField.value = entry.notes ?? '';
+            }
+            if (fastField) {
+                fastField.value = entry.fastId ?? '';
+            }
+        }
+
+        async function submitBodyEntry(event) {
+            event.preventDefault();
+
+            const form = event.target;
+            const formData = new FormData(form);
+
+            const date = formData.get('entry-date');
+            const time = formData.get('entry-time');
+            const weight = formData.get('weight');
+            const bodyFat = formData.get('body-fat');
+            const notes = formData.get('notes');
+            const fastId = formData.get('fast-id');
+            const makeCanonical = formData.get('make-canonical') === 'on';
+
+            if (!date || !time) {
+                alert('Please provide a date and time for the entry.');
+                return;
+            }
+
+            let isoResult;
+            try {
+                isoResult = buildIsoWithOffset(date, time);
+            } catch (error) {
+                console.error('Invalid date/time provided for body entry:', error);
+                alert('Invalid date or time provided.');
+                return;
+            }
+
+            const weightValue = weight !== '' && weight !== null ? Number(weight) : null;
+            if (weightValue === null || Number.isNaN(weightValue)) {
+                alert('Please provide a valid weight value.');
+                return;
+            }
+
+            const bodyFatValue = bodyFat !== '' && bodyFat !== null ? Number(bodyFat) : null;
+            if (bodyFatValue !== null && Number.isNaN(bodyFatValue)) {
+                alert('Please provide a valid body fat percentage.');
+                return;
+            }
+
+            const payload = {
+                loggedAt: isoResult.isoString,
+                timezoneOffsetMinutes: isoResult.timezoneOffsetMinutes,
+                weight: weightValue,
+                bodyFat: bodyFatValue,
+                notes: notes && notes.trim() ? notes.trim() : null
+            };
+
+            if (fastId) {
+                payload.fastId = Number(fastId);
+            }
+
+            try {
+                if (bodyEntryModalMode === 'edit' && bodyEntryEditingId) {
+                    await bodyLogApi.updateEntry(bodyEntryEditingId, payload);
+                    if (makeCanonical) {
+                        await bodyLogApi.setCanonical(bodyEntryEditingId);
+                    }
+                } else {
+                    payload.makeCanonical = makeCanonical;
+                    const createdEntry = await bodyLogApi.createEntry(payload);
+                    if (createdEntry && createdEntry.id) {
+                        pendingScrollTarget = createdEntry.id;
+                        const dateKey = getBodyEntryDateKey(createdEntry);
+                        if (dateKey) {
+                            expandedBodyDates.add(dateKey);
+                        }
+                    }
+                }
+
+                await loadBodyLogEntries();
+                hideBodyEntryModal();
+            } catch (error) {
+                console.error('Failed to save body entry:', error);
+                alert(error.payload?.error || 'Failed to save body entry.');
+            }
+        }
+
+        async function deleteBodyEntryFromModal() {
+            if (!bodyEntryEditingId) {
+                return;
+            }
+
+            const confirmed = window.confirm('Delete this body entry? This action cannot be undone.');
+            if (!confirmed) {
+                return;
+            }
+
+            try {
+                await bodyLogApi.deleteEntry(bodyEntryEditingId);
+                await loadBodyLogEntries();
+                hideBodyEntryModal();
+            } catch (error) {
+                console.error('Failed to delete body entry:', error);
+                alert(error.payload?.error || 'Failed to delete body entry.');
+            }
+        }
+
+        function buildIsoWithOffset(dateStr, timeStr) {
+            const normalizedTime = timeStr.length === 5 ? `${timeStr}:00` : timeStr;
+            const localDate = new Date(`${dateStr}T${normalizedTime}`);
+
+            if (Number.isNaN(localDate.getTime())) {
+                throw new Error('Invalid date/time');
+            }
+
+            const offsetMinutes = -localDate.getTimezoneOffset();
+            const absoluteOffset = Math.abs(localDate.getTimezoneOffset());
+            const offsetHoursPart = String(Math.floor(absoluteOffset / 60)).padStart(2, '0');
+            const offsetMinutesPart = String(absoluteOffset % 60).padStart(2, '0');
+            const sign = localDate.getTimezoneOffset() <= 0 ? '+' : '-';
+
+            const isoString = `${dateStr}T${normalizedTime}${sign}${offsetHoursPart}:${offsetMinutesPart}`;
+
+            return {
+                isoString,
+                timezoneOffsetMinutes: offsetMinutes
+            };
+        }
+
         
         async function submitAddFast(event) {
             event.preventDefault();

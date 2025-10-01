@@ -1292,7 +1292,7 @@
             text-transform: uppercase;
             letter-spacing: 1px;
         }
-        
+
         .milestones-achieved {
             background: white;
             border-radius: 15px;
@@ -1772,7 +1772,7 @@
                                 <span class="label">Est. Calories Burned</span>
                             </div>
                         </div>
-                        
+
                         <div class="milestones-achieved">
                             <h4>🏆 Milestones Achieved</h4>
                             <div class="milestone-list" id="completionMilestones">
@@ -3833,7 +3833,7 @@
         function startNewFast() {
             // Hide completion state
             document.getElementById('completionState').style.display = 'none';
-            
+
             // Reset all timer state
             if (isRunning) {
                 clearInterval(timerInterval);
@@ -4035,7 +4035,6 @@
             fastStartTime = null;
             elapsedTime = 0;
             currentFastId = null;
-
             // Reset start time selection
             selectedStartTime = null;
             if (document.querySelector('input[name="startTime"][value="now"]')) {

@@ -3,6 +3,7 @@
  * Runs comprehensive test suite across all core pages
  */
 
+const runBodyLogAnalyticsTests = require('./body-log-analytics.test.js');
 const runTimerTests = require('./timer.test.js');
 const runDashboardTests = require('./dashboard.test.js');
 const runSettingsTests = require('./settings.test.js');
@@ -21,8 +22,17 @@ async function runAllTests() {
     let totalTests = 0;
 
     try {
+        // Run Body Log analytics unit tests
+        console.log('1️⃣  BODY LOG ANALYTICS TESTS');
+        console.log('-'.repeat(30));
+        results.bodyLogAnalytics = await runBodyLogAnalyticsTests();
+        totalPassed += results.bodyLogAnalytics.passed;
+        totalFailed += results.bodyLogAnalytics.failed;
+        totalTests += results.bodyLogAnalytics.total;
+        console.log('');
+
         // Run Timer Tests
-        console.log('1️⃣  TIMER PAGE TESTS');
+        console.log('2️⃣  TIMER PAGE TESTS');
         console.log('-'.repeat(30));
         results.timer = await runTimerTests();
         totalPassed += results.timer.passed;
@@ -31,7 +41,7 @@ async function runAllTests() {
         console.log('');
 
         // Run Dashboard Tests
-        console.log('2️⃣  DASHBOARD PAGE TESTS');
+        console.log('3️⃣  DASHBOARD PAGE TESTS');
         console.log('-'.repeat(30));
         results.dashboard = await runDashboardTests();
         totalPassed += results.dashboard.passed;
@@ -40,7 +50,7 @@ async function runAllTests() {
         console.log('');
 
         // Run Settings Tests
-        console.log('3️⃣  SETTINGS PAGE TESTS');
+        console.log('4️⃣  SETTINGS PAGE TESTS');
         console.log('-'.repeat(30));
         results.settings = await runSettingsTests();
         totalPassed += results.settings.passed;
@@ -49,7 +59,7 @@ async function runAllTests() {
         console.log('');
 
         // Run Schedule Tests
-        console.log('4️⃣  SCHEDULE PAGE TESTS');
+        console.log('5️⃣  SCHEDULE PAGE TESTS');
         console.log('-'.repeat(30));
         results.schedule = await runScheduleTests();
         totalPassed += results.schedule.passed;
@@ -58,7 +68,7 @@ async function runAllTests() {
         console.log('');
 
         // Run Benefits Expansion Tests
-        console.log('5️⃣  BENEFITS EXPANSION TESTS');
+        console.log('6️⃣  BENEFITS EXPANSION TESTS');
         console.log('-'.repeat(30));
         try {
             await runBenefitsExpansionTests();
@@ -84,7 +94,7 @@ async function runAllTests() {
     // Generate comprehensive report
     console.log('📊 COMPREHENSIVE TEST REPORT');
     console.log('='.repeat(60));
-    console.log(`Total Test Suites: 5`);
+    console.log(`Total Test Suites: 6`);
     console.log(`Total Tests: ${totalTests}`);
     console.log(`Passed: ${totalPassed} ✅`);
     console.log(`Failed: ${totalFailed} ❌`);
@@ -122,7 +132,7 @@ async function runAllTests() {
     // Export detailed results for CI/CD
     const detailedResults = {
         summary: {
-            totalSuites: 4,
+            totalSuites: 6,
             totalTests,
             passed: totalPassed,
             failed: totalFailed,
