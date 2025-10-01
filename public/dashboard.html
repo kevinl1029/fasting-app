@@ -391,12 +391,54 @@
             color: #2563eb;
             font-size: 0.85rem;
             font-weight: 700;
-            cursor: help;
+            cursor: pointer;
             user-select: none;
+            position: relative;
+            transition: background 0.2s;
         }
 
         .insight-info:hover {
             background: #dbeafe;
+        }
+
+        .insight-info:active {
+            background: #bfdbfe;
+        }
+
+        .insight-tooltip {
+            position: absolute;
+            top: calc(100% + 8px);
+            right: 0;
+            background: rgba(15, 23, 42, 0.97);
+            color: #fff;
+            padding: 12px 16px;
+            border-radius: 10px;
+            font-size: 0.85rem;
+            line-height: 1.5;
+            width: max-content;
+            max-width: 280px;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.2s;
+            z-index: 1000;
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25);
+            font-weight: 400;
+        }
+
+        .insight-tooltip.visible {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        .insight-tooltip::before {
+            content: '';
+            position: absolute;
+            top: -6px;
+            right: 8px;
+            width: 12px;
+            height: 12px;
+            background: rgba(15, 23, 42, 0.97);
+            transform: rotate(45deg);
         }
 
         .chart-card-header h3 {
@@ -2122,22 +2164,28 @@
 
                     <div class="chart-card" id="fast-effectiveness-card">
                         <div class="chart-card-header">
-                            <div>
+                            <div class="chart-header-top">
                                 <h3>Fast Effectiveness</h3>
-                                <p class="chart-subtitle" id="fast-effectiveness-subtitle">Log start and post-fast weights to size up your most recent fast.</p>
+                                <span class="insight-info" aria-label="How fast effectiveness is calculated">
+                                    i
+                                    <div class="insight-tooltip">Shows the breakdown of weight lost during your most recent fast. When you log body fat %, we calculate actual fat loss vs. water weight. Without body fat data, we estimate based on typical fasting patterns.</div>
+                                </span>
                             </div>
-                            <span class="insight-info" title="We break down your most recent fast using the start and post-fast weigh-ins you logged." aria-label="How fast effectiveness is calculated">i</span>
+                            <p class="chart-subtitle" id="fast-effectiveness-subtitle">Log start and post-fast weights to size up your most recent fast.</p>
                         </div>
                         <div id="fast-effectiveness-content" class="effectiveness-content"></div>
                     </div>
 
                     <div class="chart-card" id="rolling-insights-card">
                         <div class="chart-card-header">
-                            <div>
+                            <div class="chart-header-top">
                                 <h3>Rolling Protocol Insights</h3>
-                                <p class="chart-subtitle" id="rolling-insights-subtitle">Compare how each protocol performs when you log weigh-ins.</p>
+                                <span class="insight-info" aria-label="How rolling insights are calculated">
+                                    i
+                                    <div class="insight-tooltip">Compares performance across different fasting protocols you've completed in the last 90 days. Each protocol must have both start and post-fast weigh-ins. Retention is measured by finding your next morning weigh-in within 48 hours after the fast ends.</div>
+                                </span>
                             </div>
-                            <span class="insight-info" title="We average fasts with start and post-fast weigh-ins logged in this window. Retention checks the next canonical weigh-in within 48 hours." aria-label="How rolling insights are calculated">i</span>
+                            <p class="chart-subtitle" id="rolling-insights-subtitle">Compare how each protocol performs when you log weigh-ins.</p>
                         </div>
                         <div id="rolling-insights-content" class="rolling-content"></div>
                     </div>
@@ -2722,6 +2770,33 @@
                         alert(`${pageName} page coming soon!`);
                     }
                 });
+            });
+
+            // Mobile-friendly tooltip handlers
+            document.querySelectorAll('.insight-info').forEach(infoIcon => {
+                infoIcon.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    const tooltip = infoIcon.querySelector('.insight-tooltip');
+                    if (tooltip) {
+                        tooltip.classList.toggle('visible');
+
+                        // Close other open tooltips
+                        document.querySelectorAll('.insight-tooltip.visible').forEach(other => {
+                            if (other !== tooltip) {
+                                other.classList.remove('visible');
+                            }
+                        });
+                    }
+                });
+            });
+
+            // Close tooltips when clicking outside
+            document.addEventListener('click', (e) => {
+                if (!e.target.closest('.insight-info')) {
+                    document.querySelectorAll('.insight-tooltip.visible').forEach(tooltip => {
+                        tooltip.classList.remove('visible');
+                    });
+                }
             });
 
             window.addEventListener('resize', () => {
