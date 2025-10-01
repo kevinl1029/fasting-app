@@ -2181,9 +2181,25 @@
                     </div>
 
                     <div class="modal-form-group">
-                        <label for="weight">Weight (Optional)</label>
-                        <input type="number" id="weight" name="weight" step="0.1" placeholder="Enter weight">
-                        <div class="modal-form-hint">Your weight at the start of the fast</div>
+                        <label for="start-weight">Starting Weight (Optional)</label>
+                        <input type="number" id="start-weight" name="start-weight" step="0.1" placeholder="Enter starting weight">
+                    </div>
+
+                    <div class="modal-form-group">
+                        <label for="start-body-fat">Starting Body Fat % (Optional)</label>
+                        <input type="number" id="start-body-fat" name="start-body-fat" step="0.1" min="0" max="100" placeholder="Enter starting body fat %">
+                    </div>
+
+                    <div class="modal-form-group">
+                        <label for="end-weight">End Weight (Optional)</label>
+                        <input type="number" id="end-weight" name="end-weight" step="0.1" placeholder="Enter end weight">
+                        <div class="modal-form-hint">Only if fast is complete</div>
+                    </div>
+
+                    <div class="modal-form-group">
+                        <label for="end-body-fat">End Body Fat % (Optional)</label>
+                        <input type="number" id="end-body-fat" name="end-body-fat" step="0.1" min="0" max="100" placeholder="Enter end body fat %">
+                        <div class="modal-form-hint">Only if fast is complete</div>
                     </div>
 
                     <div class="modal-form-group">
@@ -2235,9 +2251,25 @@
                     </div>
 
                     <div class="modal-form-group">
-                        <label for="edit-weight">Weight (Optional)</label>
-                        <input type="number" id="edit-weight" name="weight" step="0.1" placeholder="Enter weight">
-                        <div class="modal-form-hint">Your weight at the start of the fast</div>
+                        <label for="edit-start-weight">Starting Weight (Optional)</label>
+                        <input type="number" id="edit-start-weight" name="start-weight" step="0.1" placeholder="Enter starting weight">
+                    </div>
+
+                    <div class="modal-form-group">
+                        <label for="edit-start-body-fat">Starting Body Fat % (Optional)</label>
+                        <input type="number" id="edit-start-body-fat" name="start-body-fat" step="0.1" min="0" max="100" placeholder="Enter starting body fat %">
+                    </div>
+
+                    <div class="modal-form-group">
+                        <label for="edit-end-weight">End Weight (Optional)</label>
+                        <input type="number" id="edit-end-weight" name="end-weight" step="0.1" placeholder="Enter end weight">
+                        <div class="modal-form-hint">Only if fast is complete</div>
+                    </div>
+
+                    <div class="modal-form-group">
+                        <label for="edit-end-body-fat">End Body Fat % (Optional)</label>
+                        <input type="number" id="edit-end-body-fat" name="end-body-fat" step="0.1" min="0" max="100" placeholder="Enter end body fat %">
+                        <div class="modal-form-hint">Only if fast is complete</div>
                     </div>
 
                     <div class="modal-form-group">
@@ -4761,7 +4793,7 @@
                         break;
                     case 'delete-fast':
                         if (fastId) {
-                            confirmDeleteFast(Number(fastId));
+                            deleteFast(Number(fastId));
                         }
                         break;
                     case 'set-body-canonical':
@@ -4920,34 +4952,6 @@
             } catch (error) {
                 console.error('Failed to delete body entry:', error);
                 alert(error.payload?.error || 'Failed to delete body entry.');
-            }
-        }
-
-        async function confirmDeleteFast(fastId) {
-            if (!fastId) {
-                return;
-            }
-            const confirmed = window.confirm('Delete this fast? This action cannot be undone.');
-            if (!confirmed) {
-                return;
-            }
-            try {
-                const response = await fetch(`/api/fasts/${fastId}`, {
-                    method: 'DELETE',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    }
-                });
-
-                if (!response.ok) {
-                    throw new Error('Failed to delete fast');
-                }
-
-                await loadFasts();
-                renderLogEntries();
-            } catch (error) {
-                console.error('Failed to delete fast:', error);
-                alert('Failed to delete fast. Please try again.');
             }
         }
 
@@ -5315,38 +5319,48 @@
         
         async function submitAddFast(event) {
             event.preventDefault();
-            
+
             const formData = new FormData(event.target);
             const startDate = formData.get('start-date');
             const startTime = formData.get('start-time');
             const endDate = formData.get('end-date');
             const endTime = formData.get('end-time');
             const notes = formData.get('notes');
-            const weight = formData.get('weight');
-            
+            const startWeight = formData.get('start-weight');
+            const startBodyFat = formData.get('start-body-fat');
+            const endWeight = formData.get('end-weight');
+            const endBodyFat = formData.get('end-body-fat');
+
             // Combine date and time inputs
             const startDateTime = new Date(`${startDate}T${startTime}`).toISOString();
             const endDateTime = endDate && endTime ? new Date(`${endDate}T${endTime}`).toISOString() : null;
-            
+
             // Validate that end time is after start time if both are provided
             if (endDateTime) {
                 const startTime = new Date(startDateTime);
                 const endTime = new Date(endDateTime);
-                
+
                 if (endTime <= startTime) {
                     alert('Fast end time must be after the start time. Please check your dates and times.');
                     return;
                 }
             }
-            
+
             // Get session ID for linking to user profile
             const sessionId = window.getSessionId();
-            
+
+            // Get timezone offset in minutes
+            const timezoneOffsetMinutes = -new Date().getTimezoneOffset();
+
             const fastData = {
                 start_time: startDateTime,
                 end_time: endDateTime,
                 notes: notes || null,
-                weight: weight ? parseFloat(weight) : null,
+                start_weight: startWeight ? parseFloat(startWeight) : null,
+                start_body_fat: startBodyFat ? parseFloat(startBodyFat) : null,
+                end_weight: endWeight ? parseFloat(endWeight) : null,
+                end_body_fat: endBodyFat ? parseFloat(endBodyFat) : null,
+                timezone_offset_minutes: timezoneOffsetMinutes,
                 is_manual: true,
                 sessionId: sessionId
             };
@@ -5403,7 +5417,7 @@
         function populateEditModal(fast) {
             const startDate = new Date(fast.start_time);
             const endDate = fast.end_time ? new Date(fast.end_time) : null;
-            
+
             // Format dates for inputs
             const formatDateForInput = (date) => {
                 const year = date.getFullYear();
@@ -5411,16 +5425,16 @@
                 const day = String(date.getDate()).padStart(2, '0');
                 return `${year}-${month}-${day}`;
             };
-            
+
             const formatTimeForInput = (date) => {
                 const hours = String(date.getHours()).padStart(2, '0');
                 const minutes = String(date.getMinutes()).padStart(2, '0');
                 return `${hours}:${minutes}`;
             };
-            
+
             document.getElementById('edit-start-date').value = formatDateForInput(startDate);
             document.getElementById('edit-start-time').value = formatTimeForInput(startDate);
-            
+
             if (endDate) {
                 document.getElementById('edit-end-date').value = formatDateForInput(endDate);
                 document.getElementById('edit-end-time').value = formatTimeForInput(endDate);
@@ -5428,9 +5442,12 @@
                 document.getElementById('edit-end-date').value = '';
                 document.getElementById('edit-end-time').value = '';
             }
-            
+
             document.getElementById('edit-notes').value = fast.notes || '';
-            document.getElementById('edit-weight').value = fast.weight || '';
+            document.getElementById('edit-start-weight').value = fast.start_weight || '';
+            document.getElementById('edit-start-body-fat').value = fast.start_body_fat || '';
+            document.getElementById('edit-end-weight').value = fast.end_weight || '';
+            document.getElementById('edit-end-body-fat').value = fast.end_body_fat || '';
         }
         
         function hideEditFastModal() {
@@ -5441,26 +5458,29 @@
         
         async function submitEditFast(event) {
             event.preventDefault();
-            
+
             if (!editingFastId) return;
-            
+
             const formData = new FormData(event.target);
             const startDate = formData.get('start-date');
             const startTime = formData.get('start-time');
             const endDate = formData.get('end-date');
             const endTime = formData.get('end-time');
             const notes = formData.get('notes');
-            const weight = formData.get('weight');
-            
+            const startWeight = formData.get('start-weight');
+            const startBodyFat = formData.get('start-body-fat');
+            const endWeight = formData.get('end-weight');
+            const endBodyFat = formData.get('end-body-fat');
+
             // Combine date and time inputs
             const startDateTime = new Date(`${startDate}T${startTime}`).toISOString();
             const endDateTime = endDate && endTime ? new Date(`${endDate}T${endTime}`).toISOString() : null;
-            
+
             // Validate that end time is after start time if both are provided
             if (endDateTime) {
                 const startTime = new Date(startDateTime);
                 const endTime = new Date(endDateTime);
-                
+
                 if (endTime <= startTime) {
                     alert('Fast end time must be after the start time. Please check your dates and times.');
                     return;
@@ -5473,11 +5493,18 @@
                 return;
             }
 
+            // Get timezone offset in minutes
+            const timezoneOffsetMinutes = -new Date().getTimezoneOffset();
+
             const fastData = {
                 start_time: startDateTime,
                 end_time: endDateTime,
                 notes: notes || null,
-                weight: weight ? parseFloat(weight) : null
+                start_weight: startWeight ? parseFloat(startWeight) : null,
+                start_body_fat: startBodyFat ? parseFloat(startBodyFat) : null,
+                end_weight: endWeight ? parseFloat(endWeight) : null,
+                end_body_fat: endBodyFat ? parseFloat(endBodyFat) : null,
+                timezone_offset_minutes: timezoneOffsetMinutes
             };
 
             try {
@@ -5559,18 +5586,26 @@
 
             try {
                 const response = await fetch(`/api/fasts/${fastId}?sessionId=${sessionId}`, {
-                    method: 'DELETE'
+                    method: 'DELETE',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
                 });
-                
-                if (response.ok) {
-                    loadFasts(); // Reload the fasts list
-                } else {
+
+                if (!response.ok) {
                     const error = await response.json();
-                    alert(`Error: ${error.error}`);
+                    throw new Error(error.error || 'Failed to delete fast');
                 }
+
+                // Close modal if it's open (called from Edit Fast modal)
+                hideEditFastModal();
+
+                // Reload the data
+                await loadFasts();
+                renderLogEntries();
             } catch (error) {
                 console.error('Error deleting fast:', error);
-                alert('Failed to delete fast. Please try again.');
+                alert(error.message || 'Failed to delete fast. Please try again.');
             }
         }
         

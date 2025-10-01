@@ -175,9 +175,40 @@ app.get('/api/fasts/:id', validateSessionMiddleware, async (req, res) => {
     if (fast.user_profile_id !== req.userProfile.id) {
       return res.status(403).json({ error: 'Access denied: You can only access your own fasts' });
     }
-    
+
     const milestones = await db.getFastMilestones(fastId);
-    res.json({ ...fast, milestones });
+    const bodyLogEntries = await db.getBodyLogEntriesByFastId(fastId);
+
+    // Extract start and end weights from body log entries
+    let startWeight = null, startBodyFat = null, endWeight = null, endBodyFat = null;
+
+    for (const entry of bodyLogEntries) {
+      const entryTime = new Date(entry.logged_at).getTime();
+      const startTime = new Date(fast.start_time).getTime();
+      const endTime = fast.end_time ? new Date(fast.end_time).getTime() : null;
+
+      // Check if this is a start weight (within 2 hours before start)
+      if (Math.abs(entryTime - startTime) <= 2 * 60 * 60 * 1000 && entryTime <= startTime) {
+        startWeight = entry.weight;
+        startBodyFat = entry.body_fat;
+      }
+
+      // Check if this is an end weight (within 2 hours after end, or tagged as post_fast)
+      if (endTime && (entry.entry_tag === 'post_fast' || (entryTime >= endTime && entryTime - endTime <= 2 * 60 * 60 * 1000))) {
+        endWeight = entry.weight;
+        endBodyFat = entry.body_fat;
+      }
+    }
+
+    res.json({
+      ...fast,
+      milestones,
+      start_weight: startWeight,
+      start_body_fat: startBodyFat,
+      end_weight: endWeight,
+      end_body_fat: endBodyFat,
+      body_log_entries: bodyLogEntries
+    });
   } catch (error) {
     console.error('Error fetching fast:', error);
     res.status(500).json({ error: 'Failed to fetch fast' });
@@ -551,15 +582,15 @@ app.get('/api/body-log/analytics', validateSessionMiddleware, async (req, res) =
 app.put('/api/fasts/:id', validateSessionMiddleware, async (req, res) => {
   try {
     const fastId = parseInt(req.params.id);
-    const { start_time, end_time, notes, weight, photos } = req.body;
-    
+    const { start_time, end_time, notes, weight, photos, start_weight, start_body_fat, end_weight, end_body_fat, timezone_offset_minutes } = req.body;
+
     let updateData = { start_time, end_time, notes, weight, photos };
-    
+
     // Remove undefined values
-    Object.keys(updateData).forEach(key => 
+    Object.keys(updateData).forEach(key =>
       updateData[key] === undefined && delete updateData[key]
     );
-    
+
     // Verify ownership and recalculate duration if times are being updated
     const fast = await db.getFastById(fastId);
     if (!fast) {
@@ -582,13 +613,52 @@ app.put('/api/fasts/:id', validateSessionMiddleware, async (req, res) => {
         updateData.is_active = false;
       }
     }
-    
+
     const result = await db.updateFast(fastId, updateData);
-    
+
     if (result.changes === 0) {
       return res.status(404).json({ error: 'Fast not found' });
     }
-    
+
+    // Handle body log updates for start and end weights
+    const userProfileId = req.userProfile.id;
+    const finalStartTime = updateData.start_time || fast.start_time;
+    const finalEndTime = updateData.end_time || fast.end_time;
+
+    // Update or create start weight body log entry
+    if (start_weight !== undefined && start_weight !== null) {
+      try {
+        await bodyLogService.recordFastWeight({
+          userProfileId,
+          fastId,
+          phase: 'start',
+          weight: start_weight,
+          bodyFat: start_body_fat,
+          loggedAt: finalStartTime,
+          timezoneOffsetMinutes: timezone_offset_minutes
+        });
+      } catch (syncError) {
+        console.error('Body log sync error (fast update - start):', syncError);
+      }
+    }
+
+    // Update or create end weight body log entry
+    if (finalEndTime && end_weight !== undefined && end_weight !== null) {
+      try {
+        await bodyLogService.recordFastWeight({
+          userProfileId,
+          fastId,
+          phase: 'end',
+          weight: end_weight,
+          bodyFat: end_body_fat,
+          loggedAt: finalEndTime,
+          timezoneOffsetMinutes: timezone_offset_minutes
+        });
+      } catch (syncError) {
+        console.error('Body log sync error (fast update - end):', syncError);
+      }
+    }
+
     const updatedFast = await db.getFastById(fastId);
     res.json(updatedFast);
   } catch (error) {

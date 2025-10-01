@@ -1345,6 +1345,80 @@
             color: #666;
         }
         
+        .completion-body-metrics {
+            background: rgba(59, 130, 246, 0.05);
+            border: 2px solid #3b82f6;
+            border-radius: 15px;
+            padding: 20px;
+            margin: 25px 0;
+        }
+
+        .completion-body-metrics h4 {
+            color: #3b82f6;
+            font-size: 1.1rem;
+            font-weight: 600;
+            margin-bottom: 15px;
+        }
+
+        .metric-inputs {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            margin-bottom: 15px;
+        }
+
+        .metric-input-group {
+            display: flex;
+            flex-direction: column;
+            width: 100%;
+        }
+
+        .metric-input-group label {
+            font-size: 0.9rem;
+            color: #666;
+            margin-bottom: 5px;
+            font-weight: 500;
+        }
+
+        .metric-input-group input {
+            width: 100%;
+            padding: 10px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 1rem;
+            transition: border-color 0.2s ease;
+            box-sizing: border-box;
+        }
+
+        .metric-input-group input:focus {
+            outline: none;
+            border-color: #3b82f6;
+        }
+
+        .save-metrics-btn {
+            width: 100%;
+            background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 10px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        .save-metrics-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(59, 130, 246, 0.3);
+        }
+
+        .save-metrics-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+
         .completion-actions {
             display: flex;
             flex-direction: column;
@@ -1781,6 +1855,23 @@
                         </div>
                     </div>
                     
+                    <div class="completion-body-metrics">
+                        <h4>📊 Log Your Results</h4>
+                        <div class="metric-inputs">
+                            <div class="metric-input-group">
+                                <label for="completion-weight">End Weight</label>
+                                <input type="number" id="completion-weight" step="0.1" placeholder="Enter weight">
+                            </div>
+                            <div class="metric-input-group">
+                                <label for="completion-body-fat">End Body Fat %</label>
+                                <input type="number" id="completion-body-fat" step="0.1" min="0" max="100" placeholder="Enter body fat %">
+                            </div>
+                        </div>
+                        <button class="save-metrics-btn" onclick="saveCompletionMetrics()">
+                            Save Metrics
+                        </button>
+                    </div>
+
                     <div class="completion-actions">
                         <button class="refeed-notes-btn" onclick="openRefeedNotes()">
                             📝 Log Refeed Notes
@@ -3823,6 +3914,81 @@
             }
         }
 
+        // Save completion metrics (weight and body fat)
+        async function saveCompletionMetrics() {
+            const weight = parseFloat(document.getElementById('completion-weight').value);
+            const bodyFat = parseFloat(document.getElementById('completion-body-fat').value);
+
+            if (!weight) {
+                alert('Please enter your end weight');
+                return;
+            }
+
+            if (!completedFastId) {
+                alert('No completed fast found to save metrics for');
+                return;
+            }
+
+            const saveBtn = document.querySelector('.save-metrics-btn');
+            saveBtn.disabled = true;
+            saveBtn.textContent = 'Saving...';
+
+            try {
+                const sessionId = window.getSessionId();
+                if (!sessionId) {
+                    alert('Session error. Please refresh the page.');
+                    return;
+                }
+
+                const timezoneOffsetMinutes = -new Date().getTimezoneOffset();
+                const now = new Date().toISOString();
+
+                // Create body log entry linked to the completed fast
+                const bodyLogData = {
+                    loggedAt: now,
+                    weight: weight,
+                    bodyFat: bodyFat || null,
+                    fastId: completedFastId,
+                    source: 'fast_completion',
+                    timezoneOffsetMinutes: timezoneOffsetMinutes,
+                    sessionId: sessionId
+                };
+
+                const response = await fetch('/api/body-log', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(bodyLogData)
+                });
+
+                if (response.ok) {
+                    saveBtn.textContent = '✓ Saved!';
+                    saveBtn.style.background = 'linear-gradient(135deg, #22c55e 0%, #16a34a 100%)';
+
+                    // Clear inputs
+                    document.getElementById('completion-weight').value = '';
+                    document.getElementById('completion-body-fat').value = '';
+
+                    setTimeout(() => {
+                        saveBtn.disabled = false;
+                        saveBtn.textContent = 'Save Metrics';
+                        saveBtn.style.background = 'linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%)';
+                    }, 2000);
+                } else {
+                    const error = await response.json();
+                    alert(`Error saving metrics: ${error.error || 'Unknown error'}`);
+                    saveBtn.disabled = false;
+                    saveBtn.textContent = 'Save Metrics';
+                }
+            } catch (error) {
+                console.error('Error saving completion metrics:', error);
+                alert('Failed to save metrics. Please try again.');
+                saveBtn.disabled = false;
+                saveBtn.textContent = 'Save Metrics';
+            }
+        }
+
         // Handle refeed notes CTA (placeholder)
         function openRefeedNotes() {
             // Placeholder - would open a modal or navigate to notes page
@@ -3999,6 +4165,9 @@
                 if (endResponse.ok) {
                     const completedFast = await endResponse.json();
                     console.log('Fast entry completed:', completedFast);
+
+                    // Store the completed fast ID for metric saving
+                    completedFastId = currentFastId;
                     currentFastId = null;
 
                     // Update stats display after completing a fast
@@ -4035,6 +4204,7 @@
             fastStartTime = null;
             elapsedTime = 0;
             currentFastId = null;
+            completedFastId = null;
             // Reset start time selection
             selectedStartTime = null;
             if (document.querySelector('input[name="startTime"][value="now"]')) {
@@ -4486,6 +4656,7 @@
         let cardRotationManager = null; // Card rotation manager instance
         let hungerCoach = null; // Legacy hunger coach instance
         let currentFastId = null; // Current active fast ID
+        let completedFastId = null; // Most recently completed fast ID (for saving metrics)
         let phaseBanner = null; // Phase banner instance
         let tipRotationInterval = null; // Tip rotation interval
         const TIP_ROTATION_INTERVAL = 12000; // 12 seconds for tip rotation
