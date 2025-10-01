@@ -397,7 +397,8 @@ app.get('/api/body-log', validateSessionMiddleware, async (req, res) => {
       endDate,
       limit,
       offset,
-      includeSecondary
+      includeSecondary,
+      fastId
     } = req.query;
 
     const parsedLimit = limit ? parseInt(limit, 10) : undefined;
@@ -405,6 +406,14 @@ app.get('/api/body-log', validateSessionMiddleware, async (req, res) => {
     const includeSecondaryFlag = includeSecondary === undefined
       ? true
       : includeSecondary !== 'false' && includeSecondary !== '0';
+
+    // If filtering by fastId, get entries for that specific fast
+    if (fastId) {
+      const entries = await db.getBodyLogEntriesByFastId(parseInt(fastId, 10));
+      // Filter to only entries for this user
+      const userEntries = entries.filter(entry => entry.user_profile_id === req.userProfile.id);
+      return res.json(userEntries);
+    }
 
     const entries = await bodyLogService.listEntries(req.userProfile.id, {
       startDate,

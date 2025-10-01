@@ -851,7 +851,147 @@
             background: #f8f9fa;
             border-radius: 10px;
         }
-        
+
+        /* Starting Metrics Card */
+        .starting-metrics-card {
+            margin: 20px 0;
+            background: linear-gradient(135deg, rgba(59, 130, 246, 0.05), rgba(139, 92, 246, 0.05));
+            border: 2px solid #3b82f6;
+            border-radius: 12px;
+            overflow: hidden;
+            transition: all 0.3s ease;
+        }
+
+        .starting-metrics-header {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 15px;
+            cursor: pointer;
+            transition: background 0.2s ease;
+        }
+
+        .starting-metrics-header:hover {
+            background: rgba(59, 130, 246, 0.08);
+        }
+
+        .metrics-icon {
+            font-size: 1.3rem;
+        }
+
+        .metrics-title {
+            flex: 1;
+            font-weight: 600;
+            color: #3b82f6;
+            font-size: 0.95rem;
+        }
+
+        .metrics-chevron {
+            font-size: 1.2rem;
+            color: #3b82f6;
+            transition: transform 0.3s ease;
+        }
+
+        .starting-metrics-card.expanded .metrics-chevron {
+            transform: rotate(90deg);
+        }
+
+        .starting-metrics-summary {
+            padding: 12px 15px;
+            background: rgba(34, 197, 94, 0.1);
+            border-top: 1px solid rgba(34, 197, 94, 0.2);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .metrics-check {
+            color: #22c55e;
+            font-size: 1.1rem;
+        }
+
+        .starting-metrics-summary span {
+            color: #16a34a;
+            font-weight: 500;
+            font-size: 0.9rem;
+        }
+
+        .starting-metrics-content {
+            padding: 15px;
+            border-top: 1px solid rgba(59, 130, 246, 0.2);
+            animation: slideDown 0.3s ease;
+        }
+
+        @keyframes slideDown {
+            from {
+                opacity: 0;
+                transform: translateY(-10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .starting-metric-input-group {
+            margin-bottom: 12px;
+        }
+
+        .starting-metric-input-group label {
+            display: block;
+            font-size: 0.85rem;
+            color: #666;
+            margin-bottom: 5px;
+            font-weight: 500;
+        }
+
+        .starting-metric-input-group input {
+            width: 100%;
+            padding: 10px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 1rem;
+            transition: border-color 0.2s ease;
+            box-sizing: border-box;
+        }
+
+        .starting-metric-input-group input:focus {
+            outline: none;
+            border-color: #3b82f6;
+        }
+
+        .save-starting-metrics-btn {
+            width: 100%;
+            background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%);
+            color: white;
+            border: none;
+            padding: 12px;
+            border-radius: 10px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+            margin-top: 5px;
+        }
+
+        .save-starting-metrics-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(59, 130, 246, 0.3);
+        }
+
+        .save-starting-metrics-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .starting-metrics-hint {
+            text-align: center;
+            font-size: 0.75rem;
+            color: #888;
+            margin-top: 8px;
+        }
+
         .time-item {
             display: flex;
             justify-content: space-between;
@@ -1777,6 +1917,33 @@
 
                         <!-- See More Link -->
                         <a href="#" class="see-more-link" id="benefitsSeeMoreLink" onclick="handleBenefitsSeeMoreClick(event)">View Dashboard</a>
+                    </div>
+                </div>
+
+                <!-- Starting Metrics Card -->
+                <div class="starting-metrics-card" id="startingMetricsCard" style="display: none;">
+                    <div class="starting-metrics-header" onclick="toggleStartingMetrics()">
+                        <span class="metrics-icon">📊</span>
+                        <span class="metrics-title" id="startingMetricsTitle">Log Starting Metrics (Optional)</span>
+                        <span class="metrics-chevron" id="startingMetricsChevron">→</span>
+                    </div>
+                    <div class="starting-metrics-summary" id="startingMetricsSummary" style="display: none;">
+                        <span class="metrics-check">✓</span>
+                        <span id="startingMetricsSummaryText">Starting metrics logged</span>
+                    </div>
+                    <div class="starting-metrics-content" id="startingMetricsContent" style="display: none;">
+                        <div class="starting-metric-input-group">
+                            <label for="starting-weight">Weight</label>
+                            <input type="number" id="starting-weight" step="0.1" placeholder="Enter weight">
+                        </div>
+                        <div class="starting-metric-input-group">
+                            <label for="starting-body-fat">Body Fat %</label>
+                            <input type="number" id="starting-body-fat" step="0.1" min="0" max="100" placeholder="Enter body fat %">
+                        </div>
+                        <button class="save-starting-metrics-btn" onclick="saveStartingMetrics()">
+                            Save Starting Metrics
+                        </button>
+                        <div class="starting-metrics-hint">Logged at fast start time</div>
                     </div>
                 </div>
 
@@ -2800,6 +2967,27 @@
                     }
 
                     databaseUpdateSuccessful = true;
+
+                    // Update the linked body log entry if it exists
+                    if (startingMetricsBodyLogId) {
+                        try {
+                            const bodyLogUpdateResponse = await fetch(`/api/body-log/${startingMetricsBodyLogId}?sessionId=${updateSessionId}`, {
+                                method: 'PUT',
+                                headers: {
+                                    'Content-Type': 'application/json'
+                                },
+                                body: JSON.stringify({
+                                    loggedAt: fastStartTime.toISOString()
+                                })
+                            });
+
+                            if (!bodyLogUpdateResponse.ok) {
+                                console.error('Failed to update body log entry timestamp');
+                            }
+                        } catch (bodyLogError) {
+                            console.error('Error updating body log entry:', bodyLogError);
+                        }
+                    }
                 } catch (error) {
                     console.error('Failed to update start time in database:', error);
                     alert('Warning: Start time updated locally but may not persist. Please try again or refresh the page.');
@@ -2878,7 +3066,10 @@
             document.getElementById('preFastState').style.display = 'none';
             document.getElementById('activeFastState').style.display = 'block';
             document.querySelector('.welcome-message').style.display = 'none';
-            
+
+            // Show starting metrics card
+            showStartingMetricsCard();
+
             isRunning = true;
             // Always use current time for "Start now", enforce selected time for custom start
             if (selectedStartTime) {
@@ -2954,13 +3145,16 @@
                     globalNotificationManager.stopNotificationsForFast();
                 }
 
+                // Hide starting metrics card
+                hideStartingMetricsCard();
+
                 // End fast entry in database
                 await endFastEntry();
 
                 // Clear timer state from localStorage
                 localStorage.removeItem('fastingForecast_timerState');
             }
-            
+
             // Show completion state instead of going back to pre-fast
             showFastCompletion();
         }
@@ -3887,6 +4081,172 @@
             createConfetti();
         }
 
+        // Starting Metrics Card Functions
+        let startingMetricsBodyLogId = null; // Track the body log entry ID for updates
+
+        function toggleStartingMetrics() {
+            const card = document.getElementById('startingMetricsCard');
+            const content = document.getElementById('startingMetricsContent');
+            const summary = document.getElementById('startingMetricsSummary');
+            const isExpanded = content.style.display === 'block';
+
+            if (isExpanded) {
+                content.style.display = 'none';
+                card.classList.remove('expanded');
+            } else {
+                content.style.display = 'block';
+                card.classList.add('expanded');
+                // Hide summary when expanding to edit
+                if (summary.style.display === 'flex') {
+                    summary.style.display = 'none';
+                }
+            }
+        }
+
+        async function saveStartingMetrics() {
+            const weight = parseFloat(document.getElementById('starting-weight').value);
+            const bodyFat = parseFloat(document.getElementById('starting-body-fat').value);
+
+            if (!weight) {
+                alert('Please enter your starting weight');
+                return;
+            }
+
+            if (!currentFastId) {
+                alert('No active fast found');
+                return;
+            }
+
+            const saveBtn = document.querySelector('.save-starting-metrics-btn');
+            saveBtn.disabled = true;
+            saveBtn.textContent = 'Saving...';
+
+            try {
+                const sessionId = window.getSessionId();
+                if (!sessionId) {
+                    alert('Session error. Please refresh the page.');
+                    return;
+                }
+
+                const timezoneOffsetMinutes = -new Date().getTimezoneOffset();
+
+                // Use the fast's actual start time
+                const loggedAt = fastStartTime.toISOString();
+
+                const bodyLogData = {
+                    loggedAt: loggedAt,
+                    weight: weight,
+                    bodyFat: bodyFat || null,
+                    fastId: currentFastId,
+                    source: 'fast_start',
+                    timezoneOffsetMinutes: timezoneOffsetMinutes,
+                    sessionId: sessionId
+                };
+
+                const response = await fetch('/api/body-log', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(bodyLogData)
+                });
+
+                if (response.ok) {
+                    const result = await response.json();
+                    startingMetricsBodyLogId = result.id;
+
+                    // Update UI to show success
+                    const content = document.getElementById('startingMetricsContent');
+                    const summary = document.getElementById('startingMetricsSummary');
+                    const summaryText = document.getElementById('startingMetricsSummaryText');
+                    const card = document.getElementById('startingMetricsCard');
+
+                    content.style.display = 'none';
+                    card.classList.remove('expanded');
+
+                    // Show summary
+                    const bodyFatText = bodyFat ? `, ${bodyFat}% BF` : '';
+                    summaryText.textContent = `Starting: ${weight} lb${bodyFatText}`;
+                    summary.style.display = 'flex';
+
+                    saveBtn.disabled = false;
+                    saveBtn.textContent = 'Save Starting Metrics';
+                } else {
+                    const error = await response.json();
+                    alert(`Error saving metrics: ${error.error || 'Unknown error'}`);
+                    saveBtn.disabled = false;
+                    saveBtn.textContent = 'Save Starting Metrics';
+                }
+            } catch (error) {
+                console.error('Error saving starting metrics:', error);
+                alert('Failed to save metrics. Please try again.');
+                saveBtn.disabled = false;
+                saveBtn.textContent = 'Save Starting Metrics';
+            }
+        }
+
+        async function loadExistingStartingMetrics() {
+            if (!currentFastId) {
+                return;
+            }
+
+            try {
+                const sessionId = window.getSessionId();
+                if (!sessionId) return;
+
+                // Get body log entries for this fast
+                const response = await fetch(`/api/body-log?fastId=${currentFastId}&sessionId=${sessionId}`);
+                if (!response.ok) return;
+
+                const entries = await response.json();
+
+                // Find entry with source 'fast_start'
+                const startEntry = entries.find(entry => entry.source === 'fast_start');
+
+                if (startEntry) {
+                    // Populate the card with existing data
+                    startingMetricsBodyLogId = startEntry.id;
+
+                    const summary = document.getElementById('startingMetricsSummary');
+                    const summaryText = document.getElementById('startingMetricsSummaryText');
+                    const weightInput = document.getElementById('starting-weight');
+                    const bodyFatInput = document.getElementById('starting-body-fat');
+
+                    // Set input values
+                    weightInput.value = startEntry.weight;
+                    if (startEntry.body_fat) {
+                        bodyFatInput.value = startEntry.body_fat;
+                    }
+
+                    // Show summary
+                    const bodyFatText = startEntry.body_fat ? `, ${startEntry.body_fat}% BF` : '';
+                    summaryText.textContent = `Starting: ${startEntry.weight} lb${bodyFatText}`;
+                    summary.style.display = 'flex';
+                }
+            } catch (error) {
+                console.error('Error loading existing starting metrics:', error);
+            }
+        }
+
+        function showStartingMetricsCard() {
+            const card = document.getElementById('startingMetricsCard');
+            card.style.display = 'block';
+            // Load existing metrics if available
+            loadExistingStartingMetrics();
+        }
+
+        function hideStartingMetricsCard() {
+            const card = document.getElementById('startingMetricsCard');
+            card.style.display = 'none';
+            // Reset card state
+            document.getElementById('startingMetricsContent').style.display = 'none';
+            document.getElementById('startingMetricsSummary').style.display = 'none';
+            document.getElementById('starting-weight').value = '';
+            document.getElementById('starting-body-fat').value = '';
+            card.classList.remove('expanded');
+            startingMetricsBodyLogId = null;
+        }
+
         // Check if user has a schedule and hide "Add to schedule" button if they do
         async function checkAndHideScheduleButtonIfNeeded() {
             try {
@@ -4205,6 +4565,10 @@
             elapsedTime = 0;
             currentFastId = null;
             completedFastId = null;
+
+            // Hide starting metrics card
+            hideStartingMetricsCard();
+
             // Reset start time selection
             selectedStartTime = null;
             if (document.querySelector('input[name="startTime"][value="now"]')) {
@@ -4311,6 +4675,7 @@
                             document.getElementById('preFastState').style.display = 'none';
                             document.getElementById('activeFastState').style.display = 'block';
                             document.querySelector('.welcome-message').style.display = 'none';
+                            showStartingMetricsCard();
                             console.log('🚀 UI display states set successfully');
                         } catch (uiError) {
                             console.error('🚀 Error setting UI states:', uiError);
@@ -4437,6 +4802,7 @@
                 // Update UI to show active fast state
                 document.getElementById('preFastState').style.display = 'none';
                 document.getElementById('activeFastState').style.display = 'block';
+                showStartingMetricsCard();
                 document.querySelector('.welcome-message').style.display = 'none';
                 
                 // Create milestone markers

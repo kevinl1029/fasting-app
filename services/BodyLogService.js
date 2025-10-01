@@ -85,13 +85,33 @@ class BodyLogService {
       return tagHint;
     }
 
+    // Check for explicit pre-fast source
+    if (source === 'fast_start') {
+      return 'pre_fast';
+    }
+
+    // Check for pre-fast timing (within 2 hours before fast start)
+    if (fastId) {
+      const fast = await this.db.getFastById(fastId);
+      if (fast && fast.start_time) {
+        const entryTime = new Date(loggedAt).getTime();
+        const fastStartTime = new Date(fast.start_time).getTime();
+        const diffMs = fastStartTime - entryTime;
+
+        // If entry is within 2 hours before fast start
+        if (diffMs >= 0 && diffMs <= POST_FAST_WINDOW_MINUTES * 60 * 1000) {
+          return 'pre_fast';
+        }
+      }
+    }
+
     const { localTime } = this.getLocalContext(loggedAt, timezoneOffsetMinutes);
 
     if (this.isWithinMorningWindow(localTime)) {
       return 'morning';
     }
 
-    // Prefer explicit post-fast cues from source/fast
+    // Check for post-fast timing (within 2 hours after fast end)
     const candidateFastIds = [];
     if (fastId) {
       candidateFastIds.push(fastId);
