@@ -1,81 +1,109 @@
 const db = require('../database/db');
 const BodyLogService = require('../services/BodyLogService');
 
-async function getFastsWithWeights() {
-  return new Promise((resolve, reject) => {
-    const query = `
-      SELECT id, user_profile_id, start_time, end_time, weight
-      FROM fasts
-      WHERE user_profile_id IS NOT NULL
-        AND weight IS NOT NULL
-    `;
+function createBackfillRunner(database, options = {}) {
+  const bodyLogService = options.bodyLogService || new BodyLogService(database, options);
+  const manageLifecycle = options.manageLifecycle !== false;
 
-    db.db.all(query, [], (err, rows) => {
-      if (err) {
-        reject(err);
-      } else {
-        resolve(rows || []);
-      }
-    });
-  });
-}
-
-async function hasExistingStartEntry(fastId) {
-  const existing = await db.getBodyLogEntriesByFastId(fastId);
-  return existing.some((entry) => entry.source === 'fast_start' || entry.entry_tag === 'fast_start');
-}
-
-async function backfill() {
-  await db.initialize();
-  const bodyLogService = new BodyLogService(db);
-
-  const fasts = await getFastsWithWeights();
-  let created = 0;
-  let skippedExisting = 0;
-  let skippedMissingProfile = 0;
-
-  for (const fast of fasts) {
-    if (!fast.user_profile_id) {
-      skippedMissingProfile += 1;
-      continue;
+  async function getFastsWithWeights() {
+    if (typeof database.getFastsWithWeights !== 'function') {
+      throw new Error('Database instance must implement getFastsWithWeights()');
     }
+    return database.getFastsWithWeights();
+  }
 
-    if (await hasExistingStartEntry(fast.id)) {
-      skippedExisting += 1;
-      continue;
+  async function hasExistingStartEntry(fastId) {
+    const existing = await database.getBodyLogEntriesByFastId(fastId);
+    return existing.some((entry) => entry.source === 'fast_start' || entry.entry_tag === 'fast_start');
+  }
+
+  async function run({ dryRun = false } = {}) {
+    const summary = {
+      dryRun,
+      totalFasts: 0,
+      created: 0,
+      skippedExisting: 0,
+      skippedMissingProfile: 0,
+      errors: []
+    };
+
+    if (manageLifecycle && typeof database.initialize === 'function') {
+      await database.initialize();
     }
 
     try {
-      await bodyLogService.recordFastWeight({
-        userProfileId: fast.user_profile_id,
-        fastId: fast.id,
-        phase: 'start',
-        weight: fast.weight,
-        bodyFat: null,
-        loggedAt: fast.start_time,
-        timezoneOffsetMinutes: null
-      });
-      created += 1;
-    } catch (error) {
-      console.error(`Failed to backfill body entry for fast ${fast.id}:`, error);
+      const fasts = await getFastsWithWeights();
+      summary.totalFasts = fasts.length;
+
+      for (const fast of fasts) {
+        if (!fast.user_profile_id) {
+          summary.skippedMissingProfile += 1;
+          continue;
+        }
+
+        if (await hasExistingStartEntry(fast.id)) {
+          summary.skippedExisting += 1;
+          continue;
+        }
+
+        if (dryRun) {
+          summary.created += 1;
+          continue;
+        }
+
+        try {
+          await bodyLogService.recordFastWeight({
+            userProfileId: fast.user_profile_id,
+            fastId: fast.id,
+            phase: 'start',
+            weight: fast.weight,
+            bodyFat: fast.body_fat || null,
+            loggedAt: fast.start_time,
+            timezoneOffsetMinutes: null
+          });
+          summary.created += 1;
+        } catch (error) {
+          summary.errors.push({ fastId: fast.id, message: error.message });
+        }
+      }
+    } finally {
+      if (manageLifecycle && typeof database.close === 'function') {
+        await database.close();
+      }
     }
+
+    return summary;
   }
 
-  console.log('\nBody log backfill complete');
-  console.log(`Total fasts with weight: ${fasts.length}`);
-  console.log(`Created body entries: ${created}`);
-  console.log(`Skipped (already exists): ${skippedExisting}`);
-  console.log(`Skipped (missing profile): ${skippedMissingProfile}`);
-
-  await db.close();
+  return {
+    run,
+    getFastsWithWeights,
+    hasExistingStartEntry
+  };
 }
 
-backfill().catch(async (error) => {
-  console.error('Backfill failed:', error);
-  try {
-    await db.close();
-  } catch (closeError) {
-    console.error('Failed to close database after error:', closeError);
-  }
-  process.exit(1);
-});
+if (require.main === module) {
+  const runner = createBackfillRunner(db);
+  runner.run()
+    .then((summary) => {
+      console.log('\nBody log backfill complete');
+      console.log(`Total fasts with weight: ${summary.totalFasts}`);
+      console.log(`Created body entries: ${summary.created}`);
+      console.log(`Skipped (already exists): ${summary.skippedExisting}`);
+      console.log(`Skipped (missing profile): ${summary.skippedMissingProfile}`);
+
+      if (summary.errors.length > 0) {
+        console.error('Encountered errors while backfilling:');
+        summary.errors.forEach((err) => console.error(`  - Fast ${err.fastId}: ${err.message}`));
+        process.exit(1);
+      }
+
+      process.exit(0);
+    })
+    .catch((error) => {
+      console.error('Backfill failed:', error);
+      process.exit(1);
+    });
+}
+
+module.exports = { createBackfillRunner };

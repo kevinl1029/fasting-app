@@ -340,8 +340,26 @@ class FastingForecastTestFramework {
             const results = {};
 
             for (const tab of tabs) {
-                await page.click(`[data-tab="${tab}"]`);
-                await new Promise(resolve => setTimeout(resolve, 1000));
+                await page.waitForSelector(`[data-tab="${tab}"]`, { visible: true, timeout: 5000 });
+
+                const clicked = await page.evaluate((tabName) => {
+                    const tabButton = document.querySelector(`[data-tab="${tabName}"]`);
+                    if (!tabButton) {
+                        return false;
+                    }
+                    tabButton.click();
+                    return true;
+                }, tab);
+
+                if (!clicked) {
+                    throw new Error(`Tab ${tab} not found`);
+                }
+
+                await page.waitForFunction((tabName) => {
+                    const tabButton = document.querySelector(`[data-tab="${tabName}"]`);
+                    const tabContent = document.getElementById(`${tabName}-tab`);
+                    return tabButton?.classList.contains('active') && tabContent?.classList.contains('active');
+                }, { timeout: 5000 }, tab);
 
                 const tabState = await page.evaluate((tabName) => {
                     const tabButton = document.querySelector(`[data-tab="${tabName}"]`);
@@ -352,10 +370,6 @@ class FastingForecastTestFramework {
                         contentVisible: tabContent?.classList.contains('active')
                     };
                 }, tab);
-
-                if (!tabState.buttonActive || !tabState.contentVisible) {
-                    throw new Error(`Tab ${tab} not properly activated`);
-                }
 
                 results[tab] = tabState;
             }

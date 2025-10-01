@@ -363,6 +363,25 @@ class Database {
     });
   }
 
+  async getFastsWithWeights() {
+    return new Promise((resolve, reject) => {
+      const query = `
+        SELECT * FROM fasts
+        WHERE user_profile_id IS NOT NULL
+          AND weight IS NOT NULL
+        ORDER BY start_time ASC
+      `;
+
+      this.db.all(query, [], (err, rows) => {
+        if (err) {
+          reject(err);
+        } else {
+          resolve(rows || []);
+        }
+      });
+    });
+  }
+
   async getOrphanedFasts(limit = 50, offset = 0) {
     return new Promise((resolve, reject) => {
       const query = `
