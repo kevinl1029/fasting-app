@@ -191,6 +191,46 @@ class Database {
         )
       `;
 
+      const createBodyLogEntriesTable = `
+        CREATE TABLE IF NOT EXISTS body_log_entries (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          user_profile_id INTEGER NOT NULL,
+          fast_id INTEGER,
+          logged_at DATETIME NOT NULL,
+          local_date TEXT NOT NULL,
+          timezone_offset_minutes INTEGER,
+          weight REAL NOT NULL,
+          body_fat REAL,
+          entry_tag TEXT DEFAULT 'ad_hoc',
+          source TEXT DEFAULT 'manual',
+          notes TEXT,
+          is_canonical BOOLEAN DEFAULT 0,
+          canonical_status TEXT DEFAULT 'auto',
+          canonical_reason TEXT,
+          canonical_override_at DATETIME,
+          created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+          updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+          FOREIGN KEY (user_profile_id) REFERENCES user_profiles (id) ON DELETE CASCADE,
+          FOREIGN KEY (fast_id) REFERENCES fasts (id) ON DELETE SET NULL
+        )
+      `;
+
+      const createBodyLogUserDateIndex = `
+        CREATE INDEX IF NOT EXISTS idx_body_log_user_date
+        ON body_log_entries (user_profile_id, local_date, logged_at DESC)
+      `;
+
+      const createBodyLogFastIndex = `
+        CREATE INDEX IF NOT EXISTS idx_body_log_fast
+        ON body_log_entries (fast_id)
+      `;
+
+      const createBodyLogCanonicalIndex = `
+        CREATE UNIQUE INDEX IF NOT EXISTS idx_body_log_canonical_per_day
+        ON body_log_entries (user_profile_id, local_date)
+        WHERE is_canonical = 1
+      `;
+
       // Create all tables in sequence
       this.db.serialize(() => {
         this.db.run(createUserProfilesTable, (err) => {
@@ -263,8 +303,43 @@ class Database {
             return;
           }
           console.log('Planned instances table ready');
-          console.log('Database initialized successfully');
-          resolve();
+
+          this.db.run(createBodyLogEntriesTable, (err) => {
+            if (err) {
+              console.error('Error creating body_log_entries table:', err);
+              reject(err);
+              return;
+            }
+            console.log('Body log entries table ready');
+
+            this.db.run(createBodyLogUserDateIndex, (err) => {
+              if (err) {
+                console.error('Error creating body log user/date index:', err);
+                reject(err);
+                return;
+              }
+
+              this.db.run(createBodyLogFastIndex, (err) => {
+                if (err) {
+                  console.error('Error creating body log fast index:', err);
+                  reject(err);
+                  return;
+                }
+
+                this.db.run(createBodyLogCanonicalIndex, (err) => {
+                  if (err) {
+                    console.error('Error creating body log canonical index:', err);
+                    reject(err);
+                    return;
+                  }
+
+                  console.log('Body log indexes ready');
+                  console.log('Database initialized successfully');
+                  resolve();
+                });
+              });
+            });
+          });
         });
       });
     });
@@ -283,6 +358,25 @@ class Database {
           reject(err);
         } else {
           resolve(rows);
+        }
+      });
+    });
+  }
+
+  async getFastsWithWeights() {
+    return new Promise((resolve, reject) => {
+      const query = `
+        SELECT * FROM fasts
+        WHERE user_profile_id IS NOT NULL
+          AND weight IS NOT NULL
+        ORDER BY start_time ASC
+      `;
+
+      this.db.all(query, [], (err, rows) => {
+        if (err) {
+          reject(err);
+        } else {
+          resolve(rows || []);
         }
       });
     });
@@ -323,6 +417,41 @@ class Database {
           resolve(rows);
         }
       });
+    });
+  }
+
+  async getFastsByUserAndDateRange(userProfileId, startIso, endIso) {
+    return new Promise((resolve, reject) => {
+      const query = `
+        SELECT * FROM fasts
+        WHERE user_profile_id = ?
+          AND (
+            (start_time BETWEEN ? AND ?)
+            OR (end_time IS NOT NULL AND end_time BETWEEN ? AND ?)
+            OR (start_time <= ? AND (end_time IS NULL OR end_time >= ?))
+          )
+        ORDER BY start_time ASC
+      `;
+
+      this.db.all(
+        query,
+        [
+          userProfileId,
+          startIso,
+          endIso,
+          startIso,
+          endIso,
+          startIso,
+          endIso
+        ],
+        (err, rows) => {
+          if (err) {
+            reject(err);
+          } else {
+            resolve(rows || []);
+          }
+        }
+      );
     });
   }
 
@@ -441,6 +570,422 @@ class Database {
           is_active: false
         }).then(resolve).catch(reject);
       }).catch(reject);
+    });
+  }
+
+  async getFastEndingNearTimestamp(user_profile_id, timestampIso, windowMinutes = 120) {
+    return new Promise((resolve, reject) => {
+      if (!timestampIso) {
+        reject(new Error('timestampIso is required to query fast end proximity'));
+        return;
+      }
+
+      const ts = new Date(timestampIso);
+      if (Number.isNaN(ts.getTime())) {
+        reject(new Error('Invalid timestampIso provided'));
+        return;
+      }
+
+      const windowStart = new Date(ts.getTime() - windowMinutes * 60 * 1000).toISOString();
+
+      const query = `
+        SELECT * FROM fasts
+        WHERE user_profile_id = ?
+          AND end_time IS NOT NULL
+          AND end_time <= ?
+          AND end_time >= ?
+        ORDER BY end_time DESC
+        LIMIT 1
+      `;
+
+      this.db.get(query, [user_profile_id, timestampIso, windowStart], (err, row) => {
+        if (err) {
+          reject(err);
+        } else {
+          resolve(row || null);
+        }
+      });
+    });
+  }
+
+  // Body Log CRUD methods
+  async createBodyLogEntry(entryData) {
+    return new Promise((resolve, reject) => {
+      const {
+        user_profile_id,
+        fast_id = null,
+        logged_at,
+        local_date,
+        timezone_offset_minutes = null,
+        weight,
+        body_fat = null,
+        entry_tag = 'ad_hoc',
+        source = 'manual',
+        notes = null,
+        is_canonical = false,
+        canonical_status = 'auto',
+        canonical_reason = null,
+        canonical_override_at = null
+      } = entryData;
+
+      if (!user_profile_id || !logged_at || !local_date || weight === undefined || weight === null) {
+        reject(new Error('Missing required fields for body log entry'));
+        return;
+      }
+
+      const canonicalFlag = is_canonical ? 1 : 0;
+      const overrideTimestamp = canonicalFlag && canonical_status === 'manual'
+        ? (canonical_override_at || new Date().toISOString())
+        : null;
+
+      const query = `
+        INSERT INTO body_log_entries (
+          user_profile_id,
+          fast_id,
+          logged_at,
+          local_date,
+          timezone_offset_minutes,
+          weight,
+          body_fat,
+          entry_tag,
+          source,
+          notes,
+          is_canonical,
+          canonical_status,
+          canonical_reason,
+          canonical_override_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `;
+
+      const params = [
+        user_profile_id,
+        fast_id,
+        logged_at,
+        local_date,
+        timezone_offset_minutes,
+        weight,
+        body_fat,
+        entry_tag,
+        source,
+        notes,
+        canonicalFlag,
+        canonical_status,
+        canonical_reason,
+        overrideTimestamp
+      ];
+
+      this.db.run(query, params, function(err) {
+        if (err) {
+          reject(err);
+        } else {
+          resolve({ id: this.lastID, ...entryData, is_canonical: !!canonicalFlag, canonical_override_at: overrideTimestamp });
+        }
+      });
+    });
+  }
+
+  async getBodyLogEntryById(id) {
+    return new Promise((resolve, reject) => {
+      const query = 'SELECT * FROM body_log_entries WHERE id = ?';
+
+      this.db.get(query, [id], (err, row) => {
+        if (err) {
+          reject(err);
+        } else {
+          resolve(row || null);
+        }
+      });
+    });
+  }
+
+  async getBodyLogEntriesByUser(user_profile_id, options = {}) {
+    return new Promise((resolve, reject) => {
+      const {
+        startDate,
+        endDate,
+        limit,
+        offset = 0,
+        includeSecondary = true
+      } = options;
+
+      const conditions = ['user_profile_id = ?'];
+      const params = [user_profile_id];
+
+      if (startDate) {
+        conditions.push('local_date >= ?');
+        params.push(startDate);
+      }
+
+      if (endDate) {
+        conditions.push('local_date <= ?');
+        params.push(endDate);
+      }
+
+      if (!includeSecondary) {
+        conditions.push('is_canonical = 1');
+      }
+
+      let query = `
+        SELECT * FROM body_log_entries
+        WHERE ${conditions.join(' AND ')}
+        ORDER BY logged_at DESC
+      `;
+
+      if (limit) {
+        query += ' LIMIT ? OFFSET ?';
+        params.push(limit, offset);
+      }
+
+      this.db.all(query, params, (err, rows) => {
+        if (err) {
+          reject(err);
+        } else {
+          resolve(rows || []);
+        }
+      });
+    });
+  }
+
+  async getBodyLogEntriesForDate(user_profile_id, localDate) {
+    return new Promise((resolve, reject) => {
+      const query = `
+        SELECT * FROM body_log_entries
+        WHERE user_profile_id = ? AND local_date = ?
+        ORDER BY logged_at ASC
+      `;
+
+      this.db.all(query, [user_profile_id, localDate], (err, rows) => {
+        if (err) {
+          reject(err);
+        } else {
+          resolve(rows || []);
+        }
+      });
+    });
+  }
+
+  async updateBodyLogEntry(id, updateData) {
+    return new Promise((resolve, reject) => {
+      const fields = [];
+      const values = [];
+
+      Object.entries(updateData).forEach(([key, value]) => {
+        if (value !== undefined && key !== 'id') {
+          if (key === 'is_canonical') {
+            fields.push(`${key} = ?`);
+            values.push(value ? 1 : 0);
+          } else {
+            fields.push(`${key} = ?`);
+            values.push(value);
+          }
+        }
+      });
+
+      if (fields.length === 0) {
+        resolve({ id, ...updateData });
+        return;
+      }
+
+      fields.push('updated_at = CURRENT_TIMESTAMP');
+      values.push(id);
+
+      const query = `UPDATE body_log_entries SET ${fields.join(', ')} WHERE id = ?`;
+
+      this.db.run(query, values, function(err) {
+        if (err) {
+          reject(err);
+        } else {
+          resolve({ id, changes: this.changes });
+        }
+      });
+    });
+  }
+
+  async deleteBodyLogEntry(id) {
+    return new Promise((resolve, reject) => {
+      const query = 'DELETE FROM body_log_entries WHERE id = ?';
+
+      this.db.run(query, [id], function(err) {
+        if (err) {
+          reject(err);
+        } else {
+          resolve({ deleted: this.changes > 0 });
+        }
+      });
+    });
+  }
+
+  async clearCanonicalForDate(user_profile_id, localDate, excludeEntryId = null) {
+    return new Promise((resolve, reject) => {
+      const params = [user_profile_id, localDate];
+      let query = `
+        UPDATE body_log_entries
+        SET is_canonical = 0,
+            canonical_reason = NULL,
+            canonical_override_at = NULL,
+            updated_at = CURRENT_TIMESTAMP
+        WHERE user_profile_id = ? AND local_date = ? AND is_canonical = 1
+      `;
+
+      if (excludeEntryId) {
+        query += ' AND id <> ?';
+        params.push(excludeEntryId);
+      }
+
+      this.db.run(query, params, function(err) {
+        if (err) {
+          reject(err);
+        } else {
+          resolve({ changes: this.changes });
+        }
+      });
+    });
+  }
+
+  async markCanonicalEntry(entryId, options = {}) {
+    const entry = await this.getBodyLogEntryById(entryId);
+    if (!entry) {
+      throw new Error('Body log entry not found');
+    }
+
+    const {
+      canonicalStatus = 'auto',
+      canonicalReason = entry.entry_tag,
+      overrideAt = canonicalStatus === 'manual' ? new Date().toISOString() : null
+    } = options;
+
+    return new Promise((resolve, reject) => {
+      this.db.serialize(() => {
+        this.db.run('BEGIN IMMEDIATE TRANSACTION', (beginErr) => {
+          if (beginErr) {
+            reject(beginErr);
+            return;
+          }
+
+          const finalize = () => {
+            this.db.run('COMMIT', (commitErr) => {
+              if (commitErr) {
+                reject(commitErr);
+                return;
+              }
+              this.getBodyLogEntryById(entryId)
+                .then(resolve)
+                .catch(reject);
+            });
+          };
+
+          const rollback = (error) => {
+            this.db.run('ROLLBACK', (rollbackErr) => {
+              if (rollbackErr) {
+                console.error('Rollback error while marking canonical entry:', rollbackErr);
+              }
+              reject(error || rollbackErr);
+            });
+          };
+
+          this.db.run(
+            `UPDATE body_log_entries
+             SET is_canonical = 0,
+                 canonical_reason = NULL,
+                 canonical_override_at = NULL,
+                 updated_at = CURRENT_TIMESTAMP
+             WHERE user_profile_id = ? AND local_date = ? AND id <> ?`,
+            [entry.user_profile_id, entry.local_date, entryId],
+            (clearErr) => {
+              if (clearErr) {
+                rollback(clearErr);
+                return;
+              }
+
+              this.db.run(
+                `UPDATE body_log_entries
+                 SET is_canonical = 1,
+                     canonical_status = ?,
+                     canonical_reason = ?,
+                     canonical_override_at = ?,
+                     updated_at = CURRENT_TIMESTAMP
+                 WHERE id = ?`,
+                [canonicalStatus, canonicalReason, overrideAt, entryId],
+                (updateErr) => {
+                  if (updateErr) {
+                    rollback(updateErr);
+                    return;
+                  }
+
+                  finalize();
+                }
+              );
+            }
+          );
+        });
+      });
+    });
+  }
+
+  async getCanonicalEntryForDate(user_profile_id, localDate) {
+    return new Promise((resolve, reject) => {
+      const query = `
+        SELECT * FROM body_log_entries
+        WHERE user_profile_id = ? AND local_date = ? AND is_canonical = 1
+        LIMIT 1
+      `;
+
+      this.db.get(query, [user_profile_id, localDate], (err, row) => {
+        if (err) {
+          reject(err);
+        } else {
+          resolve(row || null);
+        }
+      });
+    });
+  }
+
+  async getCanonicalEntriesByRange(user_profile_id, startDate, endDate) {
+    return new Promise((resolve, reject) => {
+      const conditions = ['user_profile_id = ?', 'is_canonical = 1'];
+      const params = [user_profile_id];
+
+      if (startDate) {
+        conditions.push('local_date >= ?');
+        params.push(startDate);
+      }
+
+      if (endDate) {
+        conditions.push('local_date <= ?');
+        params.push(endDate);
+      }
+
+      const query = `
+        SELECT * FROM body_log_entries
+        WHERE ${conditions.join(' AND ')}
+        ORDER BY local_date ASC
+      `;
+
+      this.db.all(query, params, (err, rows) => {
+        if (err) {
+          reject(err);
+        } else {
+          resolve(rows || []);
+        }
+      });
+    });
+  }
+
+  async getBodyLogEntriesByFastId(fast_id) {
+    return new Promise((resolve, reject) => {
+      const query = `
+        SELECT * FROM body_log_entries
+        WHERE fast_id = ?
+        ORDER BY logged_at ASC
+      `;
+
+      this.db.all(query, [fast_id], (err, rows) => {
+        if (err) {
+          reject(err);
+        } else {
+          resolve(rows || []);
+        }
+      });
     });
   }
 

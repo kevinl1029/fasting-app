@@ -62,8 +62,26 @@ async function runDashboardTests() {
 
         await framework.runTest('Benefits Tab Functionality', async (page) => {
             // Switch to benefits tab
-            await page.click('[data-tab="benefits"]');
-            await new Promise(resolve => setTimeout(resolve, 2000));
+            const switched = await page.evaluate(() => {
+                const benefitsTab = document.querySelector('[data-tab="benefits"]');
+                if (!benefitsTab || benefitsTab.classList.contains('disabled')) {
+                    return false;
+                }
+                benefitsTab.click();
+                return true;
+            });
+
+            if (!switched) {
+                throw new Error('Benefits tab not available');
+            }
+
+            await page.waitForFunction(() => {
+                const benefitsButton = document.querySelector('[data-tab="benefits"]');
+                const benefitsPanel = document.getElementById('benefits-tab');
+                return benefitsButton?.classList.contains('active') && benefitsPanel?.classList.contains('active');
+            }, { timeout: 5000 });
+
+            await page.waitForTimeout(1000);
 
             const result = await page.evaluate(() => {
                 return {
@@ -82,13 +100,57 @@ async function runDashboardTests() {
         });
 
         await framework.runTest('Add Fast Modal', async (page) => {
-            // Switch back to log tab first
-            await page.click('[data-tab="log"]');
-            await new Promise(resolve => setTimeout(resolve, 1000));
+            // Switch back to log tab first and wait for activation
+            await page.evaluate(() => {
+                const logTab = document.querySelector('.sub-nav-item[data-tab="log"]');
+                if (logTab) {
+                    logTab.click();
+                }
+            });
+
+            await page.waitForFunction(() => {
+                const logTabButton = document.querySelector('.sub-nav-item[data-tab="log"]');
+                const logTabContent = document.getElementById('log-tab');
+                return logTabButton?.classList.contains('active') && logTabContent?.classList.contains('active');
+            }, { timeout: 5000 });
+
+            // Ensure the filter is set to fasts so the primary action opens the modal directly
+            await page.evaluate(() => {
+                const fastFilter = document.querySelector('.log-filter-btn[data-log-filter="fasts"]');
+                if (fastFilter && !fastFilter.classList.contains('active')) {
+                    fastFilter.click();
+                }
+            });
+
+            await page.waitForFunction(() => {
+                const fastFilter = document.querySelector('.log-filter-btn[data-log-filter="fasts"]');
+                return fastFilter?.classList.contains('active');
+            }, { timeout: 5000 });
+
+            // Ensure the primary action is present and clickable
+            await page.waitForSelector('#log-primary-action', { visible: true, timeout: 8000 });
+            await page.evaluate(() => {
+                const button = document.getElementById('log-primary-action');
+                if (button) {
+                    button.scrollIntoView({ block: 'center', inline: 'center', behavior: 'auto' });
+                }
+            });
 
             // Click add fast button
-            await page.click('.add-fast-btn');
-            await new Promise(resolve => setTimeout(resolve, 500));
+            const opened = await page.evaluate(() => {
+                const primaryAction = document.getElementById('log-primary-action');
+                if (!primaryAction) {
+                    return false;
+                }
+                primaryAction.click();
+                return true;
+            });
+
+            if (!opened) {
+                throw new Error('Primary log action button not found');
+            }
+
+            await page.waitForSelector('#add-fast-modal.active', { visible: true, timeout: 5000 });
 
             const result = await page.evaluate(() => {
                 const modal = document.getElementById('add-fast-modal');
@@ -106,8 +168,19 @@ async function runDashboardTests() {
             if (!result.hasForm) throw new Error('Add fast form not found');
 
             // Close modal
-            await page.click('.modal-close');
-            await new Promise(resolve => setTimeout(resolve, 500));
+            const closed = await page.evaluate(() => {
+                const closeBtn = document.querySelector('#add-fast-modal .modal-close');
+                if (!closeBtn) {
+                    return false;
+                }
+                closeBtn.click();
+                return true;
+            });
+
+            if (!closed) {
+                throw new Error('Modal close button not found');
+            }
+            await page.waitForSelector('#add-fast-modal.active', { hidden: true, timeout: 5000 });
 
             return result;
         });
