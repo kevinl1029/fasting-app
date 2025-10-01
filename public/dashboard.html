@@ -358,7 +358,7 @@
         }
 
         .chart-card {
-            margin: 20px 30px;
+            margin: 20px 16px;
             background: white;
             border-radius: 18px;
             border: 1px solid #e2e8f0;
@@ -368,10 +368,15 @@
 
         .chart-card-header {
             display: flex;
-            justify-content: space-between;
-            align-items: flex-start;
-            gap: 16px;
+            flex-direction: column;
+            gap: 4px;
             margin-bottom: 16px;
+        }
+
+        .chart-header-top {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
         }
 
         .insight-info {
@@ -415,15 +420,129 @@
         .chart-toggle {
             display: inline-flex;
             align-items: center;
-            gap: 8px;
-            font-size: 0.85rem;
+            gap: 6px;
+            font-size: 0.8rem;
             color: #475569;
             font-weight: 600;
+            cursor: pointer;
         }
 
         .chart-toggle input[type="checkbox"] {
-            width: 18px;
-            height: 18px;
+            width: 16px;
+            height: 16px;
+            cursor: pointer;
+        }
+
+        .chart-expand-btn {
+            position: absolute;
+            top: 12px;
+            right: 12px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 32px;
+            height: 32px;
+            border: 1px solid #e2e8f0;
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 6px;
+            cursor: pointer;
+            color: #64748b;
+            transition: all 0.2s;
+            z-index: 10;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        .chart-expand-btn:hover {
+            background: #fff;
+            border-color: #cbd5e1;
+            color: #475569;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        }
+
+        .chart-modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.85);
+            z-index: 9999;
+            padding: 20px;
+            overflow: auto;
+        }
+
+        .chart-modal.active {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .chart-modal-content {
+            background: white;
+            border-radius: 16px;
+            padding: 24px 0;
+            max-width: 1200px;
+            width: 100%;
+            max-height: 90vh;
+            overflow: auto;
+            position: relative;
+        }
+
+        .chart-modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding: 0 24px;
+        }
+
+        .chart-modal-close {
+            width: 36px;
+            height: 36px;
+            border: none;
+            background: #f1f5f9;
+            border-radius: 8px;
+            cursor: pointer;
+            color: #64748b;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+        }
+
+        .chart-modal-close:hover {
+            background: #e2e8f0;
+            color: #475569;
+        }
+
+        .chart-view-filters {
+            display: flex;
+            gap: 8px;
+            margin-top: 12px;
+        }
+
+        .chart-view-filter {
+            padding: 6px 14px;
+            border: 1px solid #e2e8f0;
+            background: #fff;
+            color: #64748b;
+            font-size: 0.85rem;
+            font-weight: 600;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .chart-view-filter:hover {
+            border-color: #cbd5e1;
+            background: #f8fafc;
+        }
+
+        .chart-view-filter.active {
+            background: #2563eb;
+            border-color: #2563eb;
+            color: #fff;
         }
 
         .chart-container {
@@ -435,16 +554,54 @@
             background: linear-gradient(180deg, rgba(248, 250, 252, 0.9), rgba(255, 255, 255, 0.7));
         }
 
+        /* Full-width chart styling for modal */
+        .chart-container-modal {
+            margin: 0 !important;
+            padding: 0 !important;
+        }
+
+        .chart-legend-modal,
+        .chart-footnote-modal {
+            padding: 0 24px;
+        }
+
         .chart-svg {
             width: 100%;
-            height: 320px;
+            height: 360px;
+        }
+
+        .chart-svg .data-point {
+            cursor: pointer;
+        }
+
+        .chart-svg .data-point:hover {
+            filter: brightness(1.1);
+        }
+
+        .chart-tooltip {
+            position: absolute;
+            background: rgba(15, 23, 42, 0.95);
+            color: #fff;
+            padding: 8px 12px;
+            border-radius: 6px;
+            font-size: 0.85rem;
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.2s;
+            z-index: 10;
+            white-space: nowrap;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        }
+
+        .chart-tooltip.visible {
+            opacity: 1;
         }
 
         .chart-legend {
             margin-top: 12px;
             display: flex;
             flex-wrap: wrap;
-            gap: 16px;
+            gap: 10px;
             font-size: 0.85rem;
             color: #475569;
         }
@@ -452,13 +609,13 @@
         .legend-item {
             display: inline-flex;
             align-items: center;
-            gap: 6px;
+            gap: 5px;
         }
 
         .legend-dot {
             display: inline-block;
-            width: 12px;
-            height: 12px;
+            width: 10px;
+            height: 10px;
             border-radius: 50%;
         }
 
@@ -469,8 +626,8 @@
         .legend-dot.hollow {
             border: 2px solid #38bdf8;
             border-radius: 50%;
-            width: 12px;
-            height: 12px;
+            width: 10px;
+            height: 10px;
         }
 
         .legend-fast-band {
@@ -1932,19 +2089,28 @@
                 <div id="charts-tab" class="tab-content">
                     <div class="chart-card">
                         <div class="chart-card-header">
-                            <div>
+                            <div class="chart-header-top">
                                 <h3>Weight Trend</h3>
-                                <p class="chart-subtitle" id="chart-weight-summary">Log a few weigh-ins to see your trend.</p>
-                            </div>
-                            <div class="chart-controls">
                                 <label class="chart-toggle">
                                     <input type="checkbox" id="toggle-post-fast" checked>
-                                    <span>Show Post-Fast Points</span>
+                                    <span>Post-Fast Points</span>
                                 </label>
+                            </div>
+                            <p class="chart-subtitle" id="chart-weight-summary">Log a few weigh-ins to see your trend.</p>
+                            <div class="chart-view-filters">
+                                <button class="chart-view-filter active" data-view="week">Week</button>
+                                <button class="chart-view-filter" data-view="month">Month</button>
+                                <button class="chart-view-filter" data-view="all">All</button>
                             </div>
                         </div>
                         <div class="chart-container">
-                            <svg id="weight-trend-chart" class="chart-svg" viewBox="0 0 760 320" preserveAspectRatio="none" role="img" aria-labelledby="weight-trend-title"></svg>
+                            <button class="chart-expand-btn" id="expand-chart-btn" title="Expand chart">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/>
+                                </svg>
+                            </button>
+                            <svg id="weight-trend-chart" class="chart-svg" viewBox="0 0 400 360" preserveAspectRatio="none" role="img" aria-labelledby="weight-trend-title"></svg>
+                            <div id="chart-tooltip" class="chart-tooltip"></div>
                         </div>
                         <div class="chart-legend">
                             <span class="legend-item"><span class="legend-dot solid"></span> Canonical</span>
@@ -2411,6 +2577,24 @@
         </div>
     </div>
 
+    <!-- Chart Expand Modal -->
+    <div id="chart-modal" class="chart-modal">
+        <div class="chart-modal-content">
+            <div class="chart-modal-header">
+                <h2 style="margin: 0; font-size: 1.5rem; color: #0f172a;">Weight Trend</h2>
+                <button class="chart-modal-close" id="close-chart-modal">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="18" y1="6" x2="6" y2="18"></line>
+                        <line x1="6" y1="6" x2="18" y2="18"></line>
+                    </svg>
+                </button>
+            </div>
+            <div id="chart-modal-body">
+                <!-- Chart will be cloned here -->
+            </div>
+        </div>
+    </div>
+
     <!-- Global Notification Manager -->
     <script src="/js/modules/hunger-coach.js"></script>
     <script src="/js/modules/global-notification-manager.js"></script>
@@ -2446,6 +2630,7 @@
         let chartsLoading = false;
         let chartsError = null;
         let showPostFastPoints = true;
+        let chartViewFilter = 'week'; // 'week', 'month', or 'all'
         
         // Initialize dashboard page function that waits for session
         async function initializeDashboardPage() {
@@ -4006,7 +4191,9 @@
         }
 
         function setupChartInteractions() {
+            console.log('setupChartInteractions called');
             if (chartControlsInitialized) {
+                console.log('Chart interactions already initialized, skipping');
                 return;
             }
 
@@ -4018,7 +4205,95 @@
                 });
             }
 
+            const viewFilters = document.querySelectorAll('.chart-view-filter');
+            viewFilters.forEach(button => {
+                button.addEventListener('click', (event) => {
+                    const newView = event.target.dataset.view;
+                    if (newView && newView !== chartViewFilter) {
+                        chartViewFilter = newView;
+
+                        viewFilters.forEach(btn => btn.classList.remove('active'));
+                        event.target.classList.add('active');
+
+                        renderWeightChart();
+                    }
+                });
+            });
+
+            const expandBtn = document.getElementById('expand-chart-btn');
+            const modal = document.getElementById('chart-modal');
+            const closeModalBtn = document.getElementById('close-chart-modal');
+            const modalBody = document.getElementById('chart-modal-body');
+
+            console.log('Expand button:', expandBtn);
+            console.log('Modal:', modal);
+            console.log('Close button:', closeModalBtn);
+            console.log('Modal body:', modalBody);
+
+            if (expandBtn && modal && closeModalBtn && modalBody) {
+                console.log('All modal elements found, attaching event listeners');
+                expandBtn.addEventListener('click', () => {
+                    console.log('Expand button clicked');
+
+                    const chartContainer = document.querySelector('.chart-container');
+                    const chartLegend = document.querySelector('.chart-legend');
+                    const chartFootnote = document.querySelector('.chart-footnote');
+
+                    // Clone chart elements
+                    const clonedContainer = chartContainer.cloneNode(true);
+                    const clonedLegend = chartLegend ? chartLegend.cloneNode(true) : null;
+                    const clonedFootnote = chartFootnote ? chartFootnote.cloneNode(true) : null;
+
+                    // Add modal-specific class for full-width styling
+                    clonedContainer.classList.add('chart-container-modal');
+                    if (clonedLegend) clonedLegend.classList.add('chart-legend-modal');
+                    if (clonedFootnote) clonedFootnote.classList.add('chart-footnote-modal');
+
+                    // Remove expand button from cloned container
+                    const clonedExpandBtn = clonedContainer.querySelector('.chart-expand-btn');
+                    if (clonedExpandBtn) {
+                        clonedExpandBtn.remove();
+                    }
+
+                    // Build modal content
+                    modalBody.innerHTML = '';
+                    modalBody.appendChild(clonedContainer);
+                    if (clonedLegend) modalBody.appendChild(clonedLegend);
+                    if (clonedFootnote) modalBody.appendChild(clonedFootnote);
+
+                    modal.classList.add('active');
+                    document.body.style.overflow = 'hidden';
+
+                    // Setup tooltips for the cloned chart
+                    setupModalChartTooltips(clonedContainer);
+
+                    console.log('Modal should be visible now');
+                });
+
+                closeModalBtn.addEventListener('click', () => {
+                    console.log('Close button clicked');
+                    modal.classList.remove('active');
+                    document.body.style.overflow = '';
+                });
+
+                modal.addEventListener('click', (e) => {
+                    if (e.target === modal) {
+                        console.log('Modal overlay clicked');
+                        modal.classList.remove('active');
+                        document.body.style.overflow = '';
+                    }
+                });
+            } else {
+                console.error('Some modal elements not found!', {
+                    expandBtn: !!expandBtn,
+                    modal: !!modal,
+                    closeModalBtn: !!closeModalBtn,
+                    modalBody: !!modalBody
+                });
+            }
+
             chartControlsInitialized = true;
+            console.log('Chart interactions setup complete');
         }
 
         async function loadBodyAnalytics() {
@@ -4101,7 +4376,7 @@
                 toggle.checked = showPostFastPoints;
             }
 
-            const canonical = bodyAnalytics.canonicalEntries
+            let canonical = bodyAnalytics.canonicalEntries
                 .filter((entry) => entry && entry.weight !== null && entry.loggedAt)
                 .map((entry) => ({
                     ...entry,
@@ -4116,17 +4391,33 @@
                 return;
             }
 
-            const allDates = [...canonical.map((entry) => entry.date)];
-            if (showPostFastPoints && Array.isArray(bodyAnalytics.postFastEntries)) {
-                bodyAnalytics.postFastEntries.forEach((entry) => {
-                    if (entry.loggedAt) {
-                        allDates.push(new Date(entry.loggedAt));
-                    }
-                });
+            const now = new Date();
+            if (chartViewFilter === 'week') {
+                const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+                canonical = canonical.filter(entry => entry.date >= weekAgo);
+            } else if (chartViewFilter === 'month') {
+                const monthAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+                canonical = canonical.filter(entry => entry.date >= monthAgo);
             }
 
-            const dateMin = new Date(Math.min(...allDates.map((date) => date.getTime())));
-            const dateMax = new Date(Math.max(...allDates.map((date) => date.getTime())));
+            if (canonical.length === 0) {
+                svg.innerHTML = '';
+                summaryEl.textContent = `No data in the selected time range.`;
+                footnoteEl.textContent = '';
+                return;
+            }
+
+            const dateMin = new Date(Math.min(...canonical.map((entry) => entry.date.getTime())));
+            const dateMax = new Date(Math.max(...canonical.map((entry) => entry.date.getTime())));
+
+            let filteredPostFastEntries = [];
+            if (showPostFastPoints && Array.isArray(bodyAnalytics.postFastEntries)) {
+                filteredPostFastEntries = bodyAnalytics.postFastEntries.filter((entry) => {
+                    if (!entry.loggedAt) return false;
+                    const date = new Date(entry.loggedAt);
+                    return date >= dateMin && date <= dateMax;
+                });
+            }
             if (dateMin.getTime() === dateMax.getTime()) {
                 dateMax.setDate(dateMax.getDate() + 1);
             }
@@ -4135,9 +4426,9 @@
             const weightMin = Math.min(...weightValues) - 1;
             const weightMax = Math.max(...weightValues) + 1;
 
-            const width = 760;
-            const height = 320;
-            const margin = { top: 30, right: 40, bottom: 45, left: 60 };
+            const width = 400;
+            const height = 360;
+            const margin = { top: 30, right: 40, bottom: 50, left: 65 };
             const chartWidth = width - margin.left - margin.right;
             const chartHeight = height - margin.top - margin.bottom;
 
@@ -4164,21 +4455,19 @@
                 const x = xScale(entry.date);
                 const y = yScale(entry.weight);
                 const title = `${formatShortDate(entry.date)} • ${formatWeight(entry.weight)}`;
-                return `<circle cx="${x}" cy="${y}" r="4.5" fill="#fb923c" stroke="#fff" stroke-width="1"><title>${title}</title></circle>`;
+                return `<circle cx="${x}" cy="${y}" r="6" fill="#fb923c" stroke="#fff" stroke-width="2" class="data-point canonical-point"><title>${title}</title></circle>`;
             }).join('');
 
-            const postFastPoints = showPostFastPoints && Array.isArray(bodyAnalytics.postFastEntries)
-                ? bodyAnalytics.postFastEntries
-                    .filter((entry) => entry.weight !== null && entry.loggedAt)
-                    .map((entry) => {
-                        const date = new Date(entry.loggedAt);
-                        const x = xScale(date);
-                        const y = yScale(entry.weight);
-                        const title = `${formatShortDateTime(date)} • ${formatWeight(entry.weight)} (Post-Fast)`;
-                        return `<circle cx="${x}" cy="${y}" r="5" fill="#fff" stroke="#38bdf8" stroke-width="2"><title>${title}</title></circle>`;
-                    })
-                    .join('')
-                : '';
+            const postFastPoints = filteredPostFastEntries
+                .filter((entry) => entry.weight !== null)
+                .map((entry) => {
+                    const date = new Date(entry.loggedAt);
+                    const x = xScale(date);
+                    const y = yScale(entry.weight);
+                    const title = `${formatShortDateTime(date)} • ${formatWeight(entry.weight)} (Post-Fast)`;
+                    return `<circle cx="${x}" cy="${y}" r="6" fill="#fff" stroke="#38bdf8" stroke-width="2.5" class="data-point post-fast-point"><title>${title}</title></circle>`;
+                })
+                .join('');
 
             const fastBands = Array.isArray(bodyAnalytics.fasts)
                 ? bodyAnalytics.fasts
@@ -4214,16 +4503,17 @@
                 const y = yScale(weight);
                 yTickElements.push(`
                     <line x1="${margin.left - 6}" y1="${y}" x2="${margin.left}" y2="${y}" stroke="#94a3b8" stroke-width="1" />
-                    <text x="${margin.left - 10}" y="${y + 4}" text-anchor="end" font-size="12" fill="#94a3b8">${weight.toFixed(0)}</text>
+                    <text x="${margin.left - 10}" y="${y + 4}" text-anchor="end" font-size="11" fill="#64748b" font-weight="600" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif" font-stretch="expanded" letter-spacing="0.5" transform="scale(1.2, 1) translate(${(margin.left - 10) * -0.2 / 1.2}, 0)">${weight.toFixed(0)}</text>
                 `);
             }
 
             const xTickDates = buildXTicks(dateMin, dateMax);
-            const xTickElements = xTickDates.map((tickDate) => {
+            const xTickElements = xTickDates.map((tickDate, index) => {
                 const x = xScale(tickDate);
+                const showLabel = index === 0 || index === xTickDates.length - 1 || index % 2 === 0;
                 return `
                     <line x1="${x}" y1="${height - margin.bottom}" x2="${x}" y2="${height - margin.bottom + 6}" stroke="#94a3b8" stroke-width="1" />
-                    <text x="${x}" y="${height - margin.bottom + 22}" text-anchor="middle" font-size="12" fill="#94a3b8">${formatShortDate(tickDate)}</text>
+                    ${showLabel ? `<text x="${x}" y="${height - margin.bottom + 20}" text-anchor="middle" font-size="11" fill="#64748b" font-weight="600" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif" font-stretch="expanded" letter-spacing="0.5" transform="scale(1.2, 1)">${formatShortDate(tickDate)}</text>` : ''}
                 `;
             }).join('');
 
@@ -4238,11 +4528,11 @@
             `;
 
             const latestEntry = canonical[canonical.length - 1];
-            const previousEntry = canonical[canonical.length - 2] || null;
+            const firstEntry = canonical[0] || null;
             if (latestEntry) {
                 let summary = `${formatWeight(latestEntry.weight)} • ${formatShortDate(latestEntry.date)}`;
-                if (previousEntry) {
-                    const delta = latestEntry.weight - previousEntry.weight;
+                if (firstEntry && canonical.length > 1) {
+                    const delta = latestEntry.weight - firstEntry.weight;
                     if (Math.abs(delta) >= 0.1) {
                         summary += ` (${formatDelta(delta)})`;
                     }
@@ -4251,6 +4541,123 @@
             }
 
             footnoteEl.textContent = 'Solid markers show canonical daily weigh-ins. Hollow markers show post-fast readings logged within two hours of ending a fast.';
+
+            setupChartTooltips();
+        }
+
+        function setupChartTooltips() {
+            const svg = document.getElementById('weight-trend-chart');
+            const tooltip = document.getElementById('chart-tooltip');
+
+            if (!svg || !tooltip) return;
+
+            const dataPoints = svg.querySelectorAll('.data-point');
+
+            dataPoints.forEach(point => {
+                point.addEventListener('mouseenter', (e) => {
+                    const title = e.target.querySelector('title');
+                    if (title) {
+                        tooltip.textContent = title.textContent;
+                        tooltip.classList.add('visible');
+                    }
+                });
+
+                point.addEventListener('mousemove', (e) => {
+                    const rect = svg.getBoundingClientRect();
+                    const container = svg.parentElement;
+                    const containerRect = container.getBoundingClientRect();
+
+                    let left = e.clientX - rect.left + 10;
+                    let top = e.clientY - rect.top - 30;
+
+                    // Check if tooltip would go off right edge
+                    const tooltipWidth = tooltip.offsetWidth;
+                    const tooltipHeight = tooltip.offsetHeight;
+
+                    if (left + tooltipWidth > containerRect.width) {
+                        left = e.clientX - rect.left - tooltipWidth - 10;
+                    }
+
+                    // Check if tooltip would go off left edge
+                    if (left < 0) {
+                        left = 10;
+                    }
+
+                    // Check if tooltip would go off top edge
+                    if (top < 0) {
+                        top = e.clientY - rect.top + 10;
+                    }
+
+                    // Check if tooltip would go off bottom edge
+                    if (top + tooltipHeight > containerRect.height) {
+                        top = containerRect.height - tooltipHeight - 10;
+                    }
+
+                    tooltip.style.left = left + 'px';
+                    tooltip.style.top = top + 'px';
+                });
+
+                point.addEventListener('mouseleave', () => {
+                    tooltip.classList.remove('visible');
+                });
+            });
+        }
+
+        function setupModalChartTooltips(container) {
+            const svg = container.querySelector('.chart-svg');
+            const tooltip = container.querySelector('.chart-tooltip');
+
+            if (!svg || !tooltip) return;
+
+            const dataPoints = svg.querySelectorAll('.data-point');
+
+            dataPoints.forEach(point => {
+                point.addEventListener('mouseenter', (e) => {
+                    const title = e.target.querySelector('title');
+                    if (title) {
+                        tooltip.textContent = title.textContent;
+                        tooltip.classList.add('visible');
+                    }
+                });
+
+                point.addEventListener('mousemove', (e) => {
+                    const rect = svg.getBoundingClientRect();
+                    const containerRect = container.getBoundingClientRect();
+
+                    let left = e.clientX - rect.left + 10;
+                    let top = e.clientY - rect.top - 30;
+
+                    // Check if tooltip would go off right edge
+                    const tooltipWidth = tooltip.offsetWidth;
+                    const tooltipHeight = tooltip.offsetHeight;
+
+                    if (left + tooltipWidth > containerRect.width) {
+                        left = e.clientX - rect.left - tooltipWidth - 10;
+                    }
+
+                    // Check if tooltip would go off left edge
+                    if (left < 0) {
+                        left = 10;
+                    }
+
+                    // Check if tooltip would go off top edge
+                    if (top < 0) {
+                        top = e.clientY - rect.top + 10;
+                    }
+
+                    // Check if tooltip would go off bottom edge
+                    if (top + tooltipHeight > containerRect.height) {
+                        top = containerRect.height - tooltipHeight - 10;
+                    }
+
+                    tooltip.style.left = left + 'px';
+                    tooltip.style.top = top + 'px';
+                });
+
+                point.addEventListener('mouseleave', () => {
+                    tooltip.classList.remove('visible');
+                });
+            });
         }
 
         function buildXTicks(startDate, endDate) {
@@ -4731,7 +5138,7 @@
             if (!date || Number.isNaN(date.getTime())) {
                 return '';
             }
-            return date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+            return date.toLocaleDateString(undefined, { month: 'numeric', day: 'numeric' });
         }
 
         function formatShortDateTime(value) {
