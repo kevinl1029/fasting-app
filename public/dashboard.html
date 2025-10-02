@@ -2168,7 +2168,12 @@
                                 <h3>Fast Effectiveness</h3>
                                 <span class="insight-info" aria-label="How fast effectiveness is calculated">
                                     i
-                                    <div class="insight-tooltip">Shows the breakdown of weight lost during your most recent fast. When you log body fat %, we calculate actual fat loss vs. water weight. Without body fat data, we estimate based on typical fasting patterns.</div>
+                                    <div class="insight-tooltip">
+                                        <strong>How this works:</strong><br><br>
+                                        <strong>Starting weight:</strong> We look for a measurement tagged as "fast start" when you began the fast. If none exists, we automatically use the most recent body log entry from earlier that same day (before the fast started). If no measurement exists on the same day, we can't calculate effectiveness.<br><br>
+                                        <strong>Post-fast weight:</strong> We use the measurement you log right after completing the fast.<br><br>
+                                        <strong>Fat vs. fluid breakdown:</strong> When you log body fat %, we calculate actual fat loss vs. water weight based on body composition changes. Without body fat data, we estimate based on typical fasting patterns (roughly 25% fat, 75% fluid for most fasts).
+                                    </div>
                                 </span>
                             </div>
                             <p class="chart-subtitle" id="fast-effectiveness-subtitle">Log start and post-fast weights to size up your most recent fast.</p>
