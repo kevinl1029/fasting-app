@@ -84,6 +84,11 @@ class Database {
           avg_meal_duration INTEGER DEFAULT 30,
           benefits_enabled BOOLEAN DEFAULT TRUE,
           benefits_onboarded BOOLEAN DEFAULT FALSE,
+          height_cm REAL,
+          sex TEXT,
+          age INTEGER,
+          keto_adapted TEXT DEFAULT 'none',
+          tdee_override REAL,
           created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
           updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
         )
@@ -104,6 +109,9 @@ class Database {
           source TEXT DEFAULT 'manual',
           planned_instance_id TEXT,
           planned_duration_hours REAL,
+          start_in_ketosis BOOLEAN DEFAULT 0,
+          pre_fast_protein_grams REAL,
+          carb_status TEXT DEFAULT 'normal',
           created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
           updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
           FOREIGN KEY (user_profile_id) REFERENCES user_profiles (id)
@@ -334,8 +342,94 @@ class Database {
                   }
 
                   console.log('Body log indexes ready');
-                  console.log('Database initialized successfully');
-                  resolve();
+
+                  // Run migrations for new columns
+                  this.runMigrations().then(() => {
+                    console.log('Database initialized successfully');
+                    resolve();
+                  }).catch(reject);
+                });
+              });
+            });
+          });
+        });
+      });
+    });
+  }
+
+  async runMigrations() {
+    return new Promise((resolve, reject) => {
+      // Helper function to check if a column exists
+      const columnExists = (table, column, callback) => {
+        this.db.all(`PRAGMA table_info(${table})`, (err, rows) => {
+          if (err) {
+            callback(err, false);
+          } else {
+            const exists = rows.some(row => row.name === column);
+            callback(null, exists);
+          }
+        });
+      };
+
+      // Helper function to add a column if it doesn't exist
+      const addColumnIfNotExists = (table, column, type, defaultValue, callback) => {
+        columnExists(table, column, (err, exists) => {
+          if (err) {
+            callback(err);
+            return;
+          }
+          if (exists) {
+            console.log(`Column ${table}.${column} already exists, skipping`);
+            callback(null);
+          } else {
+            const defaultClause = defaultValue ? ` DEFAULT ${defaultValue}` : '';
+            const sql = `ALTER TABLE ${table} ADD COLUMN ${column} ${type}${defaultClause}`;
+            this.db.run(sql, (err) => {
+              if (err) {
+                console.error(`Error adding column ${table}.${column}:`, err);
+                callback(err);
+              } else {
+                console.log(`Added column ${table}.${column}`);
+                callback(null);
+              }
+            });
+          }
+        });
+      };
+
+      // Run migrations sequentially
+      this.db.serialize(() => {
+        // User profile migrations
+        addColumnIfNotExists('user_profiles', 'height_cm', 'REAL', null, (err) => {
+          if (err) { reject(err); return; }
+
+          addColumnIfNotExists('user_profiles', 'sex', 'TEXT', null, (err) => {
+            if (err) { reject(err); return; }
+
+            addColumnIfNotExists('user_profiles', 'age', 'INTEGER', null, (err) => {
+              if (err) { reject(err); return; }
+
+              addColumnIfNotExists('user_profiles', 'keto_adapted', 'TEXT', "'none'", (err) => {
+                if (err) { reject(err); return; }
+
+                addColumnIfNotExists('user_profiles', 'tdee_override', 'REAL', null, (err) => {
+                  if (err) { reject(err); return; }
+
+                  // Fast table migrations
+                  addColumnIfNotExists('fasts', 'start_in_ketosis', 'BOOLEAN', '0', (err) => {
+                    if (err) { reject(err); return; }
+
+                    addColumnIfNotExists('fasts', 'pre_fast_protein_grams', 'REAL', null, (err) => {
+                      if (err) { reject(err); return; }
+
+                      addColumnIfNotExists('fasts', 'carb_status', 'TEXT', "'normal'", (err) => {
+                        if (err) { reject(err); return; }
+
+                        console.log('Migrations completed successfully');
+                        resolve();
+                      });
+                    });
+                  });
                 });
               });
             });

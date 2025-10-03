@@ -1,4 +1,5 @@
 const BodyLogService = require('./BodyLogService');
+const FastEffectivenessService = require('./FastEffectivenessService');
 
 const MS_PER_DAY = 24 * 60 * 60 * 1000;
 const RETENTION_WINDOW_MS = 48 * 60 * 60 * 1000;
@@ -7,6 +8,8 @@ class BodyLogAnalyticsService {
   constructor(database, bodyLogService = null, options = {}) {
     this.db = database;
     this.bodyLogService = bodyLogService || new BodyLogService(database, options);
+    this.fastEffectivenessService = new FastEffectivenessService();
+    this.useEnhancedEffectiveness = options.useEnhancedEffectiveness ?? true; // Feature flag
   }
 
   formatDate(date) {
@@ -160,11 +163,37 @@ class BodyLogAnalyticsService {
     };
   }
 
-  computeFastEffectivenessFromSnapshot(fast, snapshot) {
+  /**
+   * Fetch user profile and fast data for enhanced effectiveness calculation
+   */
+  async fetchEnhancedEffectivenessData(fast) {
+    if (!fast || !fast.user_profile_id) {
+      return null;
+    }
+
+    try {
+      const profile = await this.db.getUserProfileById(fast.user_profile_id);
+      return {
+        heightCm: profile?.height_cm,
+        age: profile?.age,
+        sex: profile?.sex,
+        ketoAdapted: profile?.keto_adapted || 'none',
+        tdeeOverride: profile?.tdee_override,
+        startInKetosis: fast.start_in_ketosis || false,
+        preFastProteinGrams: fast.pre_fast_protein_grams || 0,
+        carbStatus: fast.carb_status || 'normal'
+      };
+    } catch (error) {
+      console.error('Error fetching enhanced effectiveness data:', error);
+      return null;
+    }
+  }
+
+  async computeFastEffectivenessFromSnapshot(fast, snapshot) {
     if (!fast || !snapshot) {
       return {
         status: 'not_found',
-        message: 'We couldn’t find this fast entry.'
+        message: 'We could not find this fast entry.'
       };
     }
 
@@ -191,6 +220,51 @@ class BodyLogAnalyticsService {
         fastId: fast.id,
         message: 'Log your post-fast weight to see what portion came from fat vs. fluid.'
       };
+    }
+
+    // Try enhanced effectiveness calculation if enabled
+    if (this.useEnhancedEffectiveness && fast.duration_hours) {
+      const enhancedData = await this.fetchEnhancedEffectivenessData(fast);
+
+      if (enhancedData) {
+        const result = this.fastEffectivenessService.calculateFastEffectiveness({
+          startWeight,
+          postWeight,
+          startBodyFat,
+          postBodyFat,
+          fastDurationHours: fast.duration_hours,
+          tdee: enhancedData.tdeeOverride,
+          heightCm: enhancedData.heightCm,
+          age: enhancedData.age,
+          sex: enhancedData.sex,
+          ketoAdapted: enhancedData.ketoAdapted,
+          startInKetosis: enhancedData.startInKetosis,
+          preFastProteinGrams: enhancedData.preFastProteinGrams,
+          carbStatus: enhancedData.carbStatus
+        });
+
+        if (result.status === 'ok') {
+          // Add legacy fields for compatibility
+          return {
+            ...result,
+            fastId: fast.id,
+            startEntryId: startEntry ? startEntry.id : null,
+            postEntryId: postEntry.id,
+            bodyFatChange: (startBodyFat != null && postBodyFat != null) ? this.round(postBodyFat - startBodyFat) : null,
+            bodyFatChangeAbs: (startBodyFat != null && postBodyFat != null) ? Math.abs(this.round(postBodyFat - startBodyFat)) : null,
+            bodyFatChangeSignificant: (startBodyFat != null && postBodyFat != null) ? Math.abs(postBodyFat - startBodyFat) >= 0.3 : false,
+            message: this.generateEnhancedMessage(result),
+            enhanced: true, // Flag to indicate enhanced calculation
+            raw: {
+              startWeight,
+              postWeight,
+              startBodyFat,
+              postBodyFat,
+              weightLost: result.totalWeightLost
+            }
+          };
+        }
+      }
     }
 
     const weightDeltaRaw = postWeight - startWeight;
@@ -430,6 +504,30 @@ class BodyLogAnalyticsService {
         retentionPercent: retentionPercentRaw
       }
     };
+  }
+
+  generateEnhancedMessage(result) {
+    const { fatLoss, muscleLoss, fluidLoss, totalWeightLost } = result;
+
+    // No weight lost or gained
+    if (totalWeightLost <= 0) {
+      return 'Weight held steady—your body still got the metabolic reset.';
+    }
+
+    // Significant fat loss
+    if (fatLoss >= 1.0) {
+      return `Excellent work—${fatLoss} lbs of fat lost. Most fluid will rebound within a day or two.`;
+    } else if (fatLoss >= 0.5) {
+      return `Good progress—about ${fatLoss} lbs looks like fat loss. Expect some fluid rebound.`;
+    }
+
+    // Mostly fluid
+    if (fluidLoss / totalWeightLost > 0.7) {
+      return 'Most of the drop is temporary fluid. Keep logging to see what sticks.';
+    }
+
+    // Default message
+    return 'Your body is adapting. Continue tracking to see the real trends.';
   }
 
   round(value, decimals = 1) {
