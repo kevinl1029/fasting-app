@@ -295,7 +295,14 @@ app.post('/api/fasts', validateSessionMiddleware, async (req, res) => {
 
 app.post('/api/fasts/start', validateSessionMiddleware, async (req, res) => {
   try {
-    const { start_time, notes, weight } = req.body;
+    const {
+      start_time,
+      notes,
+      weight,
+      start_in_ketosis,
+      pre_fast_protein_grams,
+      carb_status
+    } = req.body;
 
     // Session is guaranteed valid here - use req.userProfile.id
     const userProfileId = req.userProfile.id;
@@ -312,7 +319,10 @@ app.post('/api/fasts/start', validateSessionMiddleware, async (req, res) => {
       weight,
       is_manual: false,
       is_active: true,
-      user_profile_id: userProfileId
+      user_profile_id: userProfileId,
+      start_in_ketosis: start_in_ketosis || false,
+      pre_fast_protein_grams: pre_fast_protein_grams || null,
+      carb_status: carb_status || 'normal'
     };
     
     console.log('Creating fast with data:', fastData);
@@ -591,9 +601,32 @@ app.get('/api/body-log/analytics', validateSessionMiddleware, async (req, res) =
 app.put('/api/fasts/:id', validateSessionMiddleware, async (req, res) => {
   try {
     const fastId = parseInt(req.params.id);
-    const { start_time, end_time, notes, weight, photos, start_weight, start_body_fat, end_weight, end_body_fat, timezone_offset_minutes } = req.body;
+    const {
+      start_time,
+      end_time,
+      notes,
+      weight,
+      photos,
+      start_weight,
+      start_body_fat,
+      end_weight,
+      end_body_fat,
+      timezone_offset_minutes,
+      start_in_ketosis,
+      pre_fast_protein_grams,
+      carb_status
+    } = req.body;
 
-    let updateData = { start_time, end_time, notes, weight, photos };
+    let updateData = {
+      start_time,
+      end_time,
+      notes,
+      weight,
+      photos,
+      start_in_ketosis,
+      pre_fast_protein_grams,
+      carb_status
+    };
 
     // Remove undefined values
     Object.keys(updateData).forEach(key =>
@@ -1594,7 +1627,12 @@ app.get('/api/user/settings', async (req, res) => {
         benefits_enabled: Boolean(profile.benefits_enabled),
         benefits_onboarded: profile.benefits_onboarded || false,
         custom_mealtimes: customMealtimes,
-        hunger_coach_enabled: profile.hunger_coach_enabled !== false
+        hunger_coach_enabled: profile.hunger_coach_enabled !== false,
+        height_cm: profile.height_cm || null,
+        sex: profile.sex || null,
+        age: profile.age || null,
+        keto_adapted: profile.keto_adapted || 'none',
+        tdee_override: profile.tdee_override || null
       }
     });
 
@@ -1618,7 +1656,12 @@ app.put('/api/user/settings', async (req, res) => {
       benefits_enabled,
       benefits_onboarded,
       hunger_coach_enabled,
-      custom_mealtimes
+      custom_mealtimes,
+      height_cm,
+      sex,
+      age,
+      keto_adapted,
+      tdee_override
     } = req.body;
 
     // Validate inputs
@@ -1634,6 +1677,36 @@ app.put('/api/user/settings', async (req, res) => {
       }
     }
 
+    if (height_cm !== undefined && height_cm !== null) {
+      if (typeof height_cm !== 'number' || height_cm < 100 || height_cm > 250) {
+        return res.status(400).json({ error: 'Height must be between 100 and 250 cm' });
+      }
+    }
+
+    if (sex !== undefined && sex !== null) {
+      if (!['male', 'female'].includes(sex)) {
+        return res.status(400).json({ error: 'Sex must be "male" or "female"' });
+      }
+    }
+
+    if (age !== undefined && age !== null) {
+      if (typeof age !== 'number' || age < 10 || age > 120) {
+        return res.status(400).json({ error: 'Age must be between 10 and 120' });
+      }
+    }
+
+    if (keto_adapted !== undefined && keto_adapted !== null) {
+      if (!['none', 'sometimes', 'consistent'].includes(keto_adapted)) {
+        return res.status(400).json({ error: 'Keto adapted must be "none", "sometimes", or "consistent"' });
+      }
+    }
+
+    if (tdee_override !== undefined && tdee_override !== null) {
+      if (typeof tdee_override !== 'number' || tdee_override < 800 || tdee_override > 5000) {
+        return res.status(400).json({ error: 'TDEE override must be between 800 and 5000 kcal' });
+      }
+    }
+
     const profile = await db.getUserProfileBySessionId(sessionId);
     if (!profile) {
       return res.status(404).json({ error: 'User profile not found' });
@@ -1646,6 +1719,11 @@ app.put('/api/user/settings', async (req, res) => {
     if (benefits_onboarded !== undefined) updateData.benefits_onboarded = benefits_onboarded;
     if (hunger_coach_enabled !== undefined) updateData.hunger_coach_enabled = hunger_coach_enabled;
     if (custom_mealtimes !== undefined) updateData.custom_mealtimes = JSON.stringify(custom_mealtimes);
+    if (height_cm !== undefined) updateData.height_cm = height_cm;
+    if (sex !== undefined) updateData.sex = sex;
+    if (age !== undefined) updateData.age = age;
+    if (keto_adapted !== undefined) updateData.keto_adapted = keto_adapted;
+    if (tdee_override !== undefined) updateData.tdee_override = tdee_override;
 
     const result = await db.updateUserProfile(sessionId, updateData);
 

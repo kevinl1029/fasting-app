@@ -567,6 +567,110 @@
                 </div>
             </div>
 
+            <!-- Profile Information -->
+            <div class="settings-section">
+                <h2 class="section-title">
+                    <svg class="section-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                        <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+                        <circle cx="12" cy="7" r="4"/>
+                    </svg>
+                    Profile Information
+                </h2>
+
+                <div class="setting-item">
+                    <div class="setting-label">
+                        <div class="setting-title">Optional Profile Data</div>
+                        <div class="setting-description">More data = more accurate fast effectiveness breakdown</div>
+                    </div>
+                </div>
+
+                <!-- Height Input -->
+                <div class="setting-item">
+                    <div class="setting-label">
+                        <div class="setting-title">Height (optional)</div>
+                        <div class="setting-description">Used for TDEE calculation</div>
+                    </div>
+                    <div class="setting-control" style="display: flex; gap: 8px; align-items: center;">
+                        <div class="input-group" style="width: 90px;">
+                            <input type="number" id="heightFeet" class="form-input"
+                                   min="3" max="8" step="1" placeholder="5">
+                            <span class="input-suffix">ft</span>
+                        </div>
+                        <div class="input-group" style="width: 90px;">
+                            <input type="number" id="heightInches" class="form-input"
+                                   min="0" max="11" step="1" placeholder="9">
+                            <span class="input-suffix">in</span>
+                        </div>
+                        <button class="btn-icon btn-remove" id="clearHeight" onclick="clearHeight()" style="display: none;" title="Clear height">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <line x1="18" y1="6" x2="6" y2="18"/>
+                                <line x1="6" y1="6" x2="18" y2="18"/>
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Sex Selector -->
+                <div class="setting-item">
+                    <div class="setting-label">
+                        <div class="setting-title">Sex (optional)</div>
+                        <div class="setting-description">Affects metabolic calculations</div>
+                    </div>
+                    <div class="setting-control">
+                        <select id="sexSelect" class="form-input" style="width: 180px; padding: 8px 12px;">
+                            <option value="">Prefer not to say</option>
+                            <option value="male">Male</option>
+                            <option value="female">Female</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Age Input -->
+                <div class="setting-item">
+                    <div class="setting-label">
+                        <div class="setting-title">Age (optional)</div>
+                        <div class="setting-description">Used for TDEE calculation</div>
+                    </div>
+                    <div class="setting-control">
+                        <div class="input-group" style="width: 120px;">
+                            <input type="number" id="age" class="form-input"
+                                   min="10" max="120" placeholder="35">
+                            <span class="input-suffix">yrs</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Keto Adaptation Level -->
+                <div class="setting-item">
+                    <div class="setting-label">
+                        <div class="setting-title">Keto Adaptation (optional)</div>
+                        <div class="setting-description">How often do you fast or eat low-carb?</div>
+                    </div>
+                    <div class="setting-control">
+                        <select id="ketoAdapted" class="form-input" style="width: 180px; padding: 8px 12px;">
+                            <option value="none">None</option>
+                            <option value="sometimes">Sometimes</option>
+                            <option value="consistent">Consistent</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Manual TDEE Override (Advanced) -->
+                <div class="setting-item">
+                    <div class="setting-label">
+                        <div class="setting-title">Manual TDEE (advanced)</div>
+                        <div class="setting-description">Override calculated TDEE with your own value</div>
+                    </div>
+                    <div class="setting-control">
+                        <div class="input-group" style="width: 140px;">
+                            <input type="number" id="tdeeOverride" class="form-input"
+                                   min="800" max="5000" step="50" placeholder="2000">
+                            <span class="input-suffix">kcal</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
             <!-- Mealtime Settings -->
             <div class="settings-section">
                 <h2 class="section-title">
@@ -737,7 +841,13 @@
             benefits_enabled: true,
             avg_meal_cost: 10.00,
             avg_meal_duration: 30,
-            benefits_onboarded: false
+            benefits_onboarded: false,
+            // Profile information for TDEE calculation
+            height_cm: null,
+            sex: null,
+            age: null,
+            keto_adapted: 'none',
+            tdee_override: null
         };
 
         let editingIndex = -1;
@@ -793,7 +903,12 @@
                             avg_meal_cost: result.data.avg_meal_cost || userSettings.avg_meal_cost,
                             avg_meal_duration: result.data.avg_meal_duration || userSettings.avg_meal_duration,
                             benefits_enabled: result.data.benefits_enabled !== false, // Default to true
-                            benefits_onboarded: result.data.benefits_onboarded || false
+                            benefits_onboarded: result.data.benefits_onboarded || false,
+                            height_cm: result.data.height_cm || null,
+                            sex: result.data.sex || null,
+                            age: result.data.age || null,
+                            keto_adapted: result.data.keto_adapted || 'none',
+                            tdee_override: result.data.tdee_override || null
                         };
                     }
                 } else {
@@ -824,7 +939,12 @@
                         avg_meal_cost: userSettings.avg_meal_cost,
                         avg_meal_duration: userSettings.avg_meal_duration,
                         benefits_enabled: userSettings.benefits_enabled,
-                        benefits_onboarded: userSettings.benefits_onboarded
+                        benefits_onboarded: userSettings.benefits_onboarded,
+                        height_cm: userSettings.height_cm,
+                        sex: userSettings.sex,
+                        age: userSettings.age,
+                        keto_adapted: userSettings.keto_adapted,
+                        tdee_override: userSettings.tdee_override
                     })
                 });
 
@@ -861,8 +981,71 @@
             // Update benefits preferences UI
             updateBenefitsUI();
 
+            // Update profile information UI
+            updateProfileUI();
+
             // Update mealtime list
             updateMealtimeList();
+        }
+
+        // Convert cm to feet and inches
+        function cmToFeetInches(cm) {
+            if (!cm) return { feet: '', inches: '' };
+            const totalInches = cm / 2.54;
+            const feet = Math.floor(totalInches / 12);
+            const inches = Math.round(totalInches % 12);
+            return { feet, inches };
+        }
+
+        // Convert feet and inches to cm
+        function feetInchesToCm(feet, inches) {
+            if (feet === '' && inches === '') return null;
+            const f = parseInt(feet) || 0;
+            const i = parseInt(inches) || 0;
+            if (f === 0 && i === 0) return null;
+            return Math.round(((f * 12) + i) * 2.54 * 10) / 10; // Round to 1 decimal
+        }
+
+        // Update profile information UI
+        function updateProfileUI() {
+            // Update height input (convert cm to feet/inches)
+            const heightFeet = document.getElementById('heightFeet');
+            const heightInches = document.getElementById('heightInches');
+            const clearHeightBtn = document.getElementById('clearHeight');
+            if (heightFeet && heightInches) {
+                const { feet, inches } = cmToFeetInches(userSettings.height_cm);
+                heightFeet.value = feet;
+                heightInches.value = inches;
+
+                // Show/hide clear button based on whether height is set
+                if (clearHeightBtn) {
+                    clearHeightBtn.style.display = userSettings.height_cm ? 'flex' : 'none';
+                }
+            }
+
+            // Update sex select
+            const sexSelect = document.getElementById('sexSelect');
+            if (sexSelect) {
+                sexSelect.value = userSettings.sex || '';
+            }
+
+            // Update age input
+            const ageInput = document.getElementById('age');
+            if (ageInput) {
+                ageInput.value = userSettings.age || '';
+            }
+
+            // Update keto adapted select
+            const ketoSelect = document.getElementById('ketoAdapted');
+            if (ketoSelect) {
+                ketoSelect.value = userSettings.keto_adapted || 'none';
+            }
+
+            // Update TDEE override input
+            const tdeeInput = document.getElementById('tdeeOverride');
+            if (tdeeInput) {
+                tdeeInput.value = userSettings.tdee_override || '';
+            }
         }
 
         // Update browser permission status
@@ -1365,6 +1548,83 @@
             }
         }
 
+        // Clear height function
+        function clearHeight() {
+            userSettings.height_cm = null;
+            saveUserSettings();
+            updateProfileUI();
+        }
+
+        // Profile update functions
+        function updateHeight() {
+            const feetInput = document.getElementById('heightFeet');
+            const inchesInput = document.getElementById('heightInches');
+            const clearHeightBtn = document.getElementById('clearHeight');
+            if (!feetInput || !inchesInput) return;
+
+            const feet = feetInput.value;
+            const inches = inchesInput.value;
+
+            const heightCm = feetInchesToCm(feet, inches);
+
+            if (heightCm === null) {
+                userSettings.height_cm = null;
+                saveUserSettings();
+                if (clearHeightBtn) clearHeightBtn.style.display = 'none';
+            } else if (heightCm >= 100 && heightCm <= 250) {
+                userSettings.height_cm = heightCm;
+                saveUserSettings();
+                if (clearHeightBtn) clearHeightBtn.style.display = 'flex';
+            } else {
+                // Invalid height - reset to previous value
+                updateProfileUI();
+            }
+        }
+
+        function updateSex() {
+            const select = document.getElementById('sexSelect');
+            if (!select) return;
+
+            userSettings.sex = select.value || null;
+            saveUserSettings();
+        }
+
+        function updateAge() {
+            const input = document.getElementById('age');
+            if (!input) return;
+
+            const value = parseInt(input.value);
+            if (input.value === '') {
+                userSettings.age = null;
+                saveUserSettings();
+            } else if (!isNaN(value) && value >= 10 && value <= 120) {
+                userSettings.age = value;
+                saveUserSettings();
+            }
+        }
+
+        function updateKetoAdapted() {
+            const select = document.getElementById('ketoAdapted');
+            if (!select) return;
+
+            userSettings.keto_adapted = select.value || 'none';
+            saveUserSettings();
+        }
+
+        function updateTdeeOverride() {
+            const input = document.getElementById('tdeeOverride');
+            if (!input) return;
+
+            const value = parseInt(input.value);
+            if (input.value === '') {
+                userSettings.tdee_override = null;
+                saveUserSettings();
+            } else if (!isNaN(value) && value >= 800 && value <= 5000) {
+                userSettings.tdee_override = value;
+                saveUserSettings();
+            }
+        }
+
         // Add event listeners when page loads (but don't initialize session-dependent functionality)
         document.addEventListener('DOMContentLoaded', function() {
             // Benefits toggle is handled by onclick in HTML
@@ -1381,6 +1641,34 @@
             if (mealDurationInput) {
                 mealDurationInput.addEventListener('input', updateMealDuration);
                 mealDurationInput.addEventListener('blur', updateMealDuration);
+            }
+
+            // Profile inputs
+            const heightFeetInput = document.getElementById('heightFeet');
+            const heightInchesInput = document.getElementById('heightInches');
+            if (heightFeetInput && heightInchesInput) {
+                heightFeetInput.addEventListener('blur', updateHeight);
+                heightInchesInput.addEventListener('blur', updateHeight);
+            }
+
+            const sexSelect = document.getElementById('sexSelect');
+            if (sexSelect) {
+                sexSelect.addEventListener('change', updateSex);
+            }
+
+            const ageInput = document.getElementById('age');
+            if (ageInput) {
+                ageInput.addEventListener('blur', updateAge);
+            }
+
+            const ketoSelect = document.getElementById('ketoAdapted');
+            if (ketoSelect) {
+                ketoSelect.addEventListener('change', updateKetoAdapted);
+            }
+
+            const tdeeInput = document.getElementById('tdeeOverride');
+            if (tdeeInput) {
+                tdeeInput.addEventListener('blur', updateTdeeOverride);
             }
 
             // Handle URL hash for direct navigation to benefits section

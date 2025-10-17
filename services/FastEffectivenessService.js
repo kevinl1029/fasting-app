@@ -1,288 +1,270 @@
 /**
  * FastEffectivenessService.js
  *
- * Implements the improved fast effectiveness algorithm v1.4
- * Three-component model: Fat Loss + Muscle Loss + Fluid Loss
- *
- * Based on: improved_fast_effectiveness_algorithm_v1.4.md
+ * Implements the improved fast effectiveness algorithm v1.5.
+ * Partitions weight change into fat, true muscle, lean water, and other fluid.
  */
 
 class FastEffectivenessService {
   constructor() {
-    // Algorithm constants
-    this.FAT_KCAL_PER_KG = 7700;
-    this.MUSCLE_KCAL_PER_KG = 1000;
-    this.FAT_OXIDATION_CAP_PER_KG = 69; // kcal/kg-fat/day
-    this.GLYCOGEN_WATER_RATIO = 3.2; // grams of water per gram of glycogen
-    this.GLYCOGEN_CAPACITY_RATIO = 0.015; // kg glycogen per kg LBM
+    this.FAT_KCAL_PER_LB = 3500;
+    this.GLYCOGEN_WATER_RATIO = 3.2; // water grams per gram glycogen
+    this.GLYCOGEN_CAPACITY_RATIO = 0.015; // kg glycogen per kg lean mass
+    this.DEFAULT_BODY_FAT = 20; // % used when missing
+    this.LEAN_WATER_FRACTION = 0.75; // portion of wet lean that is water
   }
 
   /**
-   * Helper Functions
-   */
-
-  /**
-   * Estimate TDEE using Mifflin-St Jeor equation with fallbacks
-   * @param {number} weightLbs - Weight in pounds
-   * @param {number} heightCm - Height in cm (defaults to 175 if null)
-   * @param {number} age - Age in years (defaults to 35 if null)
-   * @param {string} sex - 'male', 'female', or null (uses midpoint if null)
-   * @param {string} activity - Activity level: 'sedentary', 'light', 'moderate', 'active'
-   * @returns {number} Estimated TDEE in kcal/day
+   * Estimate TDEE using Mifflin-St Jeor with midpoint fallback for sex.
    */
   estimateTDEE(weightLbs, heightCm = null, age = null, sex = null, activity = 'sedentary') {
     const kg = weightLbs / 2.2046;
-
-    // Sex constant: male = +5, female = -161, midpoint = -78
     const sexConst = sex === 'male' ? 5 : sex === 'female' ? -161 : -78;
-
-    // Use fallbacks for missing data
     const height = heightCm ?? 175;
     const ageValue = age ?? 35;
-
-    // Mifflin-St Jeor: BMR = 10*weight(kg) + 6.25*height(cm) - 5*age + sexConst
     const bmr = 10 * kg + 6.25 * height - 5 * ageValue + sexConst;
-
-    // Activity multipliers
     const activityMultipliers = {
       sedentary: 1.2,
       light: 1.375,
       moderate: 1.55,
-      active: 1.725
+      active: 1.725,
+      very_active: 1.9
     };
-
     const mult = activityMultipliers[activity] ?? 1.2;
-
     return bmr * mult;
   }
 
   /**
-   * Calculate metabolic adaptation factor (TDEE reduction over time)
-   * @param {number} hours - Hours of fasting
-   * @param {number} bodyFatPct - Body fat percentage
-   * @returns {number} Adaptation factor (0.85 to 1.0, where 1.0 = no adaptation)
+   * Metabolic adaptation reduces available energy after ~36h of fasting.
    */
   metabolicAdaptationFactor(hours, bodyFatPct) {
-    // Base adaptation starts after 36 hours
+    const bf = bodyFatPct ?? this.DEFAULT_BODY_FAT;
     const d = Math.max(0, hours - 36);
-
-    // Base drop: 2% at 36h, increasing by 0.08% per hour, max 12%
     const baseDrop = Math.min(0.12, 0.02 + 0.0008 * d);
-
-    // Leanness adjustment: leaner people adapt less (have more protection)
-    // At 15% BF: no adjustment. Below 15%: reduce drop. Above 15%: increase drop.
-    const leannessAdj = Math.min(0.05, Math.max(-0.05, (15 - bodyFatPct) * 0.003));
-
-    // Total drop (limited to 0-15%)
+    const leannessAdj = Math.min(0.05, Math.max(-0.05, (15 - bf) * 0.003));
     const drop = Math.max(0, Math.min(0.15, baseDrop - leannessAdj));
-
     return 1 - drop;
   }
 
   /**
-   * Calculate dynamic ketosis factor (fat access and muscle sparing)
-   * @param {number} hours - Hours of fasting
-   * @param {Object} options - { baselineKeto: number (0-0.6), startInKetosis: boolean }
-   * @returns {number} Ketosis factor (0 to 0.8)
+   * Ketosis factor used solely for muscle sparing in v1.5.
    */
   ketosisFactor(hours, { baselineKeto = 0, startInKetosis = false } = {}) {
-    // Time-based ketosis progression
-    let timeCurve;
-    if (hours < 16) {
-      timeCurve = 0;
-    } else if (hours < 24) {
-      timeCurve = 0.2;
-    } else if (hours < 48) {
-      timeCurve = 0.5;
-    } else if (hours < 72) {
-      timeCurve = 0.7;
-    } else {
-      timeCurve = 0.8;
+    const h = Math.max(0, hours);
+    if (h === 0) {
+      return Math.max(startInKetosis ? 0.5 : 0, baselineKeto);
     }
 
-    // Starting in ketosis gives 0.5 boost
-    const startBoost = startInKetosis ? 0.5 : 0.0;
-
-    // Early ketosis is max of baseline (from keto-adapted status) and start boost
+    const startBoost = startInKetosis ? 0.5 : 0;
     const early = Math.max(startBoost, baselineKeto);
 
-    // Blend from early to time-based over 48 hours
-    const w = Math.min(1, hours / 48);
+    const timeCurve = (t) => {
+      if (t < 16) return 0;
+      if (t < 24) return 0.2;
+      if (t < 48) return 0.5;
+      if (t < 72) return 0.7;
+      return 0.8;
+    };
 
-    return (1 - w) * early + w * timeCurve;
+    const blendEnd = Math.min(h, 48);
+    let blendIntegral = 0;
+    if (blendEnd > 0) {
+      const integrateSegment = (t0, t1, value) => {
+        const startW = Math.min(1, t0 / 48);
+        const endW = Math.min(1, t1 / 48);
+        const avgW = (startW + endW) / 2;
+        const avgCurve = value;
+        const avg = (1 - avgW) * early + avgW * avgCurve;
+        return avg * (t1 - t0);
+      };
+
+      const segments = [
+        { start: 0, end: Math.min(blendEnd, 16), value: 0 },
+        { start: 16, end: Math.min(blendEnd, 24), value: 0.2 },
+        { start: 24, end: Math.min(blendEnd, 48), value: 0.5 }
+      ];
+
+      blendIntegral = segments.reduce((acc, { start, end, value }) => {
+        if (end <= start) {
+          return acc;
+        }
+        return acc + integrateSegment(start, end, value);
+      }, 0);
+    }
+
+    let plateauIntegral = 0;
+    if (h > 48) {
+      const plateauStart = 48;
+      const plateauEnd = h;
+
+      const clamp = (value) => Math.min(plateauEnd, Math.max(plateauStart, value));
+
+      const segments = [
+        { start: plateauStart, end: clamp(72), value: 0.7 },
+        { start: clamp(72), end: plateauEnd, value: 0.8 }
+      ];
+
+      plateauIntegral = segments.reduce((acc, { start, end, value }) => {
+        if (end <= start) {
+          return acc;
+        }
+        return acc + value * (end - start);
+      }, 0);
+    }
+
+    return (blendIntegral + plateauIntegral) / h;
   }
 
   /**
-   * Calculate protein buffer factor (muscle protection from pre-fast protein)
-   * @param {number} hours - Hours of fasting
-   * @param {number} preFastProteinGrams - Grams of protein in last meal before fast
-   * @returns {number} Protein buffer factor (0.65 to 1.0, where 1.0 = no protection)
+   * Protein buffer from pre-fast protein intake, fading by 48h.
    */
   proteinBufferFactor(hours, preFastProteinGrams = 0) {
-    const maxProtect = 0.35; // Up to 35% reduction in muscle loss
+    const h = Math.max(0, hours);
+    if (h === 0) {
+      return 1;
+    }
 
-    // Saturation curve: saturates around 80-100g protein
-    const sat = 1 - Math.exp(-preFastProteinGrams / 80);
+    const maxProtect = 0.35;
+    const sat = 1 - Math.exp(-(preFastProteinGrams / 80));
     const level = maxProtect * sat;
 
-    // Strong effect in first 24h, fades by 48h
-    if (hours <= 24) {
-      return 1 - level; // Full protection
-    } else if (hours >= 48) {
-      return 1; // No protection
-    } else {
-      // Linear fade from 24h to 48h
-      const t = (hours - 24) / 24;
-      return 1 - level * (1 - t);
-    }
+    const segment1 = Math.min(h, 24);
+    const segment2 = Math.min(Math.max(h - 24, 0), 24);
+    const segment3 = Math.max(h - 48, 0);
+
+    const integralSegment1 = (1 - level) * segment1;
+    const integralSegment2 = segment2 === 0
+      ? 0
+      : (1 - level) * segment2 + (level * (segment2 ** 2)) / 48;
+    const integralSegment3 = segment3;
+
+    const totalIntegral = integralSegment1 + integralSegment2 + integralSegment3;
+    return totalIntegral / h;
   }
 
   /**
-   * Component Estimators
+   * Compute protein loss in grams over the fast.
    */
-
-  /**
-   * Estimate muscle (lean tissue) loss
-   * @param {number} hours - Hours of fasting
-   * @param {number} startWeightLbs - Starting weight in lbs
-   * @param {number} bodyFatPct - Body fat percentage
-   * @param {Object} options - { baselineKeto, startInKetosis, preFastProteinGrams }
-   * @returns {number} Muscle loss in lbs
-   */
-  estimateMuscleLossLbs(hours, startWeightLbs, bodyFatPct, { baselineKeto = 0, startInKetosis = false, preFastProteinGrams = 0 } = {}) {
-    // Calculate lean body mass
-    const lbmLbs = startWeightLbs * (1 - bodyFatPct / 100);
-    const lbmKg = lbmLbs / 2.2046;
-
-    // Ketosis factor (higher = more muscle sparing)
+  estimateProteinLossGrams(hours, lbmKg, { baselineKeto = 0, startInKetosis = false, preFastProteinGrams = 0 } = {}) {
     const keto = this.ketosisFactor(hours, { baselineKeto, startInKetosis });
-
-    // Base protein loss rate: 0.5 g/kg-LBM/day
-    const baseProteinRate = 0.5;
-
-    // Ketosis multiplier: up to 60% reduction in protein loss
-    const ketoMult = 1 - keto * 0.6;
-
-    // Protein buffer from pre-fast meal
+    const baseProteinRate = 0.5; // g protein per kg LBM per day
+    const ketoMult = 1 - 0.6 * keto;
     const protBuf = this.proteinBufferFactor(hours, preFastProteinGrams);
-
-    // Calculate protein loss
     const days = hours / 24;
-    const proteinLoss_g = baseProteinRate * ketoMult * protBuf * lbmKg * days;
-
-    // Muscle is ~20% protein by weight
-    const muscleLossKg = (proteinLoss_g / 0.20) / 1000;
-
-    return muscleLossKg * 2.2046;
+    return baseProteinRate * ketoMult * protBuf * lbmKg * days;
   }
 
   /**
-   * Estimate fat loss
-   * @param {number} hours - Hours of fasting
-   * @param {number} tdee - Total daily energy expenditure (kcal/day)
-   * @param {number} weightLbs - Current weight in lbs
-   * @param {number} bodyFatPct - Body fat percentage
-   * @param {Object} options - { baselineKeto, startInKetosis }
-   * @returns {number} Fat loss in lbs
+   * Split wet lean loss into muscle vs intracellular water.
    */
-  estimateFatLossLbs(hours, tdee, weightLbs, bodyFatPct, { baselineKeto = 0, startInKetosis = false } = {}) {
+  decomposeLeanLoss(wetLeanLb, waterFraction = this.LEAN_WATER_FRACTION) {
+    const water = wetLeanLb * waterFraction;
+    const muscle = wetLeanLb - water;
+    return { water, muscle };
+  }
+
+  /**
+   * Estimate lean loss (protein driven) components.
+   */
+  estimateLeanLossComponents(hours, startWeightLbs, bodyFatPct, options = {}) {
+    const bf = bodyFatPct ?? this.DEFAULT_BODY_FAT;
+    const lbmLbs = startWeightLbs * (1 - bf / 100);
+    const lbmKg = Math.max(0, lbmLbs / 2.2046);
+    if (lbmKg <= 0 || hours <= 0) {
+      return {
+        proteinLossGrams: 0,
+        wetLeanLossLb: 0,
+        leanWaterLossLb: 0,
+        muscleLossLb: 0
+      };
+    }
+
+    const proteinLossGrams = this.estimateProteinLossGrams(hours, lbmKg, options);
+    const wetLeanLossLb = (proteinLossGrams / 453.592) * 4; // 1 g protein ≈ 4 g wet lean
+    const { water: leanWaterLossLb, muscle: muscleLossLb } = this.decomposeLeanLoss(wetLeanLossLb);
+
+    return {
+      proteinLossGrams,
+      wetLeanLossLb,
+      leanWaterLossLb,
+      muscleLossLb
+    };
+  }
+
+  /**
+   * Fat oxidation capped by available fat mass and energy demand.
+   */
+  estimateFatLossLbs(hours, tdee, startWeightLbs, bodyFatPct) {
+    if (!hours || hours <= 0 || !tdee || tdee <= 0) {
+      return 0;
+    }
+
+    const bf = Math.max(0, bodyFatPct ?? this.DEFAULT_BODY_FAT);
     const days = hours / 24;
+    const adapt = this.metabolicAdaptationFactor(hours, bf);
+    const dailyEnergyNeed = tdee * adapt;
+    const deficitLbPerDay = dailyEnergyNeed / this.FAT_KCAL_PER_LB;
 
-    // Metabolic adaptation reduces TDEE over time
-    const adapt = this.metabolicAdaptationFactor(hours, bodyFatPct);
-
-    // Ketosis increases fat access
-    const keto = this.ketosisFactor(hours, { baselineKeto, startInKetosis });
-
-    // Daily energy deficit
-    const dailyDeficit = tdee * adapt;
-
-    // Fat oxidation cap for lean individuals
-    const fatMassLbs = weightLbs * (bodyFatPct / 100);
+    const fatMassLbs = Math.max(0, startWeightLbs * (bf / 100));
     const fatMassKg = fatMassLbs / 2.2046;
     const maxFatKcalPerDay = 69 * fatMassKg;
-    const maxFatLbsPerDay = maxFatKcalPerDay / 3500; // 3500 kcal per lb of fat
+    const maxFatLbPerDay = maxFatKcalPerDay / this.FAT_KCAL_PER_LB;
 
-    // Ketosis improves fat access by up to 20%
-    const accessMult = 1 + keto * 0.2;
+    const allowedPerDay = Math.max(0, Math.min(deficitLbPerDay, maxFatLbPerDay));
+    const totalFatLoss = allowedPerDay * days;
 
-    // Allowed fat loss per day (lesser of deficit or oxidation limit)
-    const allowedPerDay = Math.min(dailyDeficit / 3500, maxFatLbsPerDay) * accessMult;
-
-    return Math.max(0, allowedPerDay * days);
+    return Math.min(totalFatLoss, fatMassLbs);
   }
 
   /**
-   * Estimate glycogen and bound water loss
-   * @param {number} hours - Hours of fasting
-   * @param {number} weightLbs - Weight in lbs
-   * @param {number} bodyFatPct - Body fat percentage
-   * @param {string} carbStatus - 'low', 'normal', or 'high'
-   * @returns {Object} { glycogenLostLbs, boundWaterLostLbs, startGlycogenLbs }
+   * Glycogen depletion and associated bound water.
    */
   estimateGlycogenAndBoundWater(hours, weightLbs, bodyFatPct, carbStatus = 'normal') {
-    // Calculate lean body mass
-    const lbmLbs = weightLbs * (1 - bodyFatPct / 100);
-    const lbmKg = lbmLbs / 2.2046;
-
-    // Glycogen capacity: 1.5% of LBM
+    const bf = bodyFatPct ?? this.DEFAULT_BODY_FAT;
+    const lbmLbs = weightLbs * (1 - bf / 100);
+    const lbmKg = Math.max(0, lbmLbs / 2.2046);
     const glycCapKg = lbmKg * this.GLYCOGEN_CAPACITY_RATIO;
 
-    // Carb status affects initial glycogen fill level
     const carbMult = carbStatus === 'high' ? 1.1 : carbStatus === 'low' ? 0.6 : 1.0;
     const startFillKg = glycCapKg * carbMult;
 
-    // Depletion curve: exponential with 24h half-life
-    const deplFrac = 1 - Math.exp(-hours / 24);
-    const glycUsedKg = Math.min(startFillKg, startFillKg * deplFrac);
-
-    // Bound water: 3.2g water per 1g glycogen
-    const boundWaterKg = glycUsedKg * this.GLYCOGEN_WATER_RATIO;
+    const depletionFraction = 1 - Math.exp(-Math.max(0, hours) / 24);
+    const glycogenUsedKg = Math.min(startFillKg, startFillKg * depletionFraction);
+    const boundWaterKg = glycogenUsedKg * this.GLYCOGEN_WATER_RATIO;
 
     return {
-      glycogenLostLbs: glycUsedKg * 2.2046,
+      glycogenLostLbs: glycogenUsedKg * 2.2046,
       boundWaterLostLbs: boundWaterKg * 2.2046,
       startGlycogenLbs: startFillKg * 2.2046
     };
   }
 
   /**
-   * Estimate gut content loss
-   * @param {number} hours - Hours of fasting
-   * @param {number} weightLbs - Weight in lbs
-   * @returns {number} Gut content loss in lbs
+   * Gut content reduction over the course of the fast.
    */
   estimateGutContentLoss(hours, weightLbs) {
-    // Peak gut content: 0.8% of body weight (1-4 lbs typical range)
-    const peak = Math.min(4.0, Math.max(1.0, weightLbs * 0.008));
-
-    // Progressive clearance over 36 hours
-    let frac;
-    if (hours < 8) {
-      frac = 0.1 * (hours / 8); // 10% by 8h
-    } else if (hours < 24) {
-      frac = 0.1 + 0.75 * ((hours - 8) / 16); // 85% by 24h
-    } else if (hours < 36) {
-      frac = 0.85 + 0.10 * ((hours - 24) / 12); // 95% by 36h
-    } else {
-      frac = 0.95; // Plateau at 95%
+    if (!hours || hours <= 0) {
+      return 0;
     }
 
-    return peak * frac;
+    const peak = Math.min(4, Math.max(1, weightLbs * 0.008));
+    let fraction;
+    if (hours < 8) {
+      fraction = 0.1 * (hours / 8);
+    } else if (hours < 24) {
+      fraction = 0.1 + 0.75 * ((hours - 8) / 16);
+    } else if (hours < 36) {
+      fraction = 0.85 + 0.1 * ((hours - 24) / 12);
+    } else {
+      fraction = 0.95;
+    }
+    return peak * fraction;
   }
 
   /**
-   * Estimate total fluid loss (assembler function)
-   * @param {number} hours - Hours of fasting
-   * @param {number} startWeightLbs - Starting weight in lbs
-   * @param {number} totalWeightLostLbs - Total weight lost in lbs
-   * @param {number} fatLossLbs - Fat loss in lbs
-   * @param {number} muscleLossLbs - Muscle loss in lbs
-   * @param {Object} options - { bodyFatPct, carbStatus }
-   * @returns {Object} { totalFluidLoss, breakdown: { glycogenMass, glycogenBoundWater, gutContent, residualWaterShift } }
+   * Assemble non-lean fluid components and residual shift.
    */
-  estimateFluidLoss(hours, startWeightLbs, totalWeightLostLbs, fatLossLbs, muscleLossLbs, { bodyFatPct, carbStatus = 'normal' } = {}) {
-    // Glycogen and bound water
+  assembleFluidLoss(hours, startWeightLbs, totalWeightLostLbs, fatLossLbs, muscleLossLbs, leanWaterLossLbs, { bodyFatPct, carbStatus = 'normal' } = {}) {
     const { glycogenLostLbs, boundWaterLostLbs } = this.estimateGlycogenAndBoundWater(
       hours,
       startWeightLbs,
@@ -290,32 +272,46 @@ class FastEffectivenessService {
       carbStatus
     );
 
-    // Gut content
-    const gutLossLbs = this.estimateGutContentLoss(hours, startWeightLbs);
+    const gutContentLossLbs = this.estimateGutContentLoss(hours, startWeightLbs);
 
-    // Residual water shift (whatever's left over)
-    const residualWaterShift = totalWeightLostLbs - fatLossLbs - muscleLossLbs
-                               - glycogenLostLbs - boundWaterLostLbs - gutLossLbs;
+    const baselineOther = glycogenLostLbs + boundWaterLostLbs + gutContentLossLbs;
+    const otherFluidRaw = totalWeightLostLbs - fatLossLbs - muscleLossLbs - leanWaterLossLbs;
+    const availableOther = Math.max(0, otherFluidRaw);
+
+    let glycogenScaled = 0;
+    let boundScaled = 0;
+    let gutScaled = 0;
+
+    if (baselineOther > 0 && availableOther > 0) {
+      const scale = Math.min(1, availableOther / baselineOther);
+      glycogenScaled = glycogenLostLbs * scale;
+      boundScaled = boundWaterLostLbs * scale;
+      gutScaled = gutContentLossLbs * scale;
+    }
+
+    const residualWaterShift = Math.max(0, availableOther - (glycogenScaled + boundScaled + gutScaled));
 
     return {
-      totalFluidLoss: glycogenLostLbs + boundWaterLostLbs + gutLossLbs + residualWaterShift,
+      otherFluidLossLbs: availableOther,
       breakdown: {
-        glycogenMass: glycogenLostLbs,
-        glycogenBoundWater: boundWaterLostLbs,
-        gutContent: gutLossLbs,
+        glycogenMass: glycogenScaled,
+        glycogenBoundWater: boundScaled,
+        gutContent: gutScaled,
         residualWaterShift
       }
     };
   }
 
-  /**
-   * Core API
-   */
+  round(value, decimals = 1) {
+    if (value === null || value === undefined || Number.isNaN(value)) {
+      return null;
+    }
+    const factor = 10 ** decimals;
+    return Math.round(value * factor) / factor;
+  }
 
   /**
-   * Calculate fast effectiveness with detailed breakdown
-   * @param {Object} params - Calculation parameters
-   * @returns {Object} Detailed effectiveness breakdown
+   * Core API: calculate fast effectiveness breakdown.
    */
   calculateFastEffectiveness(params) {
     const {
@@ -335,7 +331,6 @@ class FastEffectivenessService {
       carbStatus = 'normal'
     } = params;
 
-    // Validate required parameters
     if (!startWeight || !postWeight || !fastDurationHours) {
       return {
         status: 'error',
@@ -344,99 +339,82 @@ class FastEffectivenessService {
     }
 
     const totalWeightLost = startWeight - postWeight;
-
-    // Convert keto-adapted status to baseline ketosis level
     const baselineKeto = ketoAdapted === 'consistent' ? 0.6
-                       : ketoAdapted === 'sometimes' ? 0.3
-                       : 0.0;
+      : ketoAdapted === 'sometimes' ? 0.3
+        : 0;
 
-    let fatLoss, muscleLoss, fluidLoss, breakdownSource, fluidBreakdown;
+    const bodyFatForModel = startBodyFat ?? this.DEFAULT_BODY_FAT;
+    const leanEstimate = this.estimateLeanLossComponents(
+      fastDurationHours,
+      startWeight,
+      bodyFatForModel,
+      { baselineKeto, startInKetosis, preFastProteinGrams }
+    );
 
-    // MEASURED MODE: Use body fat % if available (preferred)
+    let fatLossLbs;
+    let breakdownSource;
+    let muscleLossLbs = leanEstimate.muscleLossLb;
+    let leanWaterLossLbs = leanEstimate.leanWaterLossLb;
+
+    // Measured mode if both body fat values provided
     if (startBodyFat != null && postBodyFat != null) {
-      // Direct calculation from body composition
       const startFatMass = startWeight * (startBodyFat / 100);
       const postFatMass = postWeight * (postBodyFat / 100);
-      fatLoss = Math.max(0, startFatMass - postFatMass);
+      fatLossLbs = Math.max(0, startFatMass - postFatMass);
 
-      const startLean = startWeight - startFatMass;
-      const postLean = postWeight - postFatMass;
-      const totalLeanLoss = Math.max(0, startLean - postLean);
+      // Measured fat loss overrides the modeled fat component,
+      // but lean/muscle stays driven by the physiology model in v1.5.
 
-      // Estimate muscle loss from protein loss model
-      muscleLoss = this.estimateMuscleLossLbs(fastDurationHours, startWeight, startBodyFat, {
-        baselineKeto,
-        startInKetosis,
-        preFastProteinGrams
-      });
-
-      // Fluid is whatever's left of lean loss after muscle
-      const fluidResult = this.estimateFluidLoss(
-        fastDurationHours,
-        startWeight,
-        totalLeanLoss,
-        0,
-        muscleLoss,
-        { bodyFatPct: startBodyFat, carbStatus }
-      );
-
-      fluidLoss = fluidResult.totalFluidLoss;
-      fluidBreakdown = fluidResult.breakdown;
       breakdownSource = 'measured';
-
-    }
-    // ESTIMATED MODE: Use TDEE-based calculation
-    else {
-      // Calculate or use provided TDEE
+    } else {
       const tdeeUse = tdee ?? this.estimateTDEE(startWeight, heightCm, age, sex, activity);
-
-      // Estimate fat loss from energy deficit
-      fatLoss = this.estimateFatLossLbs(fastDurationHours, tdeeUse, startWeight, startBodyFat ?? 20, {
-        baselineKeto,
-        startInKetosis
-      });
-
-      // Estimate muscle loss
-      muscleLoss = this.estimateMuscleLossLbs(fastDurationHours, startWeight, startBodyFat ?? 20, {
-        baselineKeto,
-        startInKetosis,
-        preFastProteinGrams
-      });
-
-      // Fluid is remainder
-      const fluidResult = this.estimateFluidLoss(
-        fastDurationHours,
-        startWeight,
-        totalWeightLost,
-        fatLoss,
-        muscleLoss,
-        { bodyFatPct: startBodyFat ?? 20, carbStatus }
-      );
-
-      fluidLoss = fluidResult.totalFluidLoss;
-      fluidBreakdown = fluidResult.breakdown;
+      fatLossLbs = this.estimateFatLossLbs(fastDurationHours, tdeeUse, startWeight, bodyFatForModel);
       breakdownSource = 'estimated';
     }
 
-    // Round to 1 decimal place
-    const round = (x, d = 1) => Math.round(x * 10 ** d) / 10 ** d;
+    const fluidAssembly = this.assembleFluidLoss(
+      fastDurationHours,
+      startWeight,
+      totalWeightLost,
+      fatLossLbs,
+      muscleLossLbs,
+      leanWaterLossLbs,
+      { bodyFatPct: bodyFatForModel, carbStatus }
+    );
+
+    const otherFluidLossLbs = fluidAssembly.otherFluidLossLbs;
+    const fluidBreakdown = fluidAssembly.breakdown;
+    const otherFluidComponentsTotal = fluidBreakdown.glycogenMass
+      + fluidBreakdown.glycogenBoundWater
+      + fluidBreakdown.gutContent
+      + fluidBreakdown.residualWaterShift;
+
+    const totalTransientLoss = leanWaterLossLbs + otherFluidLossLbs;
+    const totalMuscle = Math.max(0, muscleLossLbs);
+
+    const round = (value) => this.round(value);
 
     return {
       status: 'ok',
       startWeight: round(startWeight),
       postWeight: round(postWeight),
       totalWeightLost: round(totalWeightLost),
-      fatLoss: round(fatLoss),
-      muscleLoss: round(muscleLoss),
-      fluidLoss: round(fluidLoss),
+      fatLoss: round(fatLossLbs),
+      muscleLoss: round(totalMuscle),
+      leanWater: round(leanWaterLossLbs),
+      fluidLoss: round(totalTransientLoss),
+      otherFluidLoss: round(otherFluidLossLbs),
+      transientLoss: round(totalTransientLoss),
       fluidBreakdown: {
+        leanWater: round(leanWaterLossLbs),
         glycogenMass: round(fluidBreakdown.glycogenMass),
         glycogenBoundWater: round(fluidBreakdown.glycogenBoundWater),
         gutContent: round(fluidBreakdown.gutContent),
-        residualWaterShift: round(fluidBreakdown.residualWaterShift)
+        residualWaterShift: round(fluidBreakdown.residualWaterShift),
+        otherFluidTotal: round(otherFluidComponentsTotal)
       },
       breakdownSource,
-      waterLoss: round(muscleLoss + fluidLoss),
+      waterLoss: round(totalTransientLoss),
       weightDelta: round(postWeight - startWeight)
     };
   }

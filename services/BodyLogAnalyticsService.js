@@ -141,21 +141,84 @@ class BodyLogAnalyticsService {
       ? Number(startEntry.weight)
       : (fast.weight !== null && fast.weight !== undefined ? Number(fast.weight) : null);
 
-    const postWeight = postFastEntry && postFastEntry.weight !== null && postFastEntry.weight !== undefined
-      ? Number(postFastEntry.weight)
-      : null;
-
     const startBodyFat = startEntry && startEntry.body_fat !== null && startEntry.body_fat !== undefined
       ? Number(startEntry.body_fat)
       : null;
 
-    const postBodyFat = postFastEntry && postFastEntry.body_fat !== null && postFastEntry.body_fat !== undefined
-      ? Number(postFastEntry.body_fat)
+    const selectBetterEntry = (current, candidate) => {
+      if (!candidate) {
+        return current;
+      }
+      if (!current) {
+        return candidate;
+      }
+
+      const currentWeight = (current.weight !== null && current.weight !== undefined)
+        ? Number(current.weight)
+        : null;
+      const candidateWeight = (candidate.weight !== null && candidate.weight !== undefined)
+        ? Number(candidate.weight)
+        : null;
+
+      if (candidateWeight !== null && (currentWeight === null || candidateWeight < currentWeight)) {
+        return candidate;
+      }
+      if (candidateWeight !== null && currentWeight !== null && candidateWeight === currentWeight) {
+        const currentBodyFat = (current.body_fat !== null && current.body_fat !== undefined)
+          ? Number(current.body_fat)
+          : null;
+        const candidateBodyFat = (candidate.body_fat !== null && candidate.body_fat !== undefined)
+          ? Number(candidate.body_fat)
+          : null;
+
+        if (candidateBodyFat !== null && (currentBodyFat === null || candidateBodyFat < currentBodyFat)) {
+          return candidate;
+        }
+
+        if (candidateBodyFat !== null && currentBodyFat !== null && candidateBodyFat === currentBodyFat) {
+          const currentTime = new Date(current.logged_at).getTime();
+          const candidateTime = new Date(candidate.logged_at).getTime();
+          if (!Number.isNaN(candidateTime) && (Number.isNaN(currentTime) || candidateTime < currentTime)) {
+            return candidate;
+          }
+        }
+      }
+
+      if (currentWeight === null && candidateWeight !== null) {
+        return candidate;
+      }
+
+      return current;
+    };
+
+    let selectedPostEntry = postFastEntry;
+
+    const endLocalDate = postFastEntry?.local_date || (fast.end_time ? this.formatDate(new Date(fast.end_time)) : null);
+    if (endLocalDate && Array.isArray(allUserEntries)) {
+      const morningCandidates = allUserEntries
+        .filter((entry) => entry
+          && entry.local_date === endLocalDate
+          && entry.is_canonical
+          && entry.weight !== null
+          && entry.weight !== undefined)
+        .sort((a, b) => new Date(a.logged_at).getTime() - new Date(b.logged_at).getTime());
+
+      for (const candidate of morningCandidates) {
+        selectedPostEntry = selectBetterEntry(selectedPostEntry, candidate);
+      }
+    }
+
+    const postWeight = selectedPostEntry && selectedPostEntry.weight !== null && selectedPostEntry.weight !== undefined
+      ? Number(selectedPostEntry.weight)
+      : null;
+
+    const postBodyFat = selectedPostEntry && selectedPostEntry.body_fat !== null && selectedPostEntry.body_fat !== undefined
+      ? Number(selectedPostEntry.body_fat)
       : null;
 
     return {
       startEntry,
-      postEntry: postFastEntry,
+      postEntry: selectedPostEntry,
       startWeight,
       postWeight,
       startBodyFat,
@@ -222,8 +285,10 @@ class BodyLogAnalyticsService {
       };
     }
 
+    const durationHours = fast.duration_hours ?? this.computeDurationHours(fast.start_time, fast.end_time);
+
     // Try enhanced effectiveness calculation if enabled
-    if (this.useEnhancedEffectiveness && fast.duration_hours) {
+    if (this.useEnhancedEffectiveness && durationHours) {
       const enhancedData = await this.fetchEnhancedEffectivenessData(fast);
 
       if (enhancedData) {
@@ -232,7 +297,7 @@ class BodyLogAnalyticsService {
           postWeight,
           startBodyFat,
           postBodyFat,
-          fastDurationHours: fast.duration_hours,
+          fastDurationHours: durationHours,
           tdee: enhancedData.tdeeOverride,
           heightCm: enhancedData.heightCm,
           age: enhancedData.age,
@@ -248,6 +313,7 @@ class BodyLogAnalyticsService {
           return {
             ...result,
             fastId: fast.id,
+            durationHours,
             startEntryId: startEntry ? startEntry.id : null,
             postEntryId: postEntry.id,
             bodyFatChange: (startBodyFat != null && postBodyFat != null) ? this.round(postBodyFat - startBodyFat) : null,
@@ -313,6 +379,7 @@ class BodyLogAnalyticsService {
     return {
       status: 'ok',
       fastId: fast.id,
+      durationHours,
       startWeight: this.round(startWeight),
       postWeight: this.round(postWeight),
       weightLost,
@@ -339,6 +406,18 @@ class BodyLogAnalyticsService {
         postBodyFat
       }
     };
+  }
+
+  computeDurationHours(startTime, endTime) {
+    if (!startTime || !endTime) {
+      return null;
+    }
+    const start = new Date(startTime);
+    const end = new Date(endTime);
+    if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) {
+      return null;
+    }
+    return (end.getTime() - start.getTime()) / (1000 * 60 * 60);
   }
 
   deriveProtocolGroup(fast, snapshot) {

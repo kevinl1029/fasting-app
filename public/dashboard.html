@@ -1057,54 +1057,223 @@
             padding-top: 18px;
             display: flex;
             flex-direction: column;
-            gap: 16px;
+            gap: 14px;
         }
 
-        .effectiveness-columns {
+        .effectiveness-summary {
             display: flex;
             flex-wrap: wrap;
-            gap: 16px;
+            gap: 18px;
+            font-size: 0.82rem;
+            color: #475569;
         }
 
-        .effectiveness-metric {
-            flex: 1;
-            min-width: 160px;
-            background: #f8fafc;
-            border: 1px solid #e2e8f0;
-            border-radius: 14px;
-            padding: 14px 16px;
-            display: flex;
-            flex-direction: column;
+        .summary-item {
+            display: inline-flex;
+            align-items: baseline;
             gap: 6px;
         }
 
-        .effectiveness-label {
-            font-size: 0.78rem;
+        .summary-label {
+            font-size: 0.7rem;
             text-transform: uppercase;
             letter-spacing: 0.08em;
             color: #64748b;
         }
 
-        .effectiveness-value {
-            font-size: 1.6rem;
+        .summary-value {
+            font-weight: 600;
+            color: #0f172a;
+        }
+
+        .summary-note {
+            color: #64748b;
+        }
+
+        .effectiveness-bar {
+            position: relative;
+            height: 14px;
+            border-radius: 999px;
+            background: #e2e8f0;
+            overflow: hidden;
+            display: flex;
+        }
+
+        .bar-segment {
+            height: 100%;
+        }
+
+        .bar-fat {
+            background: #22c55e;
+        }
+
+        .bar-muscle {
+            background: #fb923c;
+        }
+
+        .bar-fluid {
+            background: #38bdf8;
+        }
+
+        .effectiveness-bar-legend {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            font-size: 0.75rem;
+            color: #475569;
+        }
+
+        .legend-item {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .legend-chip {
+            width: 10px;
+            height: 10px;
+            border-radius: 999px;
+        }
+
+        .legend-chip.fat {
+            background: #22c55e;
+        }
+
+        .legend-chip.muscle {
+            background: #fb923c;
+        }
+
+        .legend-chip.fluid {
+            background: #38bdf8;
+        }
+
+        .composition-row {
+            display: grid;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            gap: 8px;
+        }
+
+        @media (max-width: 720px) {
+            .composition-row {
+                grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            }
+        }
+
+        .component-card {
+            border: 1px solid #e2e8f0;
+            border-radius: 14px;
+            background: #ffffff;
+            padding: 10px 12px;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .component-top {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .component-icon {
+            font-size: 1.1rem;
+        }
+
+        .component-label {
+            font-size: 0.7rem;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            color: #64748b;
+        }
+
+        .component-value {
+            font-size: 1.15rem;
             font-weight: 700;
             color: #0f172a;
         }
 
-        .effectiveness-detail {
-            font-size: 0.85rem;
+        .component-meta {
+            font-size: 0.68rem;
             color: #475569;
+            line-height: 1.3;
         }
 
-        .effectiveness-caption {
-            font-size: 0.8rem;
-            color: #64748b;
+        .component-info {
+            border: none;
+            background: rgba(148, 163, 184, 0.18);
+            color: #475569;
+            width: 18px;
+            height: 18px;
+            border-radius: 999px;
+            font-size: 0.65rem;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
         }
 
-        .effectiveness-message {
-            font-size: 0.95rem;
-            color: #334155;
-            line-height: 1.5;
+        .component-info:hover,
+        .component-info:focus {
+            background: rgba(148, 163, 184, 0.32);
+            outline: none;
+        }
+
+        .component-info::after {
+            content: attr(data-tooltip);
+            position: absolute;
+            bottom: calc(100% + 8px);
+            left: 50%;
+            transform: translateX(-50%) translateY(4px);
+            padding: 8px 10px;
+            background: #0f172a;
+            color: #f8fafc;
+            font-size: 0.7rem;
+            line-height: 1.3;
+            border-radius: 8px;
+            box-shadow: 0 6px 18px rgba(15, 23, 42, 0.25);
+            width: max-content;
+            max-width: 220px;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.15s ease, transform 0.15s ease;
+            z-index: 5;
+        }
+
+        .component-info::before {
+            content: '';
+            position: absolute;
+            bottom: calc(100% + 2px);
+            left: 50%;
+            transform: translateX(-50%) translateY(4px);
+            width: 8px;
+            height: 8px;
+            background: #0f172a;
+            clip-path: polygon(50% 100%, 0 0, 100% 0);
+            opacity: 0;
+            transition: opacity 0.15s ease;
+            z-index: 5;
+        }
+
+        .component-info:hover::after,
+        .component-info:focus::after,
+        .component-info:hover::before,
+        .component-info:focus::before {
+            opacity: 1;
+            transform: translateX(-50%) translateY(0);
+        }
+
+        .component-fat {
+            border-top: 3px solid #22c55e;
+        }
+
+        .component-muscle {
+            border-top: 3px solid #fb923c;
+        }
+
+        .component-fluid {
+            border-top: 3px solid #38bdf8;
+            background: linear-gradient(180deg, #f0f9ff 0%, #ffffff 90%);
         }
 
         .effectiveness-tags {
@@ -1126,9 +1295,81 @@
             letter-spacing: 0.05em;
         }
 
+        .effectiveness-message {
+            font-size: 0.95rem;
+            color: #334155;
+            line-height: 1.5;
+        }
+
         .effectiveness-meta {
             font-size: 0.82rem;
             color: #64748b;
+        }
+
+        .fluid-toggle-btn {
+            width: 100%;
+            padding: 10px 12px;
+            border: 1px solid #bae6fd;
+            border-radius: 12px;
+            background: rgba(191, 219, 254, 0.35);
+            color: #0369a1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            cursor: pointer;
+            font-weight: 600;
+        }
+
+        .fluid-toggle-btn:hover {
+            background: rgba(191, 219, 254, 0.55);
+        }
+
+        #fluid-toggle-icon {
+            font-size: 0.7rem;
+        }
+
+        .fluid-breakdown {
+            margin-top: 8px;
+            border: 1px solid #e2e8f0;
+            border-radius: 16px;
+            background: #f8fafc;
+            padding: 12px 16px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .fluid-breakdown-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .fluid-breakdown-left {
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+        }
+
+        .fluid-icon {
+            font-size: 1.1rem;
+        }
+
+        .fluid-label {
+            font-weight: 600;
+            color: #0f172a;
+        }
+
+        .fluid-note {
+            font-size: 0.78rem;
+            color: #64748b;
+        }
+
+        .fluid-value {
+            font-weight: 600;
+            color: #0f172a;
         }
 
         .rolling-content {
@@ -1782,6 +2023,52 @@
         .modal-checkbox-group input[type="checkbox"] {
             width: 18px;
             height: 18px;
+        }
+
+        .modal-form-divider {
+            height: 1px;
+            background: #e5e7eb;
+            margin: 24px 0 20px 0;
+        }
+
+        .modal-form-section-header {
+            font-size: 14px;
+            font-weight: 600;
+            color: #6366f1;
+            text-align: center;
+            margin-bottom: 16px;
+        }
+
+        .modal-checkbox-label {
+            display: flex;
+            align-items: center;
+            cursor: pointer;
+            font-size: 15px;
+            font-weight: 500;
+            color: #374151;
+        }
+
+        .modal-checkbox-label input[type="checkbox"] {
+            margin-right: 10px;
+            width: 18px;
+            height: 18px;
+            cursor: pointer;
+        }
+
+        .modal-form-group select {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e5e7eb;
+            border-radius: 8px;
+            font-size: 15px;
+            background: white;
+            cursor: pointer;
+            transition: border-color 0.2s ease;
+        }
+
+        .modal-form-group select:focus {
+            outline: none;
+            border-color: #6366f1;
         }
 
         /* Placeholder content for disabled tabs */
@@ -2447,6 +2734,33 @@
                         <textarea id="notes" name="notes" placeholder="Add any notes about this fast..."></textarea>
                     </div>
 
+                    <div class="modal-form-divider"></div>
+                    <div class="modal-form-section-header">Optional Context (improves breakdown accuracy)</div>
+
+                    <div class="modal-form-group">
+                        <label class="modal-checkbox-label">
+                            <input type="checkbox" id="add-start-in-ketosis" name="start-in-ketosis">
+                            <span>Already in ketosis?</span>
+                        </label>
+                        <div class="modal-form-hint">Check if you were already fat-adapted before starting</div>
+                    </div>
+
+                    <div class="modal-form-group">
+                        <label for="add-pre-fast-protein">Pre-fast protein (grams)</label>
+                        <input type="number" id="add-pre-fast-protein" name="pre-fast-protein" min="0" max="200" placeholder="Optional">
+                        <div class="modal-form-hint">Protein in your last meal (helps preserve muscle)</div>
+                    </div>
+
+                    <div class="modal-form-group">
+                        <label for="add-carb-status">Pre-fast carb intake</label>
+                        <select id="add-carb-status" name="carb-status">
+                            <option value="normal">Normal</option>
+                            <option value="low">Low (keto/low-carb)</option>
+                            <option value="high">High (carb-heavy meal)</option>
+                        </select>
+                        <div class="modal-form-hint">Affects glycogen and water loss</div>
+                    </div>
+
                     <div class="modal-actions">
                         <button type="button" class="modal-btn modal-btn-secondary" onclick="hideAddFastModal()">Cancel</button>
                         <button type="submit" class="modal-btn modal-btn-primary">Add Fast</button>
@@ -2515,6 +2829,33 @@
                     <div class="modal-form-group">
                         <label for="edit-notes">Notes (Optional)</label>
                         <textarea id="edit-notes" name="notes" placeholder="Add any notes about this fast..."></textarea>
+                    </div>
+
+                    <div class="modal-form-divider"></div>
+                    <div class="modal-form-section-header">Optional Context (improves breakdown accuracy)</div>
+
+                    <div class="modal-form-group">
+                        <label class="modal-checkbox-label">
+                            <input type="checkbox" id="edit-start-in-ketosis" name="start-in-ketosis">
+                            <span>Already in ketosis?</span>
+                        </label>
+                        <div class="modal-form-hint">Check if you were already fat-adapted before starting</div>
+                    </div>
+
+                    <div class="modal-form-group">
+                        <label for="edit-pre-fast-protein">Pre-fast protein (grams)</label>
+                        <input type="number" id="edit-pre-fast-protein" name="pre-fast-protein" min="0" max="200" placeholder="Optional">
+                        <div class="modal-form-hint">Protein in your last meal (helps preserve muscle)</div>
+                    </div>
+
+                    <div class="modal-form-group">
+                        <label for="edit-carb-status">Pre-fast carb intake</label>
+                        <select id="edit-carb-status" name="carb-status">
+                            <option value="normal">Normal</option>
+                            <option value="low">Low (keto/low-carb)</option>
+                            <option value="high">High (carb-heavy meal)</option>
+                        </select>
+                        <div class="modal-form-hint">Affects glycogen and water loss</div>
                     </div>
 
                     <div class="modal-actions-special">
@@ -4841,6 +5182,27 @@
             `;
         }
 
+        function toggleFluidBreakdown() {
+            const breakdown = document.getElementById('fluid-breakdown');
+            const toggleText = document.getElementById('fluid-toggle-text');
+            const toggleIcon = document.getElementById('fluid-toggle-icon');
+            const toggleBtn = document.getElementById('fluid-toggle-btn');
+
+            if (!breakdown) return;
+
+            const isVisible = breakdown.style.display === 'flex';
+            breakdown.style.display = isVisible ? 'none' : 'flex';
+            if (toggleText) {
+                toggleText.textContent = isVisible ? 'Show fluid breakdown' : 'Hide fluid breakdown';
+            }
+            if (toggleIcon) {
+                toggleIcon.textContent = isVisible ? '▼' : '▲';
+            }
+            if (toggleBtn) {
+                toggleBtn.setAttribute('aria-expanded', (!isVisible).toString());
+            }
+        }
+
         function renderFastEffectivenessCard() {
             const container = document.getElementById('fast-effectiveness-content');
             const subtitle = document.getElementById('fast-effectiveness-subtitle');
@@ -4876,47 +5238,214 @@
 
             subtitle.textContent = 'Based on your most recent completed fast with start & post weigh-ins.';
 
+            const asNumber = (value) => {
+                const numeric = Number(value);
+                return Number.isFinite(numeric) ? numeric : 0;
+            };
+
             const startWeightLabel = formatWeight(effectiveness.startWeight);
             const postWeightLabel = formatWeight(effectiveness.postWeight);
             const weightDeltaLabel = formatDelta(effectiveness.weightDelta);
-            const fatLossLabel = formatWeight(effectiveness.fatLoss);
-            const fluidLabel = formatWeight(effectiveness.waterLoss);
-            const breakdownLabel = effectiveness.breakdownSource === 'measured'
-                ? 'Measured from body fat %'
-                : 'Estimated from typical fast responses';
 
-            const postLogged = effectiveness.postFastLoggedAt ? formatShortDateTime(effectiveness.postFastLoggedAt) : '';
-            const bodyFatCopy = (effectiveness.startBodyFat !== null && effectiveness.startBodyFat !== undefined
-                && effectiveness.postBodyFat !== null && effectiveness.postBodyFat !== undefined)
-                ? `Body fat ${formatBodyFatValue(effectiveness.startBodyFat)} → ${formatBodyFatValue(effectiveness.postBodyFat)}`
-                : '';
-
-            let durationCopy = '';
-            if (Array.isArray(bodyAnalytics?.fasts)) {
+            let durationLabel = '—';
+            let postLogged = '';
+            let durationHours = effectiveness.durationHours ? Number(effectiveness.durationHours) : null;
+            if (!durationHours && Array.isArray(bodyAnalytics?.fasts)) {
                 const matchedFast = bodyAnalytics.fasts.find((fast) => fast && Number(fast.id) === Number(effectiveness.fastId));
                 if (matchedFast) {
-                    const duration = matchedFast.durationHours ? Number(matchedFast.durationHours) : null;
-                    if (duration) {
-                        durationCopy = `Fast length ${formatFastDuration(duration)}`;
+                    durationHours = matchedFast.durationHours ? Number(matchedFast.durationHours) : durationHours;
+                    if (!durationHours && matchedFast.startTime && matchedFast.endTime) {
+                        const start = new Date(matchedFast.startTime);
+                        const end = new Date(matchedFast.endTime);
+                        if (!Number.isNaN(start.getTime()) && !Number.isNaN(end.getTime())) {
+                            durationHours = (end.getTime() - start.getTime()) / (1000 * 60 * 60);
+                        }
                     }
                 }
             }
+            if (durationHours) {
+                durationLabel = formatFastDuration(durationHours);
+            }
+            if (effectiveness.postFastLoggedAt) {
+                postLogged = formatShortDateTime(effectiveness.postFastLoggedAt);
+            }
+
+            const isMeasured = effectiveness.breakdownSource === 'measured';
+            const bfTag = (effectiveness.bodyFatChange !== null && effectiveness.bodyFatChange !== undefined && !Number.isNaN(effectiveness.bodyFatChange))
+                ? formatPercentDelta(effectiveness.bodyFatChange)
+                : '—';
+            const modePrimary = isMeasured ? 'Measured' : 'Estimated';
+            const modeSecondary = isMeasured
+                ? (bfTag !== '—' ? `${bfTag} BF` : 'Body fat logged')
+                : 'Metabolic estimate';
+
+            const fatLossValue = Math.max(0, asNumber(effectiveness.fatLoss));
+            const muscleLossValue = Math.max(0, asNumber(effectiveness.muscleLoss));
+            const fluidLossValue = Math.max(0, asNumber(effectiveness.fluidLoss ?? effectiveness.waterLoss));
+            const totalLossValue = Math.max(0, asNumber(effectiveness.totalWeightLost));
+            const leanWaterValue = Math.max(0, asNumber(effectiveness.leanWater ?? effectiveness.fluidBreakdown?.leanWater));
+            const fluidBreakdown = effectiveness.fluidBreakdown || {};
+            const glycogenMassValue = Math.max(0, asNumber(fluidBreakdown.glycogenMass));
+            const glycogenBoundWaterValue = Math.max(0, asNumber(fluidBreakdown.glycogenBoundWater));
+            const gutContentValue = Math.max(0, asNumber(fluidBreakdown.gutContent));
+            const residualWaterShiftValue = asNumber(fluidBreakdown.residualWaterShift);
+            const otherFluidRaw = effectiveness.otherFluidLoss !== null && effectiveness.otherFluidLoss !== undefined
+                ? asNumber(effectiveness.otherFluidLoss)
+                : (fluidLossValue - leanWaterValue);
+            const otherFluidValue = Math.max(0, otherFluidRaw);
+
+            const fatLossLabel = formatWeight(fatLossValue);
+            const muscleLossLabel = formatWeight(muscleLossValue);
+            const fluidLabel = formatWeight(fluidLossValue);
+            const leanWaterLabel = formatWeight(leanWaterValue);
+            const otherFluidLabel = formatWeight(otherFluidValue);
+
+            const summaryHtml = `
+                <div class="effectiveness-summary">
+                    <div class="summary-item">
+                        <span class="summary-label">Scale</span>
+                        <span class="summary-value">${weightDeltaLabel}</span>
+                        <span class="summary-note">(${startWeightLabel} → ${postWeightLabel})</span>
+                    </div>
+                    <div class="summary-item">
+                        <span class="summary-label">Fast Length</span>
+                        <span class="summary-value">${durationLabel}</span>
+                        ${postLogged ? `<span class="summary-note">• ${postLogged}</span>` : ''}
+                    </div>
+                    <div class="summary-item">
+                        <span class="summary-label">Mode</span>
+                        <span class="summary-value">${modePrimary}</span>
+                        ${modeSecondary ? `<span class="summary-note">${modeSecondary}</span>` : ''}
+                    </div>
+                </div>
+            `;
+
+            const barHtml = totalLossValue > 0.05
+                ? `
+                    <div class="effectiveness-bar" role="presentation" aria-hidden="true">
+                        <div class="bar-segment bar-fat" style="flex: ${fatLossValue};"></div>
+                        <div class="bar-segment bar-muscle" style="flex: ${muscleLossValue};"></div>
+                        <div class="bar-segment bar-fluid" style="flex: ${fluidLossValue};"></div>
+                    </div>
+                    <div class="effectiveness-bar-legend">
+                        <span class="legend-item"><span class="legend-chip fat"></span>Fat ${fatLossLabel}</span>
+                        <span class="legend-item"><span class="legend-chip muscle"></span>Muscle ${muscleLossLabel}</span>
+                        <span class="legend-item"><span class="legend-chip fluid"></span>Transient ${fluidLabel}</span>
+                    </div>
+                `
+                : '';
+
+            const breakdownHtml = `
+                <div class="composition-row">
+                    <div class="component-card component-fat">
+                        <div class="component-top">
+                            <span class="component-icon">🔥</span>
+                            <button class="component-info" type="button" data-tooltip="Permanent body fat reduction — the progress that stays after refeeding." aria-label="Fat loss info" tabindex="0">i</button>
+                        </div>
+                        <span class="component-label">Fat Loss</span>
+                        <span class="component-value">${fatLossLabel}</span>
+                    </div>
+                    <div class="component-card component-muscle">
+                        <div class="component-top">
+                            <span class="component-icon">🧬</span>
+                            <button class="component-info" type="button" data-tooltip="Structural lean tissue loss — typically minimal with solid protein and resistance training." aria-label="Muscle loss info" tabindex="0">i</button>
+                        </div>
+                        <span class="component-label">Muscle Loss</span>
+                        <span class="component-value">${muscleLossLabel}</span>
+                    </div>
+                    <div class="component-card component-fluid">
+                        <div class="component-top">
+                            <span class="component-icon">💧</span>
+                            <button class="component-info" type="button" data-tooltip="Temporary shifts from muscle water, glycogen, and gut content. Expect most to rebound within 24–72 hours. Muscle water ${leanWaterLabel}; Glycogen + gut ${otherFluidLabel}." aria-label="Fluid info" tabindex="0">i</button>
+                        </div>
+                        <span class="component-label">Fluid & Transient</span>
+                        <span class="component-value">${fluidLabel}</span>
+                    </div>
+                </div>
+            `;
+
+            const breakdownValues = [leanWaterValue, glycogenMassValue, glycogenBoundWaterValue, gutContentValue, residualWaterShiftValue];
+            const hasFluidBreakdown = !!fluidBreakdown;
+
+            let fluidDetailsHtml = '';
+            if (hasFluidBreakdown) {
+                fluidDetailsHtml = `
+                    <button class="fluid-toggle-btn" onclick="toggleFluidBreakdown()" id="fluid-toggle-btn" type="button" aria-expanded="false">
+                        <span id="fluid-toggle-text">Show fluid breakdown</span>
+                        <span id="fluid-toggle-icon">▼</span>
+                    </button>
+                    <div class="fluid-breakdown" id="fluid-breakdown" style="display: none;">
+                        <div class="fluid-breakdown-item">
+                            <div class="fluid-breakdown-left">
+                                <span class="fluid-icon">💧</span>
+                                <div>
+                                    <div class="fluid-label">Muscle water</div>
+                                    <div class="fluid-note">Intracellular water that rebounds quickly.</div>
+                                </div>
+                            </div>
+                            <span class="fluid-value">${leanWaterLabel}</span>
+                        </div>
+                        <div class="fluid-breakdown-item">
+                            <div class="fluid-breakdown-left">
+                                <span class="fluid-icon">⚡️</span>
+                                <div>
+                                    <div class="fluid-label">Glycogen mass</div>
+                                    <div class="fluid-note">Stored carbohydrate fuel burned during the fast.</div>
+                                </div>
+                            </div>
+                            <span class="fluid-value">${formatWeight(glycogenMassValue)}</span>
+                        </div>
+                        <div class="fluid-breakdown-item">
+                            <div class="fluid-breakdown-left">
+                                <span class="fluid-icon">💧</span>
+                                <div>
+                                    <div class="fluid-label">Glycogen-bound water</div>
+                                    <div class="fluid-note">Water released as glycogen depletes.</div>
+                                </div>
+                            </div>
+                            <span class="fluid-value">${formatWeight(glycogenBoundWaterValue)}</span>
+                        </div>
+                        <div class="fluid-breakdown-item">
+                            <div class="fluid-breakdown-left">
+                                <span class="fluid-icon">⚙️</span>
+                                <div>
+                                    <div class="fluid-label">Gut content</div>
+                                    <div class="fluid-note">Digestive contents cleared during the fast.</div>
+                                </div>
+                            </div>
+                            <span class="fluid-value">${formatWeight(gutContentValue)}</span>
+                        </div>
+                        <div class="fluid-breakdown-item">
+                            <div class="fluid-breakdown-left">
+                                <span class="fluid-icon">↔️</span>
+                                <div>
+                                    <div class="fluid-label">Residual shifts</div>
+                                    <div class="fluid-note">Hydration & sodium balance changes.</div>
+                                </div>
+                            </div>
+                            <span class="fluid-value">${formatWeight(residualWaterShiftValue)}</span>
+                        </div>
+                    </div>
+                `;
+            }
 
             const tags = [];
-            tags.push(effectiveness.breakdownSource === 'measured' ? 'Measured' : 'Estimated');
-            if (effectiveness.bodyFatChange !== null && effectiveness.bodyFatChange !== undefined && !Number.isNaN(effectiveness.bodyFatChange)) {
-                const bfTag = formatPercentDelta(effectiveness.bodyFatChange);
-                if (bfTag !== '—') {
-                    tags.push(`${bfTag} BF`);
-                }
+            tags.push(modePrimary);
+            if (bfTag !== '—' && isMeasured) {
+                tags.push(`${bfTag} BF`);
             }
             const tagsHtml = tags.length
                 ? `<div class="effectiveness-tags">${tags.map((tag) => `<span class="effectiveness-tag">${tag}</span>`).join('')}</div>`
                 : '';
 
+            const bodyFatCopy = (effectiveness.startBodyFat !== null && effectiveness.startBodyFat !== undefined
+                && effectiveness.postBodyFat !== null && effectiveness.postBodyFat !== undefined)
+                ? `Body fat ${formatBodyFatValue(effectiveness.startBodyFat)} → ${formatBodyFatValue(effectiveness.postBodyFat)}`
+                : '';
+
             const metaParts = [];
-            if (durationCopy) {
-                metaParts.push(durationCopy);
+            if (durationLabel && durationLabel !== '—') {
+                metaParts.push(`Fast length ${durationLabel}`);
             }
             if (postLogged) {
                 metaParts.push(`Post-fast weigh-in ${postLogged}`);
@@ -4924,25 +5453,16 @@
             if (bodyFatCopy) {
                 metaParts.push(bodyFatCopy);
             }
-            const metaText = metaParts.length ? metaParts.join(' • ') : 'Keep logging morning weigh-ins to refine this breakdown.';
+            if (!metaParts.length) {
+                metaParts.push('Keep logging morning weigh-ins to refine this breakdown.');
+            }
+            const metaText = metaParts.join(' • ');
 
             container.innerHTML = `
-                <div class="effectiveness-columns">
-                    <div class="effectiveness-metric">
-                        <span class="effectiveness-label">Scale Change</span>
-                        <span class="effectiveness-value">${weightDeltaLabel}</span>
-                        <span class="effectiveness-detail">${startWeightLabel} → ${postWeightLabel}</span>
-                    </div>
-                    <div class="effectiveness-metric">
-                        <span class="effectiveness-label">Likely Fat</span>
-                        <span class="effectiveness-value">${fatLossLabel}</span>
-                        <span class="effectiveness-caption">${breakdownLabel}</span>
-                    </div>
-                    <div class="effectiveness-metric">
-                        <span class="effectiveness-label">Fluid Swing</span>
-                        <span class="effectiveness-value">${fluidLabel}</span>
-                    </div>
-                </div>
+                ${summaryHtml}
+                ${barHtml}
+                ${breakdownHtml}
+                ${fluidDetailsHtml}
                 ${tagsHtml}
                 <div class="effectiveness-message">${effectiveness.message}</div>
                 <div class="effectiveness-meta">${metaText}</div>
@@ -5898,6 +6418,11 @@
             // Get timezone offset in minutes
             const timezoneOffsetMinutes = -new Date().getTimezoneOffset();
 
+            // Get optional context fields
+            const startInKetosis = document.getElementById('add-start-in-ketosis')?.checked || false;
+            const preFastProtein = formData.get('pre-fast-protein');
+            const carbStatus = formData.get('carb-status') || 'normal';
+
             const fastData = {
                 start_time: startDateTime,
                 end_time: endDateTime,
@@ -5908,7 +6433,10 @@
                 end_body_fat: endBodyFat ? parseFloat(endBodyFat) : null,
                 timezone_offset_minutes: timezoneOffsetMinutes,
                 is_manual: true,
-                sessionId: sessionId
+                sessionId: sessionId,
+                start_in_ketosis: startInKetosis,
+                pre_fast_protein_grams: preFastProtein ? parseFloat(preFastProtein) : null,
+                carb_status: carbStatus
             };
             
             try {
@@ -5994,6 +6522,11 @@
             document.getElementById('edit-start-body-fat').value = fast.start_body_fat || '';
             document.getElementById('edit-end-weight').value = fast.end_weight || '';
             document.getElementById('edit-end-body-fat').value = fast.end_body_fat || '';
+
+            // Populate optional context fields
+            document.getElementById('edit-start-in-ketosis').checked = fast.start_in_ketosis || false;
+            document.getElementById('edit-pre-fast-protein').value = fast.pre_fast_protein_grams || '';
+            document.getElementById('edit-carb-status').value = fast.carb_status || 'normal';
         }
         
         function hideEditFastModal() {
@@ -6042,6 +6575,11 @@
             // Get timezone offset in minutes
             const timezoneOffsetMinutes = -new Date().getTimezoneOffset();
 
+            // Get optional context fields
+            const startInKetosis = document.getElementById('edit-start-in-ketosis')?.checked || false;
+            const preFastProtein = formData.get('pre-fast-protein');
+            const carbStatus = formData.get('carb-status') || 'normal';
+
             const fastData = {
                 start_time: startDateTime,
                 end_time: endDateTime,
@@ -6050,7 +6588,10 @@
                 start_body_fat: startBodyFat ? parseFloat(startBodyFat) : null,
                 end_weight: endWeight ? parseFloat(endWeight) : null,
                 end_body_fat: endBodyFat ? parseFloat(endBodyFat) : null,
-                timezone_offset_minutes: timezoneOffsetMinutes
+                timezone_offset_minutes: timezoneOffsetMinutes,
+                start_in_ketosis: startInKetosis,
+                pre_fast_protein_grams: preFastProtein ? parseFloat(preFastProtein) : null,
+                carb_status: carbStatus
             };
 
             try {

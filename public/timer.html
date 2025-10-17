@@ -992,6 +992,65 @@
             margin-top: 8px;
         }
 
+        .metrics-divider {
+            height: 1px;
+            background: #e5e7eb;
+            margin: 20px 0 16px 0;
+        }
+
+        .optional-context-header {
+            font-size: 13px;
+            font-weight: 600;
+            color: #6366f1;
+            text-align: center;
+            margin-bottom: 16px;
+        }
+
+        .starting-metric-checkbox {
+            margin-bottom: 16px;
+        }
+
+        .starting-metric-checkbox label {
+            display: flex;
+            align-items: center;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            color: #374151;
+        }
+
+        .starting-metric-checkbox input[type="checkbox"] {
+            margin-right: 8px;
+            width: 18px;
+            height: 18px;
+            cursor: pointer;
+        }
+
+        .metric-hint {
+            display: block;
+            font-size: 12px;
+            color: #6b7280;
+            margin-top: 4px;
+            margin-left: 26px;
+            font-style: italic;
+        }
+
+        .starting-metric-input-group select {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e5e7eb;
+            border-radius: 8px;
+            font-size: 14px;
+            background: white;
+            cursor: pointer;
+            transition: border-color 0.2s ease;
+        }
+
+        .starting-metric-input-group select:focus {
+            outline: none;
+            border-color: #6366f1;
+        }
+
         .time-item {
             display: flex;
             justify-content: space-between;
@@ -1722,7 +1781,7 @@
                 font-size: 2.5rem;
             }
         }
-        
+
     </style>
 
     <!-- Session Management Scripts - Load Early -->
@@ -1839,7 +1898,7 @@
                         </div>
                     </div>
                 </div>
-                
+
                 <div class="stats-grid">
                     <div class="stat-item">
                         <div class="stat-value" id="totalFasts">0</div>
@@ -1940,6 +1999,34 @@
                             <label for="starting-body-fat">Body Fat %</label>
                             <input type="number" id="starting-body-fat" step="0.1" min="0" max="100" placeholder="Enter body fat %">
                         </div>
+
+                        <div class="metrics-divider"></div>
+                        <div class="optional-context-header">Optional Context (improves breakdown accuracy)</div>
+
+                        <div class="starting-metric-checkbox">
+                            <label>
+                                <input type="checkbox" id="startInKetosis">
+                                <span>Already in ketosis?</span>
+                            </label>
+                            <small class="metric-hint">Check if you're already fat-adapted</small>
+                        </div>
+
+                        <div class="starting-metric-input-group">
+                            <label for="preFastProtein">Pre-fast protein (grams)</label>
+                            <input type="number" id="preFastProtein" min="0" max="200" placeholder="Optional">
+                            <small class="metric-hint">Protein in your last meal (helps preserve muscle)</small>
+                        </div>
+
+                        <div class="starting-metric-input-group">
+                            <label for="carbStatus">Pre-fast carb intake</label>
+                            <select id="carbStatus">
+                                <option value="normal">Normal</option>
+                                <option value="low">Low (keto/low-carb)</option>
+                                <option value="high">High (carb-heavy meal)</option>
+                            </select>
+                            <small class="metric-hint">Affects glycogen and water loss</small>
+                        </div>
+
                         <button class="save-starting-metrics-btn" onclick="saveStartingMetrics()">
                             Save Starting Metrics
                         </button>
@@ -4107,10 +4194,10 @@
             const weight = parseFloat(document.getElementById('starting-weight').value);
             const bodyFat = parseFloat(document.getElementById('starting-body-fat').value);
 
-            if (!weight) {
-                alert('Please enter your starting weight');
-                return;
-            }
+            // Get optional context fields
+            const startInKetosis = document.getElementById('startInKetosis')?.checked || false;
+            const preFastProtein = document.getElementById('preFastProtein')?.value;
+            const carbStatus = document.getElementById('carbStatus')?.value || 'normal';
 
             if (!currentFastId) {
                 alert('No active fast found');
@@ -4125,36 +4212,77 @@
                 const sessionId = window.getSessionId();
                 if (!sessionId) {
                     alert('Session error. Please refresh the page.');
+                    saveBtn.disabled = false;
+                    saveBtn.textContent = 'Save Starting Metrics';
                     return;
                 }
 
                 const timezoneOffsetMinutes = -new Date().getTimezoneOffset();
 
-                // Use the fast's actual start time
-                const loggedAt = fastStartTime.toISOString();
+                // Handle body log entry (create/update/delete)
+                if (weight) {
+                    // Create or update body log entry
+                    const loggedAt = fastStartTime.toISOString();
 
-                const bodyLogData = {
-                    loggedAt: loggedAt,
-                    weight: weight,
-                    bodyFat: bodyFat || null,
-                    fastId: currentFastId,
-                    source: 'fast_start',
-                    timezoneOffsetMinutes: timezoneOffsetMinutes,
-                    sessionId: sessionId
+                    const bodyLogData = {
+                        loggedAt: loggedAt,
+                        weight: weight,
+                        bodyFat: bodyFat || null,
+                        fastId: currentFastId,
+                        source: 'fast_start',
+                        timezoneOffsetMinutes: timezoneOffsetMinutes,
+                        sessionId: sessionId
+                    };
+
+                    const response = await fetch('/api/body-log', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify(bodyLogData)
+                    });
+
+                    if (response.ok) {
+                        const result = await response.json();
+                        startingMetricsBodyLogId = result.id;
+                    } else {
+                        const error = await response.json();
+                        alert(`Error saving weight/body fat: ${error.error || 'Unknown error'}`);
+                        saveBtn.disabled = false;
+                        saveBtn.textContent = 'Save Starting Metrics';
+                        return;
+                    }
+                } else if (startingMetricsBodyLogId) {
+                    // Weight was cleared - delete the existing body log entry
+                    try {
+                        const deleteResponse = await fetch(`/api/body-log/${startingMetricsBodyLogId}?sessionId=${sessionId}`, {
+                            method: 'DELETE'
+                        });
+
+                        if (deleteResponse.ok) {
+                            startingMetricsBodyLogId = null;
+                        }
+                    } catch (error) {
+                        console.error('Error deleting body log entry:', error);
+                    }
+                }
+
+                // Update fast record with optional context fields
+                const fastUpdateData = {
+                    start_in_ketosis: startInKetosis,
+                    pre_fast_protein_grams: preFastProtein ? parseFloat(preFastProtein) : null,
+                    carb_status: carbStatus
                 };
 
-                const response = await fetch('/api/body-log', {
-                    method: 'POST',
+                const fastUpdateResponse = await fetch(`/api/fasts/${currentFastId}?sessionId=${sessionId}`, {
+                    method: 'PUT',
                     headers: {
                         'Content-Type': 'application/json'
                     },
-                    body: JSON.stringify(bodyLogData)
+                    body: JSON.stringify(fastUpdateData)
                 });
 
-                if (response.ok) {
-                    const result = await response.json();
-                    startingMetricsBodyLogId = result.id;
-
+                if (fastUpdateResponse.ok) {
                     // Update UI to show success
                     const content = document.getElementById('startingMetricsContent');
                     const summary = document.getElementById('startingMetricsSummary');
@@ -4164,16 +4292,25 @@
                     content.style.display = 'none';
                     card.classList.remove('expanded');
 
-                    // Show summary
-                    const bodyFatText = bodyFat ? `, ${bodyFat}% BF` : '';
-                    summaryText.textContent = `Starting: ${weight} lb${bodyFatText}`;
+                    // Build summary text
+                    let summaryParts = [];
+                    if (weight) {
+                        const bodyFatText = bodyFat ? `, ${bodyFat}% BF` : '';
+                        summaryParts.push(`${weight} lb${bodyFatText}`);
+                    }
+                    if (startInKetosis) summaryParts.push('in ketosis');
+                    if (preFastProtein) summaryParts.push(`${preFastProtein}g protein`);
+
+                    summaryText.textContent = summaryParts.length > 0
+                        ? `Starting: ${summaryParts.join(', ')}`
+                        : 'Starting metrics saved';
                     summary.style.display = 'flex';
 
                     saveBtn.disabled = false;
                     saveBtn.textContent = 'Save Starting Metrics';
                 } else {
-                    const error = await response.json();
-                    alert(`Error saving metrics: ${error.error || 'Unknown error'}`);
+                    const error = await fastUpdateResponse.json();
+                    alert(`Error saving optional context: ${error.error || 'Unknown error'}`);
                     saveBtn.disabled = false;
                     saveBtn.textContent = 'Save Starting Metrics';
                 }
@@ -4194,6 +4331,13 @@
                 const sessionId = window.getSessionId();
                 if (!sessionId) return;
 
+                // Get fast data for optional context fields
+                const fastResponse = await fetch(`/api/fasts/${currentFastId}?sessionId=${sessionId}`);
+                let fast = null;
+                if (fastResponse.ok) {
+                    fast = await fastResponse.json();
+                }
+
                 // Get body log entries for this fast
                 const response = await fetch(`/api/body-log?fastId=${currentFastId}&sessionId=${sessionId}`);
                 if (!response.ok) return;
@@ -4203,25 +4347,41 @@
                 // Find entry with source 'fast_start'
                 const startEntry = entries.find(entry => entry.source === 'fast_start');
 
-                if (startEntry) {
-                    // Populate the card with existing data
-                    startingMetricsBodyLogId = startEntry.id;
-
+                if (startEntry || fast) {
                     const summary = document.getElementById('startingMetricsSummary');
                     const summaryText = document.getElementById('startingMetricsSummaryText');
                     const weightInput = document.getElementById('starting-weight');
                     const bodyFatInput = document.getElementById('starting-body-fat');
 
-                    // Set input values
-                    weightInput.value = startEntry.weight;
-                    if (startEntry.body_fat) {
-                        bodyFatInput.value = startEntry.body_fat;
+                    // Set weight/body fat values from body log
+                    if (startEntry) {
+                        startingMetricsBodyLogId = startEntry.id;
+                        weightInput.value = startEntry.weight;
+                        if (startEntry.body_fat) {
+                            bodyFatInput.value = startEntry.body_fat;
+                        }
                     }
 
-                    // Show summary
-                    const bodyFatText = startEntry.body_fat ? `, ${startEntry.body_fat}% BF` : '';
-                    summaryText.textContent = `Starting: ${startEntry.weight} lb${bodyFatText}`;
-                    summary.style.display = 'flex';
+                    // Set optional context fields from fast data
+                    if (fast) {
+                        document.getElementById('startInKetosis').checked = fast.start_in_ketosis || false;
+                        document.getElementById('preFastProtein').value = fast.pre_fast_protein_grams || '';
+                        document.getElementById('carbStatus').value = fast.carb_status || 'normal';
+                    }
+
+                    // Build and show summary
+                    let summaryParts = [];
+                    if (startEntry) {
+                        const bodyFatText = startEntry.body_fat ? `, ${startEntry.body_fat}% BF` : '';
+                        summaryParts.push(`${startEntry.weight} lb${bodyFatText}`);
+                    }
+                    if (fast?.start_in_ketosis) summaryParts.push('in ketosis');
+                    if (fast?.pre_fast_protein_grams) summaryParts.push(`${fast.pre_fast_protein_grams}g protein`);
+
+                    if (summaryParts.length > 0) {
+                        summaryText.textContent = `Starting: ${summaryParts.join(', ')}`;
+                        summary.style.display = 'flex';
+                    }
                 }
             } catch (error) {
                 console.error('Error loading existing starting metrics:', error);
@@ -4468,17 +4628,25 @@
                 // Get session ID to link fast to user profile
                 const createSessionId = window.getSessionId();
                 console.log('Creating fast entry with sessionId:', createSessionId);
-                
+
+                // Get advanced options values
+                const startInKetosis = document.getElementById('startInKetosis')?.checked || false;
+                const preFastProtein = document.getElementById('preFastProtein')?.value;
+                const carbStatus = document.getElementById('carbStatus')?.value || 'normal';
+
                 const fastData = {
                     start_time: fastStartTime.toISOString(),
                     notes: null,
                     weight: null,
                     is_manual: false,
-                    sessionId: createSessionId
+                    sessionId: createSessionId,
+                    start_in_ketosis: startInKetosis,
+                    pre_fast_protein_grams: preFastProtein ? parseFloat(preFastProtein) : null,
+                    carb_status: carbStatus
                 };
-                
+
                 console.log('Sending fast data:', fastData);
-                
+
                 const createResponse = await fetch('/api/fasts/start', {
                     method: 'POST',
                     headers: {
@@ -4486,7 +4654,7 @@
                     },
                     body: JSON.stringify(fastData)
                 });
-                
+
                 if (createResponse.ok) {
                     const createdFast = await createResponse.json();
                     currentFastId = createdFast.id;
