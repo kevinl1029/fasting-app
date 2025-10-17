@@ -162,6 +162,22 @@ app.get('/api/fasts/active', validateSessionMiddleware, async (req, res) => {
   }
 });
 
+app.get('/api/fasts/:id/effectiveness', validateSessionMiddleware, async (req, res) => {
+  const fastId = Number.parseInt(req.params.id, 10);
+
+  if (Number.isNaN(fastId)) {
+    return res.status(400).json({ error: 'Invalid fast id' });
+  }
+
+  try {
+    const effectiveness = await bodyLogAnalyticsService.getFastEffectiveness(req.userProfile.id, fastId);
+    return res.json(effectiveness);
+  } catch (error) {
+    console.error('Error fetching fast effectiveness details:', error);
+    return res.status(500).json({ error: 'Unable to load fast effectiveness' });
+  }
+});
+
 app.get('/api/fasts/:id', validateSessionMiddleware, async (req, res) => {
   try {
     const fastId = parseInt(req.params.id);
