@@ -12,6 +12,23 @@ class FastEffectivenessCard {
         this.currentFastId = null;
         this.fluidExpanded = false;
         this.boundClickHandler = null;
+        this.tooltipButtons = [];
+        this.activeTooltip = null;
+        this.activeTooltipTrigger = null;
+        this.windowHandlersBound = false;
+
+        this.handleTooltipEnter = (event) => this.showTooltipForTrigger(event.currentTarget);
+        this.handleTooltipLeave = (event) => this.onTooltipLeave(event);
+        this.handleTooltipFocus = (event) => this.showTooltipForTrigger(event.currentTarget);
+        this.handleTooltipBlur = () => this.hideTooltip();
+        this.handleTooltipClick = (event) => this.onTooltipClick(event);
+        this.handleWindowScroll = () => this.hideTooltip();
+        this.handleWindowResize = () => this.hideTooltip();
+        this.handleKeyDown = (event) => {
+            if (event.key === 'Escape') {
+                this.hideTooltip();
+            }
+        };
 
         if (this.container) {
             this.bindInteractions();
@@ -49,12 +66,29 @@ class FastEffectivenessCard {
         }
 
         this.container.addEventListener('click', this.boundClickHandler);
+
+        if (!this.windowHandlersBound) {
+            window.addEventListener('scroll', this.handleWindowScroll, true);
+            window.addEventListener('resize', this.handleWindowResize);
+            window.addEventListener('keydown', this.handleKeyDown, true);
+            this.windowHandlersBound = true;
+        }
     }
 
     destroy() {
         if (this.container && this.boundClickHandler) {
             this.container.removeEventListener('click', this.boundClickHandler);
         }
+        this.detachTooltipHandlers();
+        this.hideTooltip();
+
+        if (this.windowHandlersBound) {
+            window.removeEventListener('scroll', this.handleWindowScroll, true);
+            window.removeEventListener('resize', this.handleWindowResize);
+            window.removeEventListener('keydown', this.handleKeyDown, true);
+            this.windowHandlersBound = false;
+        }
+
         this.container = null;
         this.subtitleElement = null;
         this.boundClickHandler = null;
@@ -64,6 +98,8 @@ class FastEffectivenessCard {
         const { subtitle = 'Sizing up your fast…' } = options;
         this.updateSubtitle(subtitle);
         if (this.container) {
+            this.hideTooltip();
+            this.detachTooltipHandlers();
             this.container.innerHTML = '<div class="insight-placeholder">Loading fast effectiveness…</div>';
         }
     }
@@ -81,6 +117,8 @@ class FastEffectivenessCard {
 
         const safeMessage = this.escapeHtml(message || 'Complete a fast with start and post-fast weights to size up effectiveness.');
         const className = tone === 'error' ? 'insight-error' : 'insight-placeholder';
+        this.hideTooltip();
+        this.detachTooltipHandlers();
         this.container.innerHTML = `<div class="${className}">${safeMessage}</div>`;
     }
 
@@ -339,6 +377,9 @@ class FastEffectivenessCard {
 
         const message = this.escapeHtml(effectiveness.message || 'Most of the rapid scale drop is fluid. Keep logging to see what sticks.');
 
+        this.hideTooltip();
+        this.detachTooltipHandlers();
+
         this.container.innerHTML = `
             ${summaryHtml}
             ${barHtml}
@@ -348,6 +389,8 @@ class FastEffectivenessCard {
             <div class="effectiveness-message">${message}</div>
             <div class="effectiveness-meta">${metaText}</div>
         `;
+
+        this.attachTooltipHandlers();
     }
 
     toggleFluidBreakdown(toggleBtn) {
@@ -372,6 +415,142 @@ class FastEffectivenessCard {
         if (toggleIcon) {
             toggleIcon.textContent = this.fluidExpanded ? '▲' : '▼';
         }
+    }
+
+    attachTooltipHandlers() {
+        if (!this.container) {
+            return;
+        }
+
+        this.detachTooltipHandlers();
+
+        const buttons = this.container.querySelectorAll('.component-info[data-tooltip]');
+        this.tooltipButtons = Array.from(buttons);
+
+        this.tooltipButtons.forEach((button) => {
+            button.addEventListener('pointerenter', this.handleTooltipEnter);
+            button.addEventListener('pointerleave', this.handleTooltipLeave);
+            button.addEventListener('focus', this.handleTooltipFocus);
+            button.addEventListener('blur', this.handleTooltipBlur);
+            button.addEventListener('click', this.handleTooltipClick);
+        });
+    }
+
+    detachTooltipHandlers() {
+        if (!Array.isArray(this.tooltipButtons) || this.tooltipButtons.length === 0) {
+            this.tooltipButtons = [];
+            return;
+        }
+
+        this.tooltipButtons.forEach((button) => {
+            button.removeEventListener('pointerenter', this.handleTooltipEnter);
+            button.removeEventListener('pointerleave', this.handleTooltipLeave);
+            button.removeEventListener('focus', this.handleTooltipFocus);
+            button.removeEventListener('blur', this.handleTooltipBlur);
+            button.removeEventListener('click', this.handleTooltipClick);
+        });
+
+        this.tooltipButtons = [];
+    }
+
+    onTooltipClick(event) {
+        event.preventDefault();
+        const trigger = event.currentTarget;
+        if (!trigger) {
+            return;
+        }
+
+        if (this.activeTooltipTrigger === trigger) {
+            this.hideTooltip();
+        } else {
+            this.showTooltipForTrigger(trigger);
+        }
+    }
+
+    onTooltipLeave(event) {
+        const trigger = event.currentTarget;
+        if (!trigger) {
+            return;
+        }
+
+        if (this.activeTooltipTrigger === trigger) {
+            this.hideTooltip();
+        }
+    }
+
+    showTooltipForTrigger(trigger) {
+        if (!trigger) {
+            return;
+        }
+
+        const text = trigger.getAttribute('data-tooltip');
+        if (!text) {
+            return;
+        }
+
+        if (this.activeTooltipTrigger === trigger && this.activeTooltip) {
+            this.positionTooltip(this.activeTooltip, trigger);
+            return;
+        }
+
+        this.hideTooltip();
+
+        const tooltip = document.createElement('div');
+        tooltip.className = 'effectiveness-tooltip';
+        tooltip.textContent = text;
+        tooltip.style.visibility = 'hidden';
+        document.body.appendChild(tooltip);
+
+        this.activeTooltip = tooltip;
+        this.activeTooltipTrigger = trigger;
+        trigger.setAttribute('data-tooltip-active', 'true');
+
+        this.positionTooltip(tooltip, trigger);
+        tooltip.style.visibility = 'visible';
+    }
+
+    positionTooltip(tooltip, trigger) {
+        if (!tooltip || !trigger) {
+            return;
+        }
+
+        const rect = trigger.getBoundingClientRect();
+        const tooltipRect = tooltip.getBoundingClientRect();
+        const viewportWidth = window.innerWidth;
+        const viewportHeight = window.innerHeight;
+        const scrollX = window.scrollX;
+        const scrollY = window.scrollY;
+
+        let top = rect.top + scrollY - tooltipRect.height - 8;
+        let left = rect.left + scrollX + rect.width / 2 - tooltipRect.width / 2;
+
+        const minLeft = scrollX + 8;
+        const maxLeft = scrollX + viewportWidth - tooltipRect.width - 8;
+        left = Math.min(Math.max(left, minLeft), maxLeft);
+
+        const minTop = scrollY + 8;
+        if (top < minTop) {
+            top = rect.bottom + scrollY + 8;
+        }
+
+        const maxTop = scrollY + viewportHeight - tooltipRect.height - 8;
+        top = Math.min(Math.max(top, minTop), maxTop);
+
+        tooltip.style.top = `${top}px`;
+        tooltip.style.left = `${left}px`;
+    }
+
+    hideTooltip() {
+        if (this.activeTooltip && this.activeTooltip.parentNode) {
+            this.activeTooltip.parentNode.removeChild(this.activeTooltip);
+        }
+
+        if (this.activeTooltipTrigger) {
+            this.activeTooltipTrigger.removeAttribute('data-tooltip-active');
+        }
+
+        this.activeTooltip = null;
+        this.activeTooltipTrigger = null;
     }
 
     updateSubtitle(text) {

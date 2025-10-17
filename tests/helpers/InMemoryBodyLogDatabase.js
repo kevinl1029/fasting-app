@@ -4,6 +4,7 @@ class InMemoryBodyLogDatabase {
     this.entries = new Map();
     this.entrySequence = 1;
     this.nowProvider = options.nowProvider || (() => new Date().toISOString());
+    this.userProfiles = new Map();
   }
 
   async initialize() {
@@ -29,6 +30,26 @@ class InMemoryBodyLogDatabase {
       return value;
     }
     return JSON.parse(JSON.stringify(value));
+  }
+
+  addUserProfile(profile) {
+    if (!profile || profile.id === undefined || profile.id === null) {
+      throw new Error('User profile must have an id');
+    }
+    const stored = {
+      benefits_enabled: true,
+      benefits_onboarded: false,
+      hunger_coach_enabled: true,
+      keto_adapted: 'none',
+      ...profile
+    };
+    this.userProfiles.set(Number(profile.id), stored);
+    return this._clone(stored);
+  }
+
+  async getUserProfileById(id) {
+    const profile = this.userProfiles.get(Number(id)) || null;
+    return this._clone(profile);
   }
 
   addFast(fast) {
