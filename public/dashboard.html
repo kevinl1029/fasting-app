@@ -1149,13 +1149,25 @@
 
         .composition-row {
             display: grid;
-            grid-template-columns: repeat(3, minmax(0, 1fr));
+            grid-template-columns: repeat(3, minmax(120px, 1fr));
             gap: 8px;
         }
 
-        @media (max-width: 720px) {
+        @media (max-width: 540px) {
             .composition-row {
-                grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+                grid-template-columns: repeat(3, minmax(0, 1fr));
+            }
+
+            .component-card {
+                padding: 8px 10px;
+            }
+
+            .component-label {
+                font-size: 0.65rem;
+            }
+
+            .component-value {
+                font-size: 1rem;
             }
         }
 

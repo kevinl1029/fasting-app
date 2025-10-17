@@ -16,9 +16,8 @@ class FastEffectivenessCard {
         this.activeTooltip = null;
         this.activeTooltipTrigger = null;
         this.windowHandlersBound = false;
+        this.justShown = false;
 
-        this.handleTooltipEnter = (event) => this.showTooltipForTrigger(event.currentTarget);
-        this.handleTooltipLeave = (event) => this.onTooltipLeave(event);
         this.handleTooltipFocus = (event) => this.showTooltipForTrigger(event.currentTarget);
         this.handleTooltipBlur = () => this.hideTooltip();
         this.handleTooltipClick = (event) => this.onTooltipClick(event);
@@ -428,8 +427,6 @@ class FastEffectivenessCard {
         this.tooltipButtons = Array.from(buttons);
 
         this.tooltipButtons.forEach((button) => {
-            button.addEventListener('pointerenter', this.handleTooltipEnter);
-            button.addEventListener('pointerleave', this.handleTooltipLeave);
             button.addEventListener('focus', this.handleTooltipFocus);
             button.addEventListener('blur', this.handleTooltipBlur);
             button.addEventListener('click', this.handleTooltipClick);
@@ -443,8 +440,6 @@ class FastEffectivenessCard {
         }
 
         this.tooltipButtons.forEach((button) => {
-            button.removeEventListener('pointerenter', this.handleTooltipEnter);
-            button.removeEventListener('pointerleave', this.handleTooltipLeave);
             button.removeEventListener('focus', this.handleTooltipFocus);
             button.removeEventListener('blur', this.handleTooltipBlur);
             button.removeEventListener('click', this.handleTooltipClick);
@@ -461,20 +456,13 @@ class FastEffectivenessCard {
         }
 
         if (this.activeTooltipTrigger === trigger) {
+            if (this.justShown) {
+                this.justShown = false;
+                return;
+            }
             this.hideTooltip();
         } else {
             this.showTooltipForTrigger(trigger);
-        }
-    }
-
-    onTooltipLeave(event) {
-        const trigger = event.currentTarget;
-        if (!trigger) {
-            return;
-        }
-
-        if (this.activeTooltipTrigger === trigger) {
-            this.hideTooltip();
         }
     }
 
@@ -490,6 +478,8 @@ class FastEffectivenessCard {
 
         if (this.activeTooltipTrigger === trigger && this.activeTooltip) {
             this.positionTooltip(this.activeTooltip, trigger);
+            this.justShown = true;
+            window.setTimeout(() => { this.justShown = false; }, 0);
             return;
         }
 
@@ -507,6 +497,8 @@ class FastEffectivenessCard {
 
         this.positionTooltip(tooltip, trigger);
         tooltip.style.visibility = 'visible';
+        this.justShown = true;
+        window.setTimeout(() => { this.justShown = false; }, 0);
     }
 
     positionTooltip(tooltip, trigger) {
@@ -551,6 +543,7 @@ class FastEffectivenessCard {
 
         this.activeTooltip = null;
         this.activeTooltipTrigger = null;
+        this.justShown = false;
     }
 
     updateSubtitle(text) {
