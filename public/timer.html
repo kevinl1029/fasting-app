@@ -323,6 +323,10 @@
             font-family: 'Courier New', monospace;
             margin: 5px 0;
         }
+
+        .timer-display.is-loading {
+            visibility: hidden;
+        }
         
         .timer-label {
             font-size: 0.9rem;
@@ -1935,7 +1939,7 @@
                     <div id="milestoneMarkers"></div>
                     
                     <div class="timer-inner">
-                        <div class="timer-display" id="timerDisplay">12:30</div>
+                        <div class="timer-display is-loading" id="timerDisplay"></div>
                         <div class="timer-label" id="timerLabel">ELAPSED</div>
                     </div>
                 </div>
@@ -3278,7 +3282,11 @@
                 ? `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`
                 : `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
 
-            document.getElementById('timerDisplay').textContent = formattedTime;
+            const timerDisplayElement = document.getElementById('timerDisplay');
+            if (timerDisplayElement) {
+                timerDisplayElement.textContent = formattedTime;
+                timerDisplayElement.classList.remove('is-loading');
+            }
             
             document.getElementById('timerLabel').textContent = label;
             
