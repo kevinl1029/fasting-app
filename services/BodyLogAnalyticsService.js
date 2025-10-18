@@ -1,5 +1,6 @@
 const BodyLogService = require('./BodyLogService');
 const FastEffectivenessService = require('./FastEffectivenessService');
+const { normalizeTimestamp, getLocalContext: buildLocalContext } = require('./timezone');
 
 const MS_PER_DAY = 24 * 60 * 60 * 1000;
 const RETENTION_WINDOW_MS = 48 * 60 * 60 * 1000;
@@ -30,6 +31,7 @@ class BodyLogAnalyticsService {
       loggedAt: entry.logged_at,
       localDate: entry.local_date,
       timezoneOffsetMinutes: entry.timezone_offset_minutes,
+      timeZone: entry.time_zone,
       weight: entry.weight !== null && entry.weight !== undefined ? Number(entry.weight) : null,
       bodyFat: entry.body_fat !== null && entry.body_fat !== undefined ? Number(entry.body_fat) : null,
       entryTag: entry.entry_tag,
@@ -255,26 +257,33 @@ class BodyLogAnalyticsService {
     if (!startEntry && fast.start_time && Array.isArray(allUserEntries) && allUserEntries.length > 0) {
       const fastStartTime = new Date(fast.start_time);
       if (!Number.isNaN(fastStartTime.getTime())) {
-        const fastStartTimestamp = fastStartTime.getTime();
+        let fastStartTimestamp = fastStartTime.getTime();
+        let fastStartLocalDate = this.formatDate(fastStartTime);
 
-        // Determine the local date of the fast start by looking at timezone offset
-        // Use the first entry's timezone offset as a proxy for user's timezone
-        // (In a real scenario, we'd want to store the fast's timezone explicitly)
-        let fastStartLocalDate = null;
-        const referenceEntry = allUserEntries.find((e) => e && e.timezone_offset_minutes !== null && e.timezone_offset_minutes !== undefined);
-        if (referenceEntry && referenceEntry.timezone_offset_minutes !== null) {
-          // Apply the timezone offset to get local time
-          // Negative offset means local time is behind UTC (e.g., -240 = UTC-4 = EDT)
-          // To convert UTC to local: UTC + offset
-          const offsetMs = referenceEntry.timezone_offset_minutes * 60 * 1000;
-          const localTime = new Date(fastStartTimestamp + offsetMs);
-          fastStartLocalDate = this.formatDate(localTime);
-        } else {
-          // Fallback to UTC date if no timezone info available
-          fastStartLocalDate = this.formatDate(fastStartTime);
+        const referenceEntry = allUserEntries.find((entry) => (
+          entry
+          && (entry.time_zone || (entry.timezone_offset_minutes !== null && entry.timezone_offset_minutes !== undefined))
+        ));
+
+        if (referenceEntry) {
+          try {
+            const normalized = normalizeTimestamp({
+              loggedAt: fast.start_time,
+              timezoneOffsetMinutes: referenceEntry.timezone_offset_minutes,
+              timeZone: referenceEntry.time_zone
+            });
+            const localContext = buildLocalContext({
+              instant: normalized.instant,
+              offsetMinutes: normalized.offsetMinutes,
+              timeZone: normalized.timeZone
+            });
+            fastStartTimestamp = normalized.instant.getTime();
+            fastStartLocalDate = localContext.localDate;
+          } catch (error) {
+            // If normalization fails, fall back to defaults derived above
+          }
         }
 
-        // Find most recent entry before fast start, but with the same local_date
         const candidateEntries = allUserEntries
           .filter((entry) => {
             if (!entry || !entry.logged_at || entry.weight === null || entry.weight === undefined) {
@@ -285,13 +294,12 @@ class BodyLogAnalyticsService {
               return false;
             }
             const entryTimestamp = entryTime.getTime();
-            // Entry must be before fast start AND have the same local_date
             return entryTimestamp < fastStartTimestamp && entry.local_date === fastStartLocalDate;
           })
-          .sort((a, b) => new Date(b.logged_at).getTime() - new Date(a.logged_at).getTime()); // Sort descending (most recent first)
+          .sort((a, b) => new Date(b.logged_at).getTime() - new Date(a.logged_at).getTime());
 
         if (candidateEntries.length > 0) {
-          startEntry = candidateEntries[0]; // Most recent entry before fast start on same local day
+          startEntry = candidateEntries[0];
         }
       }
     }

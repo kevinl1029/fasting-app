@@ -20,7 +20,8 @@
     "precommit": "npm run test:quick",
     "validate": "npm run check-duplicates && npm run test",
     "postinstall": "echo 'Installation complete'",
-    "body-log:backfill": "node scripts/backfill_body_log_entries.js"
+    "body-log:backfill": "node scripts/backfill_body_log_entries.js",
+    "body-log:backfill-timezones": "node scripts/backfill_body_log_timezones.js"
   },
   "dependencies": {
     "cors": "^2.8.5",

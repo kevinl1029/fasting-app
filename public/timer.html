@@ -2161,6 +2161,7 @@
     <script src="/js/services/MealTimeDetector.js"></script>
     <script src="/js/services/BenefitsCalculator.js"></script>
     <script src="/js/services/BenefitsDataService.js"></script>
+    <script src="/js/timezone.js"></script>
     <script src="/js/managers/CardRotationManager.js"></script>
     <script src="/js/components/PhaseBanner.js"></script>
     <script src="/js/modules/draft-schedule-api.js"></script>
@@ -4226,6 +4227,7 @@
                 }
 
                 const timezoneOffsetMinutes = -new Date().getTimezoneOffset();
+                const timeZone = window.TimezoneUtils ? window.TimezoneUtils.resolveBrowserTimeZone() : null;
 
                 // Handle body log entry (create/update/delete)
                 if (weight) {
@@ -4239,6 +4241,7 @@
                         fastId: currentFastId,
                         source: 'fast_start',
                         timezoneOffsetMinutes: timezoneOffsetMinutes,
+                        timeZone: timeZone,
                         sessionId: sessionId
                     };
 
@@ -4469,6 +4472,7 @@
                 }
 
                 const timezoneOffsetMinutes = -new Date().getTimezoneOffset();
+                const timeZone = window.TimezoneUtils ? window.TimezoneUtils.resolveBrowserTimeZone() : null;
                 const now = new Date().toISOString();
 
                 // Create body log entry linked to the completed fast
@@ -4479,6 +4483,7 @@
                     fastId: completedFastId,
                     source: 'fast_completion',
                     timezoneOffsetMinutes: timezoneOffsetMinutes,
+                    timeZone: timeZone,
                     sessionId: sessionId
                 };
 

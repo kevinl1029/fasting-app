@@ -3110,6 +3110,7 @@
     <!-- Benefits Tracking -->
     <script src="/js/services/BenefitsCalculator.js"></script>
     <script src="/js/services/BenefitsDataService.js"></script>
+    <script src="/js/timezone.js"></script>
     <script src="/js/services/BodyLogApi.js"></script>
     <script src="/js/services/FastEffectivenessApi.js"></script>
 
@@ -4268,9 +4269,17 @@
 
         function renderBodyEntry(entry) {
             const dateTime = getEntryLocalDateTime(entry);
-            const timeDisplay = dateTime
-                ? dateTime.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' })
-                : '--:--';
+            let timeDisplay = '--:--';
+            if (entry && entry.loggedAt) {
+                if (window.TimezoneUtils && typeof window.TimezoneUtils.formatInstantInTimeZone === 'function') {
+                    timeDisplay = window.TimezoneUtils.formatInstantInTimeZone(entry.loggedAt, {
+                        timeZone: entry.timeZone || undefined,
+                        formatOptions: { hour: 'numeric', minute: '2-digit' }
+                    }) || '--:--';
+                } else if (dateTime) {
+                    timeDisplay = dateTime.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' });
+                }
+            }
             const tagLabel = formatBodyEntryTag(entry.entryTag);
             const tagClass = (entry.entryTag || '').replace(/\s+/g, '_');
             const canonicalLabel = entry.isCanonical
@@ -6017,9 +6026,9 @@
         }
 
         function updateBodyStats() {
-            const weightDeltaEl = document.getElementById('weight-delta');
-            const bodyFatDeltaEl = document.getElementById('body-fat-delta');
-            const weightPercentChangeEl = document.getElementById('weight-percent-change');
+        const weightDeltaEl = document.getElementById('weight-delta');
+        const bodyFatDeltaEl = document.getElementById('body-fat-delta');
+        const weightPercentChangeEl = document.getElementById('weight-percent-change');
 
             // Default values
             weightDeltaEl.textContent = '—';
@@ -6146,6 +6155,25 @@
             bodyEntryEditingId = null;
         }
 
+        function formatDateInputValue(date) {
+            if (!(date instanceof Date) || Number.isNaN(date.getTime())) {
+                return '';
+            }
+            const year = date.getFullYear();
+            const month = String(date.getMonth() + 1).padStart(2, '0');
+            const day = String(date.getDate()).padStart(2, '0');
+            return `${year}-${month}-${day}`;
+        }
+
+        function formatTimeInputValue(date) {
+            if (!(date instanceof Date) || Number.isNaN(date.getTime())) {
+                return '';
+            }
+            const hours = String(date.getHours()).padStart(2, '0');
+            const minutes = String(date.getMinutes()).padStart(2, '0');
+            return `${hours}:${minutes}`;
+        }
+
         function resetBodyEntryForm() {
             const form = document.getElementById('body-entry-form');
             if (!form) {
@@ -6158,10 +6186,10 @@
             const dateField = document.getElementById('body-entry-date');
             const timeField = document.getElementById('body-entry-time');
             if (dateField) {
-                dateField.value = now.toISOString().slice(0, 10);
+                dateField.value = formatDateInputValue(now);
             }
             if (timeField) {
-                timeField.value = now.toTimeString().slice(0, 5);
+                timeField.value = formatTimeInputValue(now);
             }
 
             const deleteBtn = document.getElementById('body-entry-delete-btn');
@@ -6191,10 +6219,14 @@
             const localDateTime = getEntryLocalDateTime(entry) || new Date(entry.loggedAt);
 
             if (dateField && localDateTime) {
-                dateField.value = localDateTime.toISOString().slice(0, 10);
+                if (entry.localDate) {
+                    dateField.value = entry.localDate;
+                } else {
+                    dateField.value = formatDateInputValue(localDateTime);
+                }
             }
             if (timeField && localDateTime) {
-                timeField.value = localDateTime.toTimeString().slice(0, 5);
+                timeField.value = formatTimeInputValue(localDateTime);
             }
             if (weightField) {
                 weightField.value = entry.weight ?? '';
@@ -6253,6 +6285,7 @@
             const payload = {
                 loggedAt: isoResult.isoString,
                 timezoneOffsetMinutes: isoResult.timezoneOffsetMinutes,
+                timeZone: isoResult.timeZone,
                 weight: weightValue,
                 bodyFat: bodyFatValue,
                 notes: notes && notes.trim() ? notes.trim() : null
@@ -6311,25 +6344,10 @@
         }
 
         function buildIsoWithOffset(dateStr, timeStr) {
-            const normalizedTime = timeStr.length === 5 ? `${timeStr}:00` : timeStr;
-            const localDate = new Date(`${dateStr}T${normalizedTime}`);
-
-            if (Number.isNaN(localDate.getTime())) {
-                throw new Error('Invalid date/time');
+            if (!window.TimezoneUtils) {
+                throw new Error('Timezone utilities unavailable');
             }
-
-            const offsetMinutes = -localDate.getTimezoneOffset();
-            const absoluteOffset = Math.abs(localDate.getTimezoneOffset());
-            const offsetHoursPart = String(Math.floor(absoluteOffset / 60)).padStart(2, '0');
-            const offsetMinutesPart = String(absoluteOffset % 60).padStart(2, '0');
-            const sign = localDate.getTimezoneOffset() <= 0 ? '+' : '-';
-
-            const isoString = `${dateStr}T${normalizedTime}${sign}${offsetHoursPart}:${offsetMinutesPart}`;
-
-            return {
-                isoString,
-                timezoneOffsetMinutes: offsetMinutes
-            };
+            return TimezoneUtils.buildIsoWithZone(dateStr, timeStr);
         }
 
         
@@ -6382,6 +6400,7 @@
                 end_weight: endWeight ? parseFloat(endWeight) : null,
                 end_body_fat: endBodyFat ? parseFloat(endBodyFat) : null,
                 timezone_offset_minutes: timezoneOffsetMinutes,
+                time_zone: window.TimezoneUtils ? window.TimezoneUtils.resolveBrowserTimeZone() : null,
                 is_manual: true,
                 sessionId: sessionId,
                 start_in_ketosis: startInKetosis,

@@ -92,6 +92,7 @@ class BodyLogApi {
             loggedAt: entry.logged_at,
             localDate: entry.local_date,
             timezoneOffsetMinutes: entry.timezone_offset_minutes,
+            timeZone: entry.time_zone,
             weight: entry.weight,
             bodyFat: entry.body_fat,
             entryTag: entry.entry_tag,
@@ -193,6 +194,11 @@ class BodyLogApi {
 
         if (serialized.makeCanonical !== undefined) {
             serialized.makeCanonical = !!serialized.makeCanonical;
+        }
+
+        if (serialized.timeZone !== undefined && typeof serialized.timeZone === 'string') {
+            const trimmed = serialized.timeZone.trim();
+            serialized.timeZone = trimmed.length > 0 ? trimmed : null;
         }
 
         return serialized;

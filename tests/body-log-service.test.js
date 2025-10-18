@@ -160,6 +160,21 @@ async function runBodyLogServiceTests() {
     assert.strictEqual(updated.is_canonical, true);
   });
 
+  await record('createEntry infers offset from provided time zone', async () => {
+    const { service } = createServiceFixture();
+
+    const entry = await service.createEntry({
+      userProfileId: 30,
+      loggedAt: '2024-08-01T22:00:00Z',
+      timeZone: 'America/New_York',
+      weight: 154.2
+    });
+
+    assert.strictEqual(entry.time_zone, 'America/New_York');
+    assert.strictEqual(entry.timezone_offset_minutes, -240);
+    assert.strictEqual(entry.local_date, '2024-08-01');
+  });
+
   await record('deleteEntry reassigns canonical to remaining candidate', async () => {
     const { db, service } = createServiceFixture();
 

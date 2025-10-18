@@ -1,3 +1,5 @@
+const { normalizeTimestamp, getLocalContext: buildLocalContext } = require('./timezone');
+
 const POST_FAST_WINDOW_MINUTES = 120;
 const MORNING_WINDOW_START_MINUTES = 4 * 60;
 const MORNING_WINDOW_END_MINUTES = 11 * 60 + 59;
@@ -8,60 +10,31 @@ class BodyLogService {
     this.logger = options.logger || console;
   }
 
-  parseIsoOffsetMinutes(loggedAt) {
-    if (!loggedAt || typeof loggedAt !== 'string') {
-      return null;
-    }
+  resolveEntryContext(loggedAt, timezoneOffsetMinutes, timeZone) {
+    const normalized = normalizeTimestamp({
+      loggedAt,
+      timezoneOffsetMinutes,
+      timeZone
+    });
 
-    if (loggedAt.endsWith('Z') || loggedAt.endsWith('z')) {
-      return 0;
-    }
-
-    const match = loggedAt.match(/([+-])(\d{2}):?(\d{2})$/);
-    if (!match) {
-      return null;
-    }
-
-    const sign = match[1] === '-' ? -1 : 1;
-    const hours = parseInt(match[2], 10);
-    const minutes = parseInt(match[3], 10);
-    return sign * (hours * 60 + minutes);
-  }
-
-  resolveOffsetMinutes(loggedAt, timezoneOffsetMinutes) {
-    if (typeof timezoneOffsetMinutes === 'number' && !Number.isNaN(timezoneOffsetMinutes)) {
-      return timezoneOffsetMinutes;
-    }
-
-    const parsed = this.parseIsoOffsetMinutes(loggedAt);
-    if (parsed !== null) {
-      return parsed;
-    }
-
-    return 0;
-  }
-
-  getLocalContext(loggedAt, timezoneOffsetMinutes) {
-    const timestamp = new Date(loggedAt);
-    if (Number.isNaN(timestamp.getTime())) {
-      throw new Error('Invalid logged_at timestamp for body log entry');
-    }
-
-    const offsetMinutes = this.resolveOffsetMinutes(loggedAt, timezoneOffsetMinutes);
-    const localTime = new Date(timestamp.getTime() + offsetMinutes * 60 * 1000);
+    const localContext = buildLocalContext({
+      instant: normalized.instant,
+      offsetMinutes: normalized.offsetMinutes,
+      timeZone: normalized.timeZone
+    });
 
     return {
-      offsetMinutes,
-      localDate: this.formatDate(localTime),
-      localTime
+      instant: normalized.instant,
+      isoString: normalized.isoString,
+      offsetMinutes: localContext.offsetMinutes,
+      timeZone: localContext.timeZone,
+      localDate: localContext.localDate,
+      localTime: localContext.localTime
     };
   }
 
-  formatDate(date) {
-    const year = date.getUTCFullYear();
-    const month = String(date.getUTCMonth() + 1).padStart(2, '0');
-    const day = String(date.getUTCDate()).padStart(2, '0');
-    return `${year}-${month}-${day}`;
+  getLocalContext(loggedAt, timezoneOffsetMinutes, timeZone) {
+    return this.resolveEntryContext(loggedAt, timezoneOffsetMinutes, timeZone);
   }
 
   minutesIntoDay(localTime) {
@@ -77,6 +50,7 @@ class BodyLogService {
     userProfileId,
     loggedAt,
     timezoneOffsetMinutes,
+    timeZone = null,
     fastId = null,
     source = 'manual',
     tagHint = null
@@ -84,6 +58,10 @@ class BodyLogService {
     if (tagHint) {
       return tagHint;
     }
+
+    const context = this.resolveEntryContext(loggedAt, timezoneOffsetMinutes, timeZone);
+    const entryTimestamp = context.instant.getTime();
+    const loggedAtIso = context.isoString;
 
     // Check for explicit pre-fast source
     if (source === 'fast_start') {
@@ -94,9 +72,8 @@ class BodyLogService {
     if (fastId) {
       const fast = await this.db.getFastById(fastId);
       if (fast && fast.start_time) {
-        const entryTime = new Date(loggedAt).getTime();
         const fastStartTime = new Date(fast.start_time).getTime();
-        const diffMs = fastStartTime - entryTime;
+        const diffMs = fastStartTime - entryTimestamp;
 
         // If entry is within 2 hours before fast start
         if (diffMs >= 0 && diffMs <= POST_FAST_WINDOW_MINUTES * 60 * 1000) {
@@ -105,7 +82,7 @@ class BodyLogService {
       }
     }
 
-    const { localTime } = this.getLocalContext(loggedAt, timezoneOffsetMinutes);
+    const { localTime } = context;
 
     if (this.isWithinMorningWindow(localTime)) {
       return 'morning';
@@ -121,7 +98,7 @@ class BodyLogService {
     if (candidateFastIds.length > 0) {
       const fast = await this.db.getFastById(candidateFastIds[0]);
       if (fast && fast.end_time) {
-        const diffMs = new Date(loggedAt).getTime() - new Date(fast.end_time).getTime();
+        const diffMs = entryTimestamp - new Date(fast.end_time).getTime();
         if (diffMs >= 0 && diffMs <= POST_FAST_WINDOW_MINUTES * 60 * 1000) {
           nearestFast = fast;
         }
@@ -131,13 +108,13 @@ class BodyLogService {
     if (!nearestFast) {
       nearestFast = await this.db.getFastEndingNearTimestamp(
         userProfileId,
-        loggedAt,
+        loggedAtIso,
         POST_FAST_WINDOW_MINUTES
       );
     }
 
     if (nearestFast) {
-      const diffMs = new Date(loggedAt).getTime() - new Date(nearestFast.end_time).getTime();
+      const diffMs = entryTimestamp - new Date(nearestFast.end_time).getTime();
       if (diffMs >= 0 && diffMs <= POST_FAST_WINDOW_MINUTES * 60 * 1000) {
         return 'post_fast';
       }
@@ -191,6 +168,7 @@ class BodyLogService {
       weight,
       bodyFat = null,
       timezoneOffsetMinutes = null,
+      timeZone = null,
       fastId = null,
       source = 'manual',
       notes = null,
@@ -208,11 +186,12 @@ class BodyLogService {
       throw new Error('weight is required');
     }
 
-    const { offsetMinutes, localDate } = this.getLocalContext(loggedAt, timezoneOffsetMinutes);
+    const context = this.resolveEntryContext(loggedAt, timezoneOffsetMinutes, timeZone);
     const entryTag = await this.determineEntryTag({
       userProfileId,
-      loggedAt,
-      timezoneOffsetMinutes: offsetMinutes,
+      loggedAt: context.isoString,
+      timezoneOffsetMinutes: context.offsetMinutes,
+      timeZone: context.timeZone,
       fastId,
       source,
       tagHint
@@ -221,9 +200,10 @@ class BodyLogService {
     const created = await this.db.createBodyLogEntry({
       user_profile_id: userProfileId,
       fast_id: fastId,
-      logged_at: loggedAt,
-      local_date: localDate,
-      timezone_offset_minutes: offsetMinutes,
+      logged_at: context.isoString,
+      local_date: context.localDate,
+      timezone_offset_minutes: context.offsetMinutes,
+      time_zone: context.timeZone,
       weight,
       body_fat: bodyFat,
       entry_tag: entryTag,
@@ -241,7 +221,7 @@ class BodyLogService {
       return this.db.getBodyLogEntryById(created.id);
     }
 
-    await this.autoSelectCanonical(userProfileId, localDate);
+    await this.autoSelectCanonical(userProfileId, context.localDate);
     return this.db.getBodyLogEntryById(created.id);
   }
 
@@ -261,22 +241,31 @@ class BodyLogService {
 
     const updates = { ...updateInput };
 
-    if (updates.logged_at || updates.timezone_offset_minutes !== undefined) {
-      const loggedAt = updates.logged_at || entry.logged_at;
-      const tzOffset =
-        updates.timezone_offset_minutes !== undefined
-          ? updates.timezone_offset_minutes
-          : entry.timezone_offset_minutes;
+    const timestampChanged = updates.logged_at !== undefined;
+    const offsetChanged = updates.timezone_offset_minutes !== undefined;
+    const timeZoneChanged = updates.time_zone !== undefined;
 
-      const { offsetMinutes, localDate } = this.getLocalContext(loggedAt, tzOffset);
-      updates.local_date = localDate;
-      updates.timezone_offset_minutes = offsetMinutes;
+    if (timestampChanged || offsetChanged || timeZoneChanged) {
+      const loggedAtInput = timestampChanged ? updates.logged_at : entry.logged_at;
+      const offsetInput = offsetChanged ? updates.timezone_offset_minutes : entry.timezone_offset_minutes;
+      const timeZoneInput = timeZoneChanged ? updates.time_zone : entry.time_zone;
+
+      const context = this.resolveEntryContext(loggedAtInput, offsetInput, timeZoneInput);
+
+      if (timestampChanged) {
+        updates.logged_at = context.isoString;
+      }
+
+      updates.local_date = context.localDate;
+      updates.timezone_offset_minutes = context.offsetMinutes;
+      updates.time_zone = context.timeZone;
 
       if (!updateInput.entry_tag) {
         updates.entry_tag = await this.determineEntryTag({
           userProfileId: entry.user_profile_id,
-          loggedAt,
-          timezoneOffsetMinutes: offsetMinutes,
+          loggedAt: context.isoString,
+          timezoneOffsetMinutes: context.offsetMinutes,
+          timeZone: context.timeZone,
           fastId: updates.fast_id || entry.fast_id,
           source: updates.source || entry.source
         });
@@ -353,7 +342,8 @@ class BodyLogService {
     weight,
     bodyFat = null,
     loggedAt,
-    timezoneOffsetMinutes = null
+    timezoneOffsetMinutes = null,
+    timeZone = null
   }) {
     if (!userProfileId || !fastId) {
       throw new Error('userProfileId and fastId are required to record fast weight');
@@ -376,6 +366,7 @@ class BodyLogService {
       weight,
       bodyFat,
       timezoneOffsetMinutes,
+      timeZone,
       fastId,
       source,
       tagHint

@@ -89,6 +89,7 @@ class Database {
           age INTEGER,
           keto_adapted TEXT DEFAULT 'none',
           tdee_override REAL,
+          time_zone TEXT,
           created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
           updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
         )
@@ -207,6 +208,7 @@ class Database {
           logged_at DATETIME NOT NULL,
           local_date TEXT NOT NULL,
           timezone_offset_minutes INTEGER,
+          time_zone TEXT,
           weight REAL NOT NULL,
           body_fat REAL,
           entry_tag TEXT DEFAULT 'ad_hoc',
@@ -415,18 +417,26 @@ class Database {
                 addColumnIfNotExists('user_profiles', 'tdee_override', 'REAL', null, (err) => {
                   if (err) { reject(err); return; }
 
-                  // Fast table migrations
-                  addColumnIfNotExists('fasts', 'start_in_ketosis', 'BOOLEAN', '0', (err) => {
+                  addColumnIfNotExists('user_profiles', 'time_zone', 'TEXT', null, (err) => {
                     if (err) { reject(err); return; }
 
-                    addColumnIfNotExists('fasts', 'pre_fast_protein_grams', 'REAL', null, (err) => {
+                    // Fast table migrations
+                    addColumnIfNotExists('fasts', 'start_in_ketosis', 'BOOLEAN', '0', (err) => {
                       if (err) { reject(err); return; }
 
-                      addColumnIfNotExists('fasts', 'carb_status', 'TEXT', "'normal'", (err) => {
+                      addColumnIfNotExists('fasts', 'pre_fast_protein_grams', 'REAL', null, (err) => {
                         if (err) { reject(err); return; }
 
-                        console.log('Migrations completed successfully');
-                        resolve();
+                        addColumnIfNotExists('fasts', 'carb_status', 'TEXT', "'normal'", (err) => {
+                          if (err) { reject(err); return; }
+
+                          addColumnIfNotExists('body_log_entries', 'time_zone', 'TEXT', null, (err) => {
+                            if (err) { reject(err); return; }
+
+                            console.log('Migrations completed successfully');
+                            resolve();
+                          });
+                        });
                       });
                     });
                   });
@@ -711,6 +721,7 @@ class Database {
         logged_at,
         local_date,
         timezone_offset_minutes = null,
+        time_zone = null,
         weight,
         body_fat = null,
         entry_tag = 'ad_hoc',
@@ -739,6 +750,7 @@ class Database {
           logged_at,
           local_date,
           timezone_offset_minutes,
+          time_zone,
           weight,
           body_fat,
           entry_tag,
@@ -748,7 +760,7 @@ class Database {
           canonical_status,
           canonical_reason,
           canonical_override_at
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `;
 
       const params = [
@@ -757,6 +769,7 @@ class Database {
         logged_at,
         local_date,
         timezone_offset_minutes,
+        time_zone,
         weight,
         body_fat,
         entry_tag,
@@ -835,6 +848,21 @@ class Database {
           reject(err);
         } else {
           resolve(rows || []);
+        }
+      });
+    });
+  }
+
+  async getBodyLogUserIds() {
+    return new Promise((resolve, reject) => {
+      const query = 'SELECT DISTINCT user_profile_id FROM body_log_entries';
+
+      this.db.all(query, (err, rows) => {
+        if (err) {
+          reject(err);
+        } else {
+          const ids = (rows || []).map((row) => Number(row.user_profile_id)).filter((id) => !Number.isNaN(id));
+          resolve(ids);
         }
       });
     });
@@ -1154,15 +1182,16 @@ class Database {
         target_body_fat,
         activity_level,
         goal_date,
-        forecast_data
+        forecast_data,
+        time_zone = null
       } = profileData;
 
       const query = `
-        INSERT INTO user_profiles (session_id, weight, weight_unit, body_fat, target_body_fat, activity_level, goal_date, forecast_data)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        INSERT INTO user_profiles (session_id, weight, weight_unit, body_fat, target_body_fat, activity_level, goal_date, forecast_data, time_zone)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
       `;
 
-      this.db.run(query, [session_id, weight, weight_unit, body_fat, target_body_fat, activity_level, goal_date, forecast_data], function(err) {
+      this.db.run(query, [session_id, weight, weight_unit, body_fat, target_body_fat, activity_level, goal_date, forecast_data, time_zone], function(err) {
         if (err) {
           reject(err);
         } else {

@@ -16,6 +16,39 @@ const PORT = process.env.PORT || 3000;
 app.use(cors());
 app.use(express.json());
 
+async function ensureProfileTimeZone(userProfile, timeZone) {
+  if (!userProfile || !timeZone || typeof timeZone !== 'string' || !timeZone.trim()) {
+    return;
+  }
+
+  const trimmed = timeZone.trim();
+  if (userProfile.time_zone === trimmed) {
+    return;
+  }
+
+  if (!userProfile.session_id) {
+    // Fetch full profile to obtain session if missing
+    try {
+      const fullProfile = await db.getUserProfileById(userProfile.id);
+      if (!fullProfile || !fullProfile.session_id) {
+        return;
+      }
+      await db.updateUserProfile(fullProfile.session_id, { time_zone: trimmed });
+      userProfile.time_zone = trimmed;
+    } catch (error) {
+      console.error('Failed to update user profile timezone (lookup path):', error);
+    }
+    return;
+  }
+
+  try {
+    await db.updateUserProfile(userProfile.session_id, { time_zone: trimmed });
+    userProfile.time_zone = trimmed;
+  } catch (error) {
+    console.error('Failed to update user profile timezone:', error);
+  }
+}
+
 // Session validation middleware
 function validateSessionFormat(sessionId) {
     return sessionId &&
@@ -269,6 +302,11 @@ app.post('/api/fasts', validateSessionMiddleware, async (req, res) => {
     const endWeight = req.body.end_weight ?? req.body.endWeight;
     const endBodyFat = req.body.end_body_fat ?? req.body.endBodyFat;
     const timezoneOffsetMinutes = req.body.timezone_offset_minutes ?? req.body.timezoneOffsetMinutes;
+    const rawFastTimeZone = req.body.timeZone ?? req.body.time_zone ?? null;
+    const fastTimeZone = typeof rawFastTimeZone === 'string' && rawFastTimeZone.trim()
+      ? rawFastTimeZone.trim()
+      : null;
+    const finalFastTimeZone = fastTimeZone || req.userProfile?.time_zone || null;
 
     if (startWeight !== undefined && startWeight !== null) {
       try {
@@ -279,7 +317,8 @@ app.post('/api/fasts', validateSessionMiddleware, async (req, res) => {
           weight: startWeight,
           bodyFat: startBodyFat,
           loggedAt: start_time,
-          timezoneOffsetMinutes
+          timezoneOffsetMinutes,
+          timeZone: finalFastTimeZone
         });
       } catch (syncError) {
         console.error('Body log sync error (fast create - start):', syncError);
@@ -295,11 +334,16 @@ app.post('/api/fasts', validateSessionMiddleware, async (req, res) => {
           weight: endWeight,
           bodyFat: endBodyFat,
           loggedAt: end_time,
-          timezoneOffsetMinutes
+          timezoneOffsetMinutes,
+          timeZone: finalFastTimeZone
         });
       } catch (syncError) {
         console.error('Body log sync error (fast create - end):', syncError);
       }
+    }
+
+    if (finalFastTimeZone) {
+      await ensureProfileTimeZone(req.userProfile, finalFastTimeZone);
     }
 
     res.status(201).json(newFast);
@@ -345,6 +389,10 @@ app.post('/api/fasts/start', validateSessionMiddleware, async (req, res) => {
     const newFast = await db.createFast(fastData);
     console.log('Fast created:', newFast);
 
+    const rawTimeZone = req.body.timeZone ?? req.body.time_zone ?? null;
+    const fastTimeZone = typeof rawTimeZone === 'string' && rawTimeZone.trim() ? rawTimeZone.trim() : null;
+    const finalFastTimeZone = fastTimeZone || req.userProfile?.time_zone || null;
+
     if (weight !== undefined && weight !== null) {
       const timezoneOffsetMinutes = req.body.timezone_offset_minutes ?? req.body.timezoneOffsetMinutes;
       const bodyFat = req.body.body_fat ?? req.body.bodyFat ?? null;
@@ -357,11 +405,16 @@ app.post('/api/fasts/start', validateSessionMiddleware, async (req, res) => {
           weight,
           bodyFat,
           loggedAt: fastData.start_time,
-          timezoneOffsetMinutes
+          timezoneOffsetMinutes,
+          timeZone: finalFastTimeZone
         });
       } catch (syncError) {
         console.error('Body log sync error (fast start):', syncError);
       }
+    }
+
+    if (finalFastTimeZone) {
+      await ensureProfileTimeZone(req.userProfile, finalFastTimeZone);
     }
 
     res.status(201).json(newFast);
@@ -390,6 +443,9 @@ app.post('/api/fasts/:id/end', validateSessionMiddleware, async (req, res) => {
     const weight = req.body.weight ?? req.body.end_weight ?? req.body.endWeight;
     const bodyFat = req.body.body_fat ?? req.body.end_body_fat ?? req.body.bodyFat ?? null;
     const timezoneOffsetMinutes = req.body.timezone_offset_minutes ?? req.body.timezoneOffsetMinutes;
+    const rawTimeZone = req.body.timeZone ?? req.body.time_zone ?? null;
+    const fastTimeZone = typeof rawTimeZone === 'string' && rawTimeZone.trim() ? rawTimeZone.trim() : null;
+    const finalFastTimeZone = fastTimeZone || req.userProfile?.time_zone || null;
 
     if (weight !== undefined && weight !== null) {
       try {
@@ -401,11 +457,16 @@ app.post('/api/fasts/:id/end', validateSessionMiddleware, async (req, res) => {
           weight,
           bodyFat,
           loggedAt: fastRecord?.end_time || endTime,
-          timezoneOffsetMinutes
+          timezoneOffsetMinutes,
+          timeZone: finalFastTimeZone
         });
       } catch (syncError) {
         console.error('Body log sync error (fast end):', syncError);
       }
+    }
+
+    if (finalFastTimeZone) {
+      await ensureProfileTimeZone(req.userProfile, finalFastTimeZone);
     }
 
     res.json(updatedFast);
@@ -470,6 +531,13 @@ app.post('/api/body-log', validateSessionMiddleware, async (req, res) => {
       makeCanonical
     } = req.body;
 
+    const rawTimeZone = req.body.timeZone ?? req.body.time_zone ?? null;
+    const sanitizedTimeZone = typeof rawTimeZone === 'string' && rawTimeZone.trim()
+      ? rawTimeZone.trim()
+      : null;
+
+    const finalTimeZone = sanitizedTimeZone || req.userProfile?.time_zone || null;
+
     const tzOffset = timezoneOffsetMinutes !== undefined
       ? Number(timezoneOffsetMinutes)
       : undefined;
@@ -484,12 +552,17 @@ app.post('/api/body-log', validateSessionMiddleware, async (req, res) => {
       weight,
       bodyFat,
       timezoneOffsetMinutes: tzOffset,
+      timeZone: finalTimeZone,
       fastId,
       source,
       notes,
       tagHint: tag,
       makeCanonical: !!makeCanonical
     });
+
+    if (finalTimeZone) {
+      await ensureProfileTimeZone(req.userProfile, finalTimeZone);
+    }
 
     res.status(201).json(entry);
   } catch (error) {
@@ -539,7 +612,17 @@ app.put('/api/body-log/:id', validateSessionMiddleware, async (req, res) => {
       updates.timezone_offset_minutes = tzOffset;
     }
 
+    if (req.body.timeZone !== undefined || req.body.time_zone !== undefined) {
+      const rawTimeZone = req.body.timeZone !== undefined ? req.body.timeZone : req.body.time_zone;
+      updates.time_zone = typeof rawTimeZone === 'string' && rawTimeZone.trim() ? rawTimeZone.trim() : null;
+    }
+
     const updatedEntry = await bodyLogService.updateEntry(entryId, updates);
+
+    if (updates.time_zone) {
+      await ensureProfileTimeZone(req.userProfile, updates.time_zone);
+    }
+
     res.json(updatedEntry);
   } catch (error) {
     console.error('Error updating body log entry:', error);
@@ -682,6 +765,11 @@ app.put('/api/fasts/:id', validateSessionMiddleware, async (req, res) => {
     const userProfileId = req.userProfile.id;
     const finalStartTime = updateData.start_time || fast.start_time;
     const finalEndTime = updateData.end_time || fast.end_time;
+    const rawFastTimeZone = req.body.timeZone ?? req.body.time_zone ?? null;
+    const updateTimeZone = typeof rawFastTimeZone === 'string' && rawFastTimeZone.trim()
+      ? rawFastTimeZone.trim()
+      : null;
+    const finalFastTimeZone = updateTimeZone || req.userProfile?.time_zone || null;
 
     // Update or create start weight body log entry
     if (start_weight !== undefined && start_weight !== null) {
@@ -693,7 +781,8 @@ app.put('/api/fasts/:id', validateSessionMiddleware, async (req, res) => {
           weight: start_weight,
           bodyFat: start_body_fat,
           loggedAt: finalStartTime,
-          timezoneOffsetMinutes: timezone_offset_minutes
+          timezoneOffsetMinutes: timezone_offset_minutes,
+          timeZone: finalFastTimeZone
         });
       } catch (syncError) {
         console.error('Body log sync error (fast update - start):', syncError);
@@ -710,11 +799,16 @@ app.put('/api/fasts/:id', validateSessionMiddleware, async (req, res) => {
           weight: end_weight,
           bodyFat: end_body_fat,
           loggedAt: finalEndTime,
-          timezoneOffsetMinutes: timezone_offset_minutes
+          timezoneOffsetMinutes: timezone_offset_minutes,
+          timeZone: finalFastTimeZone
         });
       } catch (syncError) {
         console.error('Body log sync error (fast update - end):', syncError);
       }
+    }
+
+    if (finalFastTimeZone) {
+      await ensureProfileTimeZone(req.userProfile, finalFastTimeZone);
     }
 
     const updatedFast = await db.getFastById(fastId);
@@ -755,12 +849,16 @@ app.delete('/api/fasts/:id', validateSessionMiddleware, async (req, res) => {
 app.post('/api/user/profile', async (req, res) => {
   try {
     const { sessionId, weight, weightUnit, bodyFat, targetBodyFat, activityLevel, goalDate, forecastData } = req.body;
+    const rawTimeZone = req.body.timeZone ?? req.body.time_zone ?? null;
+    const detectedTimeZone = typeof rawTimeZone === 'string' && rawTimeZone.trim()
+      ? rawTimeZone.trim()
+      : null;
     
     if (!sessionId || !weight || !bodyFat || !targetBodyFat) {
       return res.status(400).json({ error: 'Missing required fields' });
     }
     
-    const profileData = {
+    const baseProfileData = {
       session_id: sessionId,
       weight: weight,
       weight_unit: weightUnit || 'lb',
@@ -774,8 +872,17 @@ app.post('/api/user/profile', async (req, res) => {
     // Try to update existing profile first
     const existingProfile = await db.getUserProfileBySessionId(sessionId);
     if (existingProfile) {
-      await db.updateUserProfile(sessionId, profileData);
+      const updatePayload = { ...baseProfileData };
+      if (detectedTimeZone) {
+        updatePayload.time_zone = detectedTimeZone;
+      }
+
+      await db.updateUserProfile(sessionId, updatePayload);
       const updatedProfile = await db.getUserProfileBySessionId(sessionId);
+
+      if (detectedTimeZone) {
+        updatedProfile.time_zone = detectedTimeZone;
+      }
 
       try {
         await draftScheduleService.seedFromForecast(updatedProfile);
@@ -786,12 +893,17 @@ app.post('/api/user/profile', async (req, res) => {
       res.json(updatedProfile);
     } else {
       // Create new profile
-      const newProfile = await db.createUserProfile(profileData);
+      const createPayload = { ...baseProfileData, time_zone: detectedTimeZone || null };
+      const newProfile = await db.createUserProfile(createPayload);
 
       try {
         await draftScheduleService.seedFromForecast(newProfile);
       } catch (seedError) {
         console.error('Failed to seed draft schedule after profile creation:', seedError);
+      }
+
+      if (detectedTimeZone) {
+        newProfile.time_zone = detectedTimeZone;
       }
 
       res.status(201).json(newProfile);

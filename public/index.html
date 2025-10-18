@@ -481,6 +481,7 @@
     </style>
 
     <!-- Session Management Scripts - Load Early -->
+    <script src="/js/timezone.js"></script>
     <script src="/js/modules/session-manager.js"></script>
     <script src="/js/modules/page-session-guard.js"></script>
 </head>
@@ -1353,6 +1354,11 @@
                         results: apiResults // This reflects adjusted calculations
                     }
                 };
+
+                const detectedTimeZone = window.TimezoneUtils ? window.TimezoneUtils.resolveBrowserTimeZone() : null;
+                if (detectedTimeZone) {
+                    profileData.timeZone = detectedTimeZone;
+                }
 
                 // Save to server
                 const response = await fetch('/api/user/profile', {
