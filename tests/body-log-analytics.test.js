@@ -177,6 +177,78 @@ async function runBodyLogAnalyticsTests() {
         }
     });
 
+    await record('Fast context exposes setup values and impacts', async () => {
+        const { db, analytics } = createAnalyticsFixture();
+        const userId = 77;
+
+        db.addUserProfile({
+            id: userId,
+            height_cm: 180,
+            age: 36,
+            sex: 'male',
+            keto_adapted: 'consistent'
+        });
+
+        const fast = {
+            id: 21,
+            user_profile_id: userId,
+            start_time: '2024-03-10T12:00:00Z',
+            end_time: '2024-03-12T00:00:00Z',
+            duration_hours: 36,
+            planned_duration_hours: 36,
+            start_in_ketosis: true,
+            pre_fast_protein_grams: 60,
+            carb_status: 'low'
+        };
+
+        await seedFastWithEntries(db, fast, [
+            {
+                logged_at: '2024-03-10T12:00:00Z',
+                weight: 198,
+                body_fat: 26,
+                entry_tag: 'fast_start',
+                source: 'fast_start'
+            },
+            {
+                logged_at: '2024-03-12T00:00:00Z',
+                weight: 192.6,
+                body_fat: 25.2,
+                entry_tag: 'post_fast'
+            }
+        ]);
+
+        const effectiveness = await analytics.getFastEffectiveness(userId, fast.id);
+
+        assert.strictEqual(effectiveness.status, 'ok');
+        assert(effectiveness.fastContext);
+        assert.strictEqual(effectiveness.fastContext.ketosisAdapted, true);
+        assert.strictEqual(effectiveness.fastContext.lastMealProteinGrams, 60);
+        assert.strictEqual(effectiveness.fastContext.preFastCarbSetting, 'low');
+
+        const impacts = effectiveness.contextImpacts;
+        assert(impacts, 'Context impacts should be provided');
+        assert(impacts.ketosis, 'Ketosis impact should be calculated');
+        assert(impacts.lastMealProtein, 'Protein impact should be calculated');
+        assert(impacts.preFastCarbs, 'Carb impact should be calculated');
+
+        if (impacts.ketosis && impacts.ketosis.delta !== null) {
+            assert(impacts.ketosis.metric === 'muscle' || impacts.ketosis.metric === 'fluid');
+            assert(impacts.ketosis.delta <= 0, 'Starting in ketosis should not increase losses');
+        }
+
+        if (impacts.lastMealProtein && impacts.lastMealProtein.delta !== null) {
+            assert(impacts.lastMealProtein.metric === 'muscle' || impacts.lastMealProtein.metric === 'fluid');
+            assert(impacts.lastMealProtein.delta <= 0, 'Pre-fast protein should preserve tissue');
+        }
+
+        if (impacts.preFastCarbs && impacts.preFastCarbs.delta !== null) {
+            assert.strictEqual(impacts.preFastCarbs.metric, 'fluid');
+            assert(impacts.preFastCarbs.delta <= 0.1, 'Low carb preload should not add fluid loss');
+        }
+
+        assert.strictEqual(effectiveness.fastContextImpacts, impacts, 'Impacts alias should reference same object');
+    });
+
     await record('Fast effectiveness surfaces missing data guidance when post-fast weight absent', async () => {
         const { db, analytics } = createAnalyticsFixture();
         const userId = 55;

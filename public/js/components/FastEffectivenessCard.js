@@ -11,6 +11,7 @@ class FastEffectivenessCard {
         this.context = context;
         this.currentFastId = null;
         this.fluidExpanded = false;
+        this.contextExpanded = false;
         this.boundClickHandler = null;
         this.tooltipButtons = [];
         this.activeTooltip = null;
@@ -60,6 +61,13 @@ class FastEffectivenessCard {
                 if (toggleBtn && this.container.contains(toggleBtn)) {
                     event.preventDefault();
                     this.toggleFluidBreakdown(toggleBtn);
+                    return;
+                }
+
+                const contextToggle = event.target.closest('[data-action="toggle-fast-context"]');
+                if (contextToggle && this.container.contains(contextToggle)) {
+                    event.preventDefault();
+                    this.toggleFastContext(contextToggle);
                 }
             };
         }
@@ -96,6 +104,8 @@ class FastEffectivenessCard {
     renderLoading(options = {}) {
         const { subtitle = 'Sizing up your fast…' } = options;
         this.updateSubtitle(subtitle);
+        this.fluidExpanded = false;
+        this.contextExpanded = false;
         if (this.container) {
             this.hideTooltip();
             this.detachTooltipHandlers();
@@ -116,6 +126,8 @@ class FastEffectivenessCard {
 
         const safeMessage = this.escapeHtml(message || 'Complete a fast with start and post-fast weights to size up effectiveness.');
         const className = tone === 'error' ? 'insight-error' : 'insight-placeholder';
+        this.fluidExpanded = false;
+        this.contextExpanded = false;
         this.hideTooltip();
         this.detachTooltipHandlers();
         this.container.innerHTML = `<div class="${className}">${safeMessage}</div>`;
@@ -149,6 +161,7 @@ class FastEffectivenessCard {
 
         this.currentFastId = effectiveness.fastId ?? null;
         this.fluidExpanded = false;
+        this.contextExpanded = false;
 
         const asNumber = (value, fallback = 0) => {
             const numeric = Number(value);
@@ -224,11 +237,6 @@ class FastEffectivenessCard {
                     <span class="summary-value">${weightDeltaLabel}</span>
                     <span class="summary-note">(${startWeightLabel} → ${postWeightLabel})</span>
                 </div>
-                <div class="summary-item">
-                    <span class="summary-label">Mode</span>
-                    <span class="summary-value">${this.escapeHtml(modePrimary)}</span>
-                    ${modeSecondary ? `<span class="summary-note">${this.escapeHtml(modeSecondary)}</span>` : ''}
-                </div>
             </div>
         `;
 
@@ -238,11 +246,6 @@ class FastEffectivenessCard {
                     <div class="bar-segment bar-fat" style="flex: ${fatLossValue};"></div>
                     <div class="bar-segment bar-muscle" style="flex: ${muscleLossValue};"></div>
                     <div class="bar-segment bar-fluid" style="flex: ${fluidLossValue};"></div>
-                </div>
-                <div class="effectiveness-bar-legend">
-                    <span class="legend-item"><span class="legend-chip fat"></span>Fat ${fatLossLabel}</span>
-                    <span class="legend-item"><span class="legend-chip muscle"></span>Muscle ${muscleLossLabel}</span>
-                    <span class="legend-item"><span class="legend-chip fluid"></span>Transient ${fluidLabel}</span>
                 </div>
             `
             : '';
@@ -345,34 +348,198 @@ class FastEffectivenessCard {
             `;
         }
 
-        const tags = [];
-        if (modePrimary) {
-            tags.push(modePrimary);
-        }
-        if (bodyFatDeltaLabel !== '—' && isMeasured) {
-            tags.push(`${bodyFatDeltaLabel} BF`);
+        const toTitleCase = (input) => {
+            if (input === null || input === undefined) {
+                return '';
+            }
+            return String(input)
+                .replace(/[_-]+/g, ' ')
+                .trim()
+                .split(/\s+/)
+                .map((part) => part.charAt(0).toUpperCase() + part.slice(1).toLowerCase())
+                .join(' ');
+        };
+
+        const formatKetosis = (value) => {
+            if (value === true) {
+                return 'Ketosis-adapted';
+            }
+            if (value === false) {
+                return 'Not adapted';
+            }
+            if (value === 'adapted' || value === 'not_adapted') {
+                return toTitleCase(value);
+            }
+            return 'Not logged';
+        };
+
+        const formatProtein = (value) => {
+            if (value === null || value === undefined || Number.isNaN(Number(value))) {
+                return 'Not logged';
+            }
+            const numeric = Number(value);
+            if (!Number.isFinite(numeric) || numeric <= 0) {
+                return 'Not logged';
+            }
+            const rounded = Math.round(numeric);
+            return `${rounded} g protein`;
+        };
+
+        const formatCarbSetting = (value) => {
+            if (value === null || value === undefined || value === '') {
+                return 'Not logged';
+            }
+            return toTitleCase(value);
+        };
+
+        const formatContextImpact = (impact) => {
+            if (!impact || impact.delta === null || impact.delta === undefined) {
+                return { text: 'Impact pending', className: 'is-placeholder' };
+            }
+
+            const entries = Array.isArray(impact.deltas) && impact.deltas.length > 0
+                ? impact.deltas
+                : [{ metric: impact.metric, delta: impact.delta }];
+
+            const renderEntry = (entry) => {
+                const delta = Number(entry?.delta);
+                if (!Number.isFinite(delta)) {
+                    return null;
+                }
+
+                const metric = (entry?.metric || 'total').toLowerCase();
+                const absDelta = Math.abs(delta);
+                const precise = absDelta < 0.1 ? absDelta.toFixed(2) : null;
+                if (absDelta < 0.005) {
+                        return `${toTitleCase(metric)} unchanged`;
+                }
+                const poundsLabel = precise ?? this.formatWeight(absDelta).replace(' lb', '');
+
+                if (metric === 'muscle') {
+                    return delta < 0
+                        ? `Spared ${poundsLabel} lb muscle`
+                        : `Cost ${poundsLabel} lb muscle`;
+                }
+
+                if (metric === 'fluid') {
+                    return delta < 0
+                        ? `Reduced ${poundsLabel} lb fluid shift`
+                        : `Added ${poundsLabel} lb fluid shift`;
+                }
+
+                const metricLabel = toTitleCase(metric);
+                if (precise) {
+                    return `${delta < 0 ? 'Down' : 'Up'} ${precise} lb ${metricLabel}`;
+                }
+                const deltaLabel = this.formatDelta(delta);
+                return `${deltaLabel} ${metricLabel}`;
+            };
+
+            const descriptors = entries
+                .map(renderEntry)
+                .filter((value) => value && value.trim().length > 0);
+
+            if (descriptors.length === 0) {
+                return { text: 'Impact pending', className: 'is-placeholder' };
+            }
+
+            const firstDelta = entries.find((entry) => Number.isFinite(Number(entry?.delta)));
+            const className = (firstDelta && Math.abs(Number(firstDelta.delta)) >= 0.005)
+                ? (Number(firstDelta.delta) < 0 ? 'is-positive' : 'is-negative')
+                : 'is-neutral';
+
+            return {
+                text: descriptors.join(' • '),
+                className
+            };
+        };
+
+        const fastContext = effectiveness.fastContext || effectiveness.fastSetup || {};
+        const contextImpacts = effectiveness.contextImpacts || effectiveness.fastContextImpacts || {};
+
+        const ketosisValueRaw = fastContext.ketosisAdapted !== undefined
+            ? fastContext.ketosisAdapted
+            : effectiveness.ketosisAdapted;
+        const proteinValueRaw = fastContext.lastMealProteinGrams !== undefined
+            ? fastContext.lastMealProteinGrams
+            : effectiveness.lastMealProteinGrams;
+        const carbValueRaw = fastContext.preFastCarbIntake !== undefined
+            ? fastContext.preFastCarbIntake
+            : (fastContext.preFastCarbSetting !== undefined ? fastContext.preFastCarbSetting : effectiveness.preFastCarbIntake ?? effectiveness.preFastCarbSetting);
+
+        const contextRows = [];
+
+        contextRows.push({
+            label: 'Mode',
+            value: modePrimary || '—',
+            impact: {
+                text: modeSecondary || (isMeasured ? 'Measured inputs' : 'Metabolic estimate'),
+                className: 'is-neutral'
+            }
+        });
+
+        if (bodyFatDeltaLabel !== '—') {
+            contextRows.push({
+                label: 'Body fat change',
+                value: bodyFatDeltaLabel,
+                impact: {
+                    text: isMeasured ? 'Logged measurement' : 'Estimated from model',
+                    className: 'is-neutral'
+                }
+            });
         }
 
-        const tagsHtml = tags.length
-            ? `<div class="effectiveness-tags">${tags.map((tag) => `<span class="effectiveness-tag">${this.escapeHtml(tag)}</span>`).join('')}</div>`
-            : '';
+        contextRows.push(
+            {
+                label: 'Ketosis at start',
+                value: formatKetosis(ketosisValueRaw),
+                impact: formatContextImpact(contextImpacts.ketosis ?? contextImpacts.ketosisAdapted)
+            },
+            {
+                label: 'Last meal protein',
+                value: formatProtein(proteinValueRaw),
+                impact: formatContextImpact(contextImpacts.lastMealProtein ?? contextImpacts.protein)
+            },
+            {
+                label: 'Pre-fast carbs',
+                value: formatCarbSetting(carbValueRaw),
+                impact: formatContextImpact(contextImpacts.preFastCarbs ?? contextImpacts.carbs)
+            }
+        );
 
-        const bodyFatCopy = (effectiveness.startBodyFat !== null && effectiveness.startBodyFat !== undefined
-            && effectiveness.postBodyFat !== null && effectiveness.postBodyFat !== undefined)
-            ? `Body fat ${this.formatBodyFat(effectiveness.startBodyFat)} → ${this.formatBodyFat(effectiveness.postBodyFat)}`
-            : '';
+        const isContextExpanded = this.contextExpanded;
+        const contextToggleText = isContextExpanded ? 'Hide fast context' : 'Show fast context';
+        const contextToggleIcon = isContextExpanded ? '▲' : '▼';
+        const contextBodyDisplay = isContextExpanded ? 'flex' : 'none';
 
-        const metaParts = [];
-        if (postLogged) {
-            metaParts.push(`Post-fast weigh-in ${postLogged}`);
-        }
-        if (bodyFatCopy) {
-            metaParts.push(bodyFatCopy);
-        }
-        if (!metaParts.length) {
-            metaParts.push('Keep logging morning weigh-ins to refine this breakdown.');
-        }
-        const metaText = metaParts.map((part) => this.escapeHtml(part)).join(' • ');
+        const contextHtml = `
+            <div class="fast-context">
+                <button type="button" class="fast-context-toggle" data-action="toggle-fast-context" aria-expanded="${isContextExpanded}">
+                    <span data-role="fast-context-toggle-text">${contextToggleText}</span>
+                    <span data-role="fast-context-toggle-icon">${contextToggleIcon}</span>
+                </button>
+                <div class="fast-context-body" data-role="fast-context-body" style="display: ${contextBodyDisplay};">
+                    ${contextRows.map((row) => {
+                        const valueText = row.value === null || row.value === undefined || row.value === ''
+                            ? 'Not logged'
+                            : row.value;
+                        const impactInfo = row.impact || { text: '—', className: 'is-neutral' };
+                        const impactClass = impactInfo.className || 'is-neutral';
+                        const impactText = impactInfo.text || '—';
+                        return `
+                            <div class="fast-context-row">
+                                <div class="fast-context-main">
+                                    <span class="fast-context-label">${this.escapeHtml(row.label)}</span>
+                                    <span class="fast-context-separator">•</span>
+                                    <span class="fast-context-value">${this.escapeHtml(valueText)}</span>
+                                </div>
+                                <div class="fast-context-impact ${impactClass}">${this.escapeHtml(impactText)}</div>
+                            </div>
+                        `;
+                    }).join('')}
+                </div>
+            </div>
+        `;
 
         const message = this.escapeHtml(effectiveness.message || 'Most of the rapid scale drop is fluid. Keep logging to see what sticks.');
 
@@ -384,9 +551,8 @@ class FastEffectivenessCard {
             ${barHtml}
             ${breakdownHtml}
             ${fluidDetailsHtml}
-            ${tagsHtml}
+            ${contextHtml}
             <div class="effectiveness-message">${message}</div>
-            <div class="effectiveness-meta">${metaText}</div>
         `;
 
         this.attachTooltipHandlers();
@@ -413,6 +579,30 @@ class FastEffectivenessCard {
         }
         if (toggleIcon) {
             toggleIcon.textContent = this.fluidExpanded ? '▲' : '▼';
+        }
+    }
+
+    toggleFastContext(toggleBtn) {
+        this.contextExpanded = !this.contextExpanded;
+        if (!this.container) {
+            return;
+        }
+
+        const contextBody = this.container.querySelector('[data-role="fast-context-body"]');
+        const toggleText = this.container.querySelector('[data-role="fast-context-toggle-text"]');
+        const toggleIcon = this.container.querySelector('[data-role="fast-context-toggle-icon"]');
+
+        if (contextBody) {
+            contextBody.style.display = this.contextExpanded ? 'flex' : 'none';
+        }
+        if (toggleBtn) {
+            toggleBtn.setAttribute('aria-expanded', String(this.contextExpanded));
+        }
+        if (toggleText) {
+            toggleText.textContent = this.contextExpanded ? 'Hide fast context' : 'Show fast context';
+        }
+        if (toggleIcon) {
+            toggleIcon.textContent = this.contextExpanded ? '▲' : '▼';
         }
     }
 

@@ -392,6 +392,30 @@ class FastEffectivenessService {
     const totalTransientLoss = leanWaterLossLbs + otherFluidLossLbs;
     const totalMuscle = Math.max(0, muscleLossLbs);
 
+    const rawFluidBreakdown = {
+      leanWater: leanWaterLossLbs,
+      glycogenMass: fluidBreakdown.glycogenMass,
+      glycogenBoundWater: fluidBreakdown.glycogenBoundWater,
+      gutContent: fluidBreakdown.gutContent,
+      residualWaterShift: fluidBreakdown.residualWaterShift,
+      otherFluidTotal: otherFluidComponentsTotal
+    };
+
+    const raw = {
+      startWeight,
+      postWeight,
+      totalWeightLost,
+      fatLoss: fatLossLbs,
+      muscleLoss: totalMuscle,
+      leanWater: leanWaterLossLbs,
+      fluidLoss: totalTransientLoss,
+      otherFluidLoss: otherFluidLossLbs,
+      weightDelta: postWeight - startWeight,
+      proteinLossGrams: leanEstimate.proteinLossGrams,
+      wetLeanLoss: leanEstimate.wetLeanLossLb,
+      fluidBreakdown: rawFluidBreakdown
+    };
+
     const round = (value) => this.round(value);
 
     return {
@@ -415,7 +439,8 @@ class FastEffectivenessService {
       },
       breakdownSource,
       waterLoss: round(totalTransientLoss),
-      weightDelta: round(postWeight - startWeight)
+      weightDelta: round(postWeight - startWeight),
+      raw
     };
   }
 }

@@ -60,6 +60,170 @@ class BodyLogAnalyticsService {
     };
   }
 
+  isFiniteNumber(value) {
+    return typeof value === 'number' && Number.isFinite(value);
+  }
+
+  normalizeBoolean(value) {
+    if (value === null || value === undefined) {
+      return null;
+    }
+
+    if (typeof value === 'string') {
+      const lower = value.toLowerCase();
+      if (lower === 'true') {
+        return true;
+      }
+      if (lower === 'false') {
+        return false;
+      }
+      if (lower === '1') {
+        return true;
+      }
+      if (lower === '0') {
+        return false;
+      }
+    }
+
+    if (typeof value === 'number') {
+      if (Number.isNaN(value)) {
+        return null;
+      }
+      return value !== 0;
+    }
+
+    return Boolean(value);
+  }
+
+  deriveContextImpact(actualResult, baselineResult, metricDefs = []) {
+    if (!actualResult || actualResult.status !== 'ok' || !actualResult.raw) {
+      return null;
+    }
+    if (!baselineResult || baselineResult.status !== 'ok' || !baselineResult.raw) {
+      return null;
+    }
+
+    const actualRaw = actualResult.raw;
+    const baselineRaw = baselineResult.raw;
+    const deltas = [];
+
+    metricDefs.forEach((def) => {
+      const actualValue = typeof def.getValue === 'function'
+        ? def.getValue(actualRaw)
+        : actualRaw[def.key];
+      const baselineValue = typeof def.getValue === 'function'
+        ? def.getValue(baselineRaw)
+        : baselineRaw[def.key];
+
+      if (!this.isFiniteNumber(actualValue) || !this.isFiniteNumber(baselineValue)) {
+        return;
+      }
+
+      const delta = actualValue - baselineValue;
+      deltas.push({ metric: def.metric, delta });
+    });
+
+    if (deltas.length === 0) {
+      return null;
+    }
+
+    const sorted = deltas.sort((a, b) => Math.abs(b.delta) - Math.abs(a.delta));
+    const primary = sorted[0];
+
+    return {
+      delta: Number(primary.delta.toFixed(4)),
+      metric: primary.metric,
+      deltas: sorted.map((entry) => ({
+        metric: entry.metric,
+        delta: Number(entry.delta.toFixed(4))
+      }))
+    };
+  }
+
+  buildContextImpacts(effectivenessParams, actualResult) {
+    const impacts = {};
+
+    if (!effectivenessParams || !actualResult || actualResult.status !== 'ok') {
+      return impacts;
+    }
+
+    const ensureImpact = (impact, metric) => {
+      if (impact && impact.delta !== undefined) {
+        if (!Array.isArray(impact.deltas) || impact.deltas.length === 0) {
+          impact.deltas = [{ metric: impact.metric ?? metric ?? 'total', delta: impact.delta }];
+        }
+        return impact;
+      }
+      if (!metric) {
+        return null;
+      }
+      return {
+        delta: 0,
+        metric,
+        deltas: [{ metric, delta: 0 }]
+      };
+    };
+
+    // Start-in-ketosis impact
+    if (effectivenessParams.startInKetosis === null || effectivenessParams.startInKetosis === undefined) {
+      impacts.ketosis = null;
+    } else if (effectivenessParams.startInKetosis) {
+      const baselineParams = { ...effectivenessParams, startInKetosis: false };
+      const baselineResult = this.fastEffectivenessService.calculateFastEffectiveness(baselineParams);
+      const impact = this.deriveContextImpact(actualResult, baselineResult, [
+        { key: 'muscleLoss', metric: 'muscle' },
+        { key: 'leanWater', metric: 'fluid' }
+      ]);
+      impacts.ketosis = ensureImpact(impact, 'muscle');
+    } else {
+      impacts.ketosis = { delta: 0, metric: 'muscle' };
+    }
+
+    // Pre-fast protein impact
+    const proteinValue = effectivenessParams.preFastProteinGrams;
+    if (proteinValue === null || proteinValue === undefined) {
+      impacts.lastMealProtein = null;
+    } else if (Number(proteinValue) > 0) {
+      const baselineParams = { ...effectivenessParams, preFastProteinGrams: 0 };
+      const baselineResult = this.fastEffectivenessService.calculateFastEffectiveness(baselineParams);
+      const impact = this.deriveContextImpact(actualResult, baselineResult, [
+        { key: 'muscleLoss', metric: 'muscle' },
+        { key: 'leanWater', metric: 'fluid' }
+      ]);
+      impacts.lastMealProtein = ensureImpact(impact, 'muscle');
+    } else {
+      impacts.lastMealProtein = { delta: 0, metric: 'muscle' };
+    }
+
+    // Pre-fast carbohydrate status impact
+    const carbStatus = effectivenessParams.carbStatus;
+    if (carbStatus === null || carbStatus === undefined || carbStatus === '') {
+      impacts.preFastCarbs = null;
+    } else if (carbStatus !== 'normal') {
+      const baselineParams = { ...effectivenessParams, carbStatus: 'normal' };
+      const baselineResult = this.fastEffectivenessService.calculateFastEffectiveness(baselineParams);
+      const impact = this.deriveContextImpact(actualResult, baselineResult, [
+        { key: 'fluidLoss', metric: 'fluid' },
+        { key: 'otherFluidLoss', metric: 'fluid' },
+        {
+          metric: 'fluid',
+          getValue: (raw) => {
+            if (!raw || !raw.fluidBreakdown) {
+              return null;
+            }
+            const breakdown = raw.fluidBreakdown;
+            return (breakdown.glycogenMass ?? 0) + (breakdown.glycogenBoundWater ?? 0);
+          }
+        }
+      ]);
+      impacts.preFastCarbs = ensureImpact(impact, 'fluid');
+    } else {
+      impacts.preFastCarbs = { delta: 0, metric: 'fluid' };
+    }
+
+    return impacts;
+  }
+
   buildFastSnapshot(fast, entries = [], allUserEntries = []) {
     if (!fast) {
       return null;
@@ -242,7 +406,7 @@ class BodyLogAnalyticsService {
         sex: profile?.sex,
         ketoAdapted: profile?.keto_adapted || 'none',
         tdeeOverride: profile?.tdee_override,
-        startInKetosis: fast.start_in_ketosis || false,
+        startInKetosis: this.normalizeBoolean(fast.start_in_ketosis) ?? false,
         preFastProteinGrams: fast.pre_fast_protein_grams || 0,
         carbStatus: fast.carb_status || 'normal'
       };
@@ -286,13 +450,15 @@ class BodyLogAnalyticsService {
     }
 
     const durationHours = fast.duration_hours ?? this.computeDurationHours(fast.start_time, fast.end_time);
+    const weightDeltaRaw = postWeight - startWeight;
+    const weightLostRaw = startWeight - postWeight;
 
     // Try enhanced effectiveness calculation if enabled
     if (this.useEnhancedEffectiveness && durationHours) {
       const enhancedData = await this.fetchEnhancedEffectivenessData(fast);
 
       if (enhancedData) {
-        const result = this.fastEffectivenessService.calculateFastEffectiveness({
+        const effectivenessParams = {
           startWeight,
           postWeight,
           startBodyFat,
@@ -306,10 +472,41 @@ class BodyLogAnalyticsService {
           startInKetosis: enhancedData.startInKetosis,
           preFastProteinGrams: enhancedData.preFastProteinGrams,
           carbStatus: enhancedData.carbStatus
-        });
+        };
+
+        const result = this.fastEffectivenessService.calculateFastEffectiveness(effectivenessParams);
 
         if (result.status === 'ok') {
-          // Add legacy fields for compatibility
+          const fastContext = {
+            startInKetosis: effectivenessParams.startInKetosis ?? null,
+            ketosisAdapted: effectivenessParams.startInKetosis ?? null,
+            lastMealProteinGrams: effectivenessParams.preFastProteinGrams ?? null,
+            preFastProteinGrams: effectivenessParams.preFastProteinGrams ?? null,
+            preFastCarbSetting: effectivenessParams.carbStatus ?? null,
+            preFastCarbIntake: effectivenessParams.carbStatus ?? null
+          };
+
+          const contextImpacts = this.buildContextImpacts(effectivenessParams, result);
+
+          const fatLossRaw = this.isFiniteNumber(result.raw?.fatLoss)
+            ? result.raw.fatLoss
+            : (typeof result.fatLoss === 'number' ? result.fatLoss : null);
+          const waterLossRaw = this.isFiniteNumber(result.raw?.fluidLoss)
+            ? result.raw.fluidLoss
+            : (typeof result.fluidLoss === 'number' ? result.fluidLoss : null);
+
+          const rawMetrics = {
+            ...result.raw,
+            startWeight,
+            postWeight,
+            startBodyFat,
+            postBodyFat,
+            weightLost: weightLostRaw,
+            weightDelta: weightDeltaRaw,
+            fatLoss: fatLossRaw,
+            waterLoss: waterLossRaw
+          };
+
           return {
             ...result,
             fastId: fast.id,
@@ -320,21 +517,22 @@ class BodyLogAnalyticsService {
             bodyFatChangeAbs: (startBodyFat != null && postBodyFat != null) ? Math.abs(this.round(postBodyFat - startBodyFat)) : null,
             bodyFatChangeSignificant: (startBodyFat != null && postBodyFat != null) ? Math.abs(postBodyFat - startBodyFat) >= 0.3 : false,
             message: this.generateEnhancedMessage(result),
-            enhanced: true, // Flag to indicate enhanced calculation
-            raw: {
-              startWeight,
-              postWeight,
-              startBodyFat,
-              postBodyFat,
-              weightLost: result.totalWeightLost
-            }
+            enhanced: true,
+            raw: rawMetrics,
+            fastContext,
+            contextImpacts,
+            fastContextImpacts: contextImpacts,
+            ketoAdapted: enhancedData.ketoAdapted || 'none',
+            startInKetosis: effectivenessParams.startInKetosis ?? null,
+            preFastProteinGrams: effectivenessParams.preFastProteinGrams ?? null,
+            carbStatus: effectivenessParams.carbStatus ?? null,
+            ketosisAdapted: effectivenessParams.startInKetosis ?? null,
+            lastMealProteinGrams: effectivenessParams.preFastProteinGrams ?? null,
+            preFastCarbSetting: effectivenessParams.carbStatus ?? null
           };
         }
       }
     }
-
-    const weightDeltaRaw = postWeight - startWeight;
-    const weightLostRaw = startWeight - postWeight;
 
     let fatLossRaw = null;
     let waterLossRaw = null;

@@ -277,6 +277,12 @@ console.log('Test 10: Full Calculation - Measured Mode');
   assert(result.fluidBreakdown.residualWaterShift !== undefined, 'Should have residual');
   assert(result.fluidBreakdown.otherFluidTotal !== undefined, 'Should report other fluid total');
 
+  // Raw metrics expose unrounded values
+  assert(result.raw && typeof result.raw === 'object', 'Raw metrics should be included');
+  assert(result.raw.fluidBreakdown && typeof result.raw.fluidBreakdown === 'object', 'Raw fluid breakdown present');
+  assertClose(result.raw.totalWeightLost, 5, 0.1, 'Raw total weight lost should reflect actual delta');
+  assertClose(result.raw.fatLoss, result.fatLoss, 0.15, 'Raw fat loss stays aligned with rounded value');
+
   console.log('✅ Full calculation (measured mode) tests passed\n');
 }
 
