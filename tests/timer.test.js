@@ -14,6 +14,7 @@ async function runTimerTests() {
     try {
         await framework.setup();
         await framework.navigateToPage('/timer.html');
+        await framework.cleanupTestData(); // Clean up existing schedule to allow draft creation
         await framework.seedForecastProfile();
         await framework.page.reload({ waitUntil: 'networkidle0' });
         await framework.page.waitForTimeout(framework.options.waitTime);

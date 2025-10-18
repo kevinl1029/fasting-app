@@ -139,6 +139,45 @@ app.get('/api/debug/profiles', async (req, res) => {
   }
 });
 
+// Test cleanup endpoint - deletes schedule and draft for a session to allow draft creation
+app.delete('/api/debug/cleanup-schedule', async (req, res) => {
+  try {
+    const sessionId = req.query.sessionId;
+    if (!sessionId) {
+      return res.status(400).json({ error: 'sessionId required' });
+    }
+
+    const profile = await db.getUserProfileBySessionId(sessionId);
+    if (!profile) {
+      return res.json({ deleted: false, message: 'No profile found for session' });
+    }
+
+    // Delete schedule and draft to reset to onboarding state
+    await new Promise((resolve, reject) => {
+      db.db.run('DELETE FROM schedules WHERE user_profile_id = ?', [profile.id], (err) => {
+        if (err) reject(err);
+        else resolve();
+      });
+    });
+
+    await new Promise((resolve, reject) => {
+      db.db.run('DELETE FROM schedule_drafts WHERE user_profile_id = ?', [profile.id], (err) => {
+        if (err) reject(err);
+        else resolve();
+      });
+    });
+
+    res.json({
+      deleted: true,
+      message: 'Schedule and draft deleted successfully',
+      profileId: profile.id
+    });
+  } catch (error) {
+    console.error('Cleanup error:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // Session validation endpoint
 app.get('/api/session/validate', async (req, res) => {
     const sessionId = req.query.sessionId || req.sessionId;

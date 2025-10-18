@@ -27,7 +27,8 @@ class FastingForecastTestFramework {
         console.log('🚀 Setting up Fasting Forecast Test Framework...');
 
         this.browser = await puppeteer.launch({
-            headless: this.options.headless,
+            headless: this.options.headless === true ? 'new' : this.options.headless,
+            executablePath: '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',
             args: ['--no-sandbox', '--disable-setuid-sandbox']
         });
 
@@ -210,6 +211,22 @@ class FastingForecastTestFramework {
 
             return result;
         });
+    }
+
+    async cleanupTestData() {
+        const sessionId = this.options.sessionId;
+
+        await this.page.evaluate(async (sid) => {
+            // Delete any existing schedules and drafts for this test session
+            // This ensures we start fresh for onboarding/draft tests
+            await fetch(`/api/debug/cleanup-schedule?sessionId=${sid}`, {
+                method: 'DELETE'
+            }).catch(err => {
+                console.warn('Failed to cleanup test data:', err);
+            });
+        }, sessionId);
+
+        await this.page.waitForTimeout(500);
     }
 
     async seedForecastProfile(overrides = {}) {
