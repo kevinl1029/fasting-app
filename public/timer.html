@@ -3037,10 +3037,12 @@
                 return;
             }
 
-            // Calculate new start time from date and time inputs
-            const [hours, minutes] = adjustTimeInput.value.split(':').map(Number);
-            const newStartTime = new Date(adjustDateInput.value);
-            newStartTime.setHours(hours, minutes, 0, 0);
+            // Calculate new start time from date and time inputs using timezone-aware utility
+            const timeZoneResult = window.TimezoneUtils.buildIsoWithZone(
+                adjustDateInput.value,
+                adjustTimeInput.value
+            );
+            const newStartTime = new Date(timeZoneResult.isoString);
 
             // Validation
             const now = new Date();
@@ -3213,10 +3215,12 @@
                 return;
             }
 
-            // Calculate new target end time from date and time inputs
-            const [hours, minutes] = targetTimeInput.value.split(':').map(Number);
-            const newTargetTime = new Date(targetDateInput.value);
-            newTargetTime.setHours(hours, minutes, 0, 0);
+            // Calculate new target end time from date and time inputs using timezone-aware utility
+            const targetTimeZoneResult = window.TimezoneUtils.buildIsoWithZone(
+                targetDateInput.value,
+                targetTimeInput.value
+            );
+            const newTargetTime = new Date(targetTimeZoneResult.isoString);
 
             // Validation - target must be after start time
             if (newTargetTime <= fastStartTime) {
