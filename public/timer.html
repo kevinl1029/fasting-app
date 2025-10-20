@@ -1085,7 +1085,35 @@
             justify-content: flex-end;
             gap: 8px;
         }
-        
+
+        .time-item-tappable {
+            cursor: pointer;
+            transition: background-color 0.2s ease;
+            border-radius: 8px;
+            padding: 8px 12px;
+            margin: -8px -12px;
+        }
+
+        .time-item-tappable:hover {
+            background-color: rgba(251, 146, 60, 0.05);
+        }
+
+        .time-item-tappable:active {
+            background-color: rgba(251, 146, 60, 0.1);
+        }
+
+        .chevron-icon {
+            color: #999;
+            font-size: 1.2rem;
+            transition: color 0.2s ease, transform 0.2s ease;
+            user-select: none;
+        }
+
+        .time-item-tappable:hover .chevron-icon {
+            color: #fb923c;
+            transform: translateX(2px);
+        }
+
         .adjust-time-btn {
             background: transparent;
             border: 1px solid #ddd;
@@ -1097,7 +1125,7 @@
             transition: all 0.2s ease;
             opacity: 0.7;
         }
-        
+
         .adjust-time-btn:hover {
             border-color: #fb923c;
             color: #fb923c;
@@ -1113,6 +1141,7 @@
         }
         
         .time-adjustment-controls input[type="time"],
+        .time-adjustment-controls input[type="date"],
         .time-adjustment-controls select {
             padding: 4px 6px;
             border: 1px solid #ddd;
@@ -1120,8 +1149,13 @@
             font-size: 0.8rem;
             font-family: inherit;
         }
-        
+
+        .time-adjustment-controls input[type="date"] {
+            min-width: 140px;
+        }
+
         .time-adjustment-controls input[type="time"]:focus,
+        .time-adjustment-controls input[type="date"]:focus,
         .time-adjustment-controls select:focus {
             border-color: #fb923c;
             outline: none;
@@ -2039,30 +2073,35 @@
                 </div>
 
                 <div class="time-display">
-                    <div class="time-item">
+                    <div class="time-item time-item-tappable" onclick="toggleStartTimeAdjustment()">
                         <span class="time-label">Started</span>
                         <div class="time-value-container">
                             <span class="time-value" id="startTime">8:00 PM</span>
-                            <button class="adjust-time-btn" id="adjustStartBtn" onclick="toggleStartTimeAdjustment()">
-                                <small>adjust</small>
-                            </button>
+                            <span class="chevron-icon">›</span>
                         </div>
                     </div>
                     <div class="time-item" id="startTimeAdjustment" style="display: none;">
                         <div class="time-adjustment-controls">
+                            <input type="date" id="adjustDateInput">
                             <input type="time" id="adjustTimeInput">
-                            <select id="adjustDateOffset">
-                                <option value="0">Today</option>
-                                <option value="1">Yesterday</option>
-                                <option value="2">2 days ago</option>
-                            </select>
                             <button class="apply-adjustment-btn" onclick="applyStartTimeAdjustment()">Apply</button>
                             <button class="cancel-adjustment-btn" onclick="cancelStartTimeAdjustment()">Cancel</button>
                         </div>
                     </div>
-                    <div class="time-item">
+                    <div class="time-item time-item-tappable" onclick="toggleTargetTimeAdjustment()">
                         <span class="time-label">Target End</span>
-                        <span class="time-value" id="endTime">8:00 PM</span>
+                        <div class="time-value-container">
+                            <span class="time-value" id="endTime">8:00 PM</span>
+                            <span class="chevron-icon">›</span>
+                        </div>
+                    </div>
+                    <div class="time-item" id="targetTimeAdjustment" style="display: none;">
+                        <div class="time-adjustment-controls">
+                            <input type="date" id="adjustTargetDateInput">
+                            <input type="time" id="adjustTargetTimeInput">
+                            <button class="apply-adjustment-btn" onclick="applyTargetTimeAdjustment()">Apply</button>
+                            <button class="cancel-adjustment-btn" onclick="cancelTargetTimeAdjustment()">Cancel</button>
+                        </div>
                     </div>
                 </div>
                 
@@ -2959,27 +2998,28 @@
         // Toggle start time adjustment controls
         function toggleStartTimeAdjustment() {
             const toggleAdjustmentRow = document.getElementById('startTimeAdjustment');
-            const toggleAdjustBtn = document.getElementById('adjustStartBtn');
-            
+
             if (toggleAdjustmentRow.style.display === 'none') {
+                // Hide target time adjustment if open
+                const targetAdjustmentRow = document.getElementById('targetTimeAdjustment');
+                if (targetAdjustmentRow) {
+                    targetAdjustmentRow.style.display = 'none';
+                }
+
                 // Show adjustment controls
                 toggleAdjustmentRow.style.display = 'block';
-                toggleAdjustBtn.textContent = 'cancel';
-                
+
                 // Pre-populate with current start time
                 const toggleTimeInput = document.getElementById('adjustTimeInput');
-                const toggleDateOffset = document.getElementById('adjustDateOffset');
-                
+                const toggleDateInput = document.getElementById('adjustDateInput');
+
                 toggleTimeInput.value = fastStartTime.toTimeString().slice(0, 5); // HH:MM
-                
-                // Calculate date offset
-                const adjustToday = new Date();
-                adjustToday.setHours(0, 0, 0, 0);
-                const startDate = new Date(fastStartTime);
-                startDate.setHours(0, 0, 0, 0);
-                const daysDiff = Math.floor((adjustToday - startDate) / (24 * 60 * 60 * 1000));
-                
-                toggleDateOffset.value = Math.min(daysDiff, 2); // Cap at 2 days ago
+
+                // Format date as YYYY-MM-DD for date input
+                const year = fastStartTime.getFullYear();
+                const month = String(fastStartTime.getMonth() + 1).padStart(2, '0');
+                const day = String(fastStartTime.getDate()).padStart(2, '0');
+                toggleDateInput.value = `${year}-${month}-${day}`;
             } else {
                 // Hide adjustment controls
                 cancelStartTimeAdjustment();
@@ -2990,29 +3030,26 @@
         async function applyStartTimeAdjustment() {
 
             const adjustTimeInput = document.getElementById('adjustTimeInput');
-            const adjustDateOffset = document.getElementById('adjustDateOffset');
+            const adjustDateInput = document.getElementById('adjustDateInput');
 
-            if (!adjustTimeInput.value) {
-                alert('Please enter a start time.');
+            if (!adjustTimeInput.value || !adjustDateInput.value) {
+                alert('Please enter both date and time.');
                 return;
             }
 
-            // Calculate new start time
-            const adjustmentTime = new Date();
+            // Calculate new start time from date and time inputs
             const [hours, minutes] = adjustTimeInput.value.split(':').map(Number);
-            const adjustmentDateOffset = parseInt(adjustDateOffset.value);
-
-            const newStartTime = new Date(adjustmentTime);
+            const newStartTime = new Date(adjustDateInput.value);
             newStartTime.setHours(hours, minutes, 0, 0);
-            newStartTime.setDate(newStartTime.getDate() - adjustmentDateOffset);
 
             // Validation
-            const adjustmentMaxBackdate = new Date(adjustmentTime.getTime() - (7 * 24 * 60 * 60 * 1000));
+            const now = new Date();
+            const maxBackdate = new Date(now.getTime() - (7 * 24 * 60 * 60 * 1000));
 
-            if (newStartTime > adjustmentTime) {
+            if (newStartTime > now) {
                 alert('Start time cannot be in the future!');
                 return;
-            } else if (newStartTime < adjustmentMaxBackdate) {
+            } else if (newStartTime < maxBackdate) {
                 alert('Start time cannot be more than 7 days ago!');
                 return;
             }
@@ -3130,12 +3167,154 @@
         // Cancel start time adjustment
         function cancelStartTimeAdjustment() {
             const cancelAdjustmentRow = document.getElementById('startTimeAdjustment');
-            const cancelAdjustBtn = document.getElementById('adjustStartBtn');
-            
             cancelAdjustmentRow.style.display = 'none';
-            cancelAdjustBtn.innerHTML = '<small>adjust</small>';
         }
-        
+
+        // Toggle target time adjustment controls
+        function toggleTargetTimeAdjustment() {
+            const targetAdjustmentRow = document.getElementById('targetTimeAdjustment');
+
+            if (targetAdjustmentRow.style.display === 'none') {
+                // Hide start time adjustment if open
+                const startAdjustmentRow = document.getElementById('startTimeAdjustment');
+                if (startAdjustmentRow) {
+                    startAdjustmentRow.style.display = 'none';
+                }
+
+                // Show adjustment controls
+                targetAdjustmentRow.style.display = 'block';
+
+                // Pre-populate with current target time
+                const targetTimeInput = document.getElementById('adjustTargetTimeInput');
+                const targetDateInput = document.getElementById('adjustTargetDateInput');
+
+                // Calculate target end time
+                const targetEndTime = new Date(fastStartTime.getTime() + (fastDuration * 60 * 60 * 1000));
+                targetTimeInput.value = targetEndTime.toTimeString().slice(0, 5); // HH:MM
+
+                // Format date as YYYY-MM-DD for date input
+                const year = targetEndTime.getFullYear();
+                const month = String(targetEndTime.getMonth() + 1).padStart(2, '0');
+                const day = String(targetEndTime.getDate()).padStart(2, '0');
+                targetDateInput.value = `${year}-${month}-${day}`;
+            } else {
+                // Hide adjustment controls
+                cancelTargetTimeAdjustment();
+            }
+        }
+
+        // Apply target time adjustment
+        async function applyTargetTimeAdjustment() {
+            const targetTimeInput = document.getElementById('adjustTargetTimeInput');
+            const targetDateInput = document.getElementById('adjustTargetDateInput');
+
+            if (!targetTimeInput.value || !targetDateInput.value) {
+                alert('Please enter both date and time.');
+                return;
+            }
+
+            // Calculate new target end time from date and time inputs
+            const [hours, minutes] = targetTimeInput.value.split(':').map(Number);
+            const newTargetTime = new Date(targetDateInput.value);
+            newTargetTime.setHours(hours, minutes, 0, 0);
+
+            // Validation - target must be after start time
+            if (newTargetTime <= fastStartTime) {
+                alert('Target end time must be after the start time!');
+                return;
+            }
+
+            // Validation - target should not be more than 14 days away
+            const maxTargetTime = new Date(fastStartTime.getTime() + (14 * 24 * 60 * 60 * 1000));
+            if (newTargetTime > maxTargetTime) {
+                alert('Target end time cannot be more than 14 days from the start!');
+                return;
+            }
+
+            // Calculate new duration in hours
+            const newDuration = (newTargetTime - fastStartTime) / (60 * 60 * 1000);
+
+            // Update the fast duration
+            fastDuration = newDuration;
+
+            // Update database if we have an active fast
+            let databaseUpdateSuccessful = false;
+
+            // Ensure we have currentFastId
+            if (!currentFastId) {
+                const storedState = localStorage.getItem('fastingForecast_timerState');
+                if (storedState) {
+                    try {
+                        const parsedState = JSON.parse(storedState);
+                        currentFastId = parsedState.currentFastId;
+                        console.log('Retrieved currentFastId from localStorage:', currentFastId);
+                    } catch (e) {
+                        console.error('Error parsing timer state:', e);
+                    }
+                }
+            }
+
+            if (currentFastId) {
+                try {
+                    const sessionId = window.getSessionId();
+                    if (!sessionId) {
+                        throw new Error('Session not available');
+                    }
+
+                    const response = await fetch(`/api/fasts/${currentFastId}?sessionId=${sessionId}`, {
+                        method: 'PUT',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            duration_hours: fastDuration
+                        })
+                    });
+
+                    if (response.ok) {
+                        databaseUpdateSuccessful = true;
+                        console.log('Target time updated in database successfully');
+                    } else {
+                        console.error('Failed to update target time in database');
+                    }
+                } catch (error) {
+                    console.error('Error updating target time:', error);
+                }
+            }
+
+            // Update localStorage timer state
+            const timerState = {
+                isRunning: true,
+                fastStartTime: fastStartTime.toISOString(),
+                elapsedTime: elapsedTime,
+                fastDuration: fastDuration,
+                currentFastId: currentFastId
+            };
+
+            localStorage.setItem('fastingForecast_timerState', JSON.stringify(timerState));
+
+            // Close the adjustment UI first
+            cancelTargetTimeAdjustment();
+
+            // Update UI - force a complete refresh
+            updateTimerDisplay();
+            updateTimeDisplay(); // Update start/end time text
+
+            // Show success feedback
+            if (databaseUpdateSuccessful) {
+                console.log('Target time adjustment saved successfully');
+            }
+        }
+
+        // Make function globally available
+        window.applyTargetTimeAdjustment = applyTargetTimeAdjustment;
+
+        // Cancel target time adjustment
+        function cancelTargetTimeAdjustment() {
+            const targetAdjustmentRow = document.getElementById('targetTimeAdjustment');
+            targetAdjustmentRow.style.display = 'none';
+        }
+
         // Start a fast
         async function startFast() {
             if (shouldUseScheduledStart()) {
@@ -4843,6 +5022,10 @@
                             return;
                         }
 
+                        // Restore duration from database
+                        fastDuration = activeFast.duration_hours || activeFast.planned_duration_hours || 24;
+                        console.log('🚀 Restored fastDuration:', fastDuration, 'hours');
+
                         isRunning = true;
                         window.isRunning = true; // Expose to window for testing
                         elapsedTime = Date.now() - fastStartTime.getTime();
@@ -4899,7 +5082,7 @@
                             // Save timer state to localStorage to prevent future inconsistencies
                             const restoredTimerState = {
                                 fastStartTime: fastStartTime.toISOString(),
-                                fastDuration: 24, // Default duration
+                                fastDuration: activeFast.duration_hours || activeFast.planned_duration_hours || 24, // Use database duration or default to 24
                                 isRunning: true,
                                 currentFastId: currentFastId
                             };
