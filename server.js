@@ -2594,11 +2594,23 @@ async function startServer() {
     }
 }
 
+async function vercelHandler(req, res) {
+    try {
+        await initializeApp();
+        return app(req, res);
+    } catch (error) {
+        console.error('Failed to initialize Vercel function:', error);
+        return res.status(500).json({
+            error: 'Application initialization failed',
+            code: 'INITIALIZATION_ERROR'
+        });
+    }
+}
+
 if (require.main === module) {
     startServer();
 }
 
-module.exports = {
-    app,
-    initializeApp
-};
+module.exports = vercelHandler;
+module.exports.app = app;
+module.exports.initializeApp = initializeApp;
