@@ -1,7 +1,8 @@
+require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const path = require('path');
-const db = require('./database/db');
+const db = require('./database/index');
 const DraftScheduleService = require('./services/DraftScheduleService');
 const BodyLogService = require('./services/BodyLogService');
 const BodyLogAnalyticsService = require('./services/BodyLogAnalyticsService');
@@ -2563,21 +2564,41 @@ app.get('/api/debug/sqlite-test', async (req, res) => {
 // Serve static files (after custom routes)
 app.use(express.static('public'));
 
-// Initialize database and start server
-async function startServer() {
-  try {
-    await db.initialize();
-    console.log('Database initialized successfully');
-    
-    app.listen(PORT, () => {
-      console.log(`Server is running on http://localhost:${PORT}`);
-      console.log(`API available at http://localhost:${PORT}/api/hello`);
-      console.log(`Fasting Log API available at http://localhost:${PORT}/api/fasts`);
-    });
-  } catch (error) {
-    console.error('Failed to initialize database:', error);
-    process.exit(1);
-  }
+let databaseInitialization = null;
+
+async function initializeApp() {
+    if (!databaseInitialization) {
+        databaseInitialization = db.initialize().then(() => {
+            console.log('Database initialized successfully');
+        }).catch((error) => {
+            databaseInitialization = null;
+            throw error;
+        });
+    }
+
+    return databaseInitialization;
 }
 
-startServer();
+async function startServer() {
+    try {
+        await initializeApp();
+    
+        app.listen(PORT, () => {
+            console.log(`Server is running on http://localhost:${PORT}`);
+            console.log(`API available at http://localhost:${PORT}/api/hello`);
+            console.log(`Fasting Log API available at http://localhost:${PORT}/api/fasts`);
+        });
+    } catch (error) {
+        console.error('Failed to initialize database:', error);
+        process.exit(1);
+    }
+}
+
+if (require.main === module) {
+    startServer();
+}
+
+module.exports = {
+    app,
+    initializeApp
+};

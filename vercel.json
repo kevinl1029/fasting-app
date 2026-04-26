@@ -1,0 +1,37 @@
+{
+    "version": 2,
+    "rewrites": [
+        {
+            "source": "/api/(.*)",
+            "destination": "/api"
+        },
+        {
+            "source": "/forecaster",
+            "destination": "/api"
+        },
+        {
+            "source": "/dashboard",
+            "destination": "/api"
+        },
+        {
+            "source": "/timer",
+            "destination": "/api"
+        },
+        {
+            "source": "/welcome",
+            "destination": "/api"
+        },
+        {
+            "source": "/schedule",
+            "destination": "/api"
+        },
+        {
+            "source": "/calculator",
+            "destination": "/api"
+        },
+        {
+            "source": "/settings",
+            "destination": "/api"
+        }
+    ]
+}
