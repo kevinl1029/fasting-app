@@ -32,6 +32,10 @@
         {
             "source": "/settings",
             "destination": "/api"
+        },
+        {
+            "source": "/restore",
+            "destination": "/api"
         }
     ]
 }

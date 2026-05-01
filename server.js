@@ -2509,6 +2509,45 @@ app.get('/settings', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'settings.html'));
 });
 
+// Session restore page — works on any browser/device without a JS console
+// Usage: /restore?sid=fs_xxxx
+app.get('/restore', (req, res) => {
+  const sid = req.query.sid || '';
+  // Validate format server-side before embedding into the page
+  if (sid && !/^fs_\d+_[a-z0-9]+$/.test(sid)) {
+    return res.status(400).send('Invalid session ID format.');
+  }
+  res.send(`<!DOCTYPE html>
+<html>
+<head>
+  <title>Restoring session…</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    body { font-family: sans-serif; display: flex; align-items: center; justify-content: center;
+           min-height: 100vh; margin: 0; background: #0f172a; color: #e2e8f0; text-align: center; }
+    p { font-size: 1.1rem; opacity: .7; }
+  </style>
+</head>
+<body>
+  <div>
+    <p id="msg">Restoring your session…</p>
+  </div>
+  <script>
+    (function () {
+      var sid = ${sid ? JSON.stringify(sid) : 'null'};
+      if (!sid) {
+        document.getElementById('msg').textContent = 'No session ID provided. Add ?sid=YOUR_SESSION_ID to the URL.';
+        return;
+      }
+      localStorage.setItem('fastingForecast_sessionId', sid);
+      localStorage.setItem('fastingForecast_profileSaved', 'true');
+      window.location.replace('/timer');
+    })();
+  </script>
+</body>
+</html>`);
+});
+
 
 // Debug endpoint to test minimal SQLite operations
 app.get('/api/debug/sqlite-test', async (req, res) => {
